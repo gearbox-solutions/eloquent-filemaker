@@ -1,10 +1,10 @@
 <?php
 
 
-namespace BlueFeather\EloquentFileMaker\Database\Eloquent\Relations;
+namespace BlueFeatherGroup\EloquentFileMaker\Database\Eloquent\Relations;
 
 
-use BlueFeather\EloquentFileMaker\Database\Eloquent\FMModel;
+use BlueFeatherGroup\EloquentFileMaker\Database\Eloquent\FMModel;
 use Illuminate\Database\Eloquent\Relations\Concerns\ComparesRelatedModels;
 use Illuminate\Database\Eloquent\Relations\Concerns\SupportsDefaultModels;
 use Illuminate\Database\Eloquent\Relations\HasOneOrMany;

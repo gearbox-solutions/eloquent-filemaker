@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFeather\EloquentFileMaker\Exceptions;
+namespace BlueFeatherGroup\EloquentFileMaker\Exceptions;
 
 use Exception;
 

@@ -1,11 +1,11 @@
 <?php
 
 
-namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
+namespace BlueFeatherGroup\EloquentFileMaker\Database\Eloquent;
 
-use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
-use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use BlueFeatherGroup\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
+use BlueFeatherGroup\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use BlueFeatherGroup\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;

@@ -1,13 +1,13 @@
 <?php
 
 
-namespace BlueFeather\EloquentFileMaker\Services;
+namespace BlueFeatherGroup\EloquentFileMaker\Services;
 
 
-use BlueFeather\EloquentFileMaker\Database\Eloquent\FMEloquentBuilder;
-use BlueFeather\EloquentFileMaker\Database\Eloquent\FMModel;
-use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use BlueFeatherGroup\EloquentFileMaker\Database\Eloquent\FMEloquentBuilder;
+use BlueFeatherGroup\EloquentFileMaker\Database\Eloquent\FMModel;
+use BlueFeatherGroup\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use BlueFeatherGroup\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Database\Connection;
 use Illuminate\Http\File;
 use Illuminate\Support\Arr;

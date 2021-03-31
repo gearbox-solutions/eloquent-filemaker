@@ -1,10 +1,10 @@
 <?php
 
-namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
+namespace BlueFeatherGroup\EloquentFileMaker\Database\Eloquent;
 
-use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
-use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
+use BlueFeatherGroup\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
+use BlueFeatherGroup\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use BlueFeatherGroup\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
