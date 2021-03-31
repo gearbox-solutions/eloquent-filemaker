@@ -10,7 +10,9 @@
         "FileMaker",
         "Database",
         "Data API",
-        "Models"
+        "Models",
+        "Eloquent",
+        "Laravel"
     ],
     "authors": [
         {
