@@ -1,11 +1,11 @@
 <?php
 
 
-namespace BlueFeather\FileMaker_Laravel\Support\Facades;
+namespace BlueFeather\EloquentFileMaker\Support\Facades;
 
 
-use BlueFeather\FileMaker_Laravel\Database\Query\FMBaseBuilder;
-use BlueFeather\FileMaker_Laravel\Services\FileMakerConnection;
+use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Http\File;
 use Illuminate\Support\Facades\Facade;
 

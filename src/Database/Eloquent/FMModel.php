@@ -1,10 +1,10 @@
 <?php
 
-namespace BlueFeather\FileMaker_Laravel\Database\Eloquent;
+namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
 
-use BlueFeather\FileMaker_Laravel\Database\Eloquent\Concerns\FMHasRelationships;
-use BlueFeather\FileMaker_Laravel\Database\Query\FMBaseBuilder;
-use BlueFeather\FileMaker_Laravel\Services\FileMakerConnection;
+use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
+use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;

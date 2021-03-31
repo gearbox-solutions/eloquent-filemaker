@@ -1,7 +1,7 @@
 <?php
 
 
-namespace BlueFeather\FileMaker_Laravel\Database\Eloquent\Relations;
+namespace BlueFeather\EloquentFileMaker\Database\Eloquent\Relations;
 
 
 use Illuminate\Database\Eloquent\Collection;

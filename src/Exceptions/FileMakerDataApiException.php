@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFeather\FileMaker_Laravel\Exceptions;
+namespace BlueFeather\EloquentFileMaker\Exceptions;
 
 use Exception;
 
