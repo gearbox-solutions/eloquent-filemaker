@@ -250,8 +250,15 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
+    /**
+     * Alias for orderBy
+     *
+     * @param $column
+     * @param string $direction
+     * @return $this
+     */
     public function sort($column, $direction = self::ASCEND){
-        $this->orderBy($column, $direction);
+        return $this->orderBy($column, $direction);
     }
 
     /**
@@ -646,7 +653,7 @@ class FMBaseBuilder extends Builder
     }
 
     /**
-     * Execute a script
+     * Alias for executeScript()
      *
      *
      * @param null $script
@@ -655,6 +662,16 @@ class FMBaseBuilder extends Builder
      */
     public function performScript($script = null, $param = null)
     {
+        return $this->executeScript($script, $param);
+    }
+
+    /**
+     * Execute a script
+     *
+     * @param null $script
+     * @param null $param
+     */
+    public function executeScript($script = null, $param = null){
         if ($script) {
             $this->script = $script;
         }
