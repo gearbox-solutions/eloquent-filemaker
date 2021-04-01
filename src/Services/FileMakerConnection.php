@@ -8,12 +8,16 @@ use BlueFeather\EloquentFileMaker\Database\Eloquent\FMEloquentBuilder;
 use BlueFeather\EloquentFileMaker\Database\Eloquent\FMModel;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Middleware;
 use Illuminate\Database\Connection;
-use Illuminate\Database\Query\Builder;
-use Illuminate\Http\File;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 class FileMakerConnection extends Connection
 {
@@ -24,6 +28,7 @@ class FileMakerConnection extends Connection
     protected $username;
     protected $password;
     protected $sessionToken;
+    protected $retries = 1;
 
 
     /**
@@ -35,20 +40,12 @@ class FileMakerConnection extends Connection
      */
     public function __construct($connectionName, $database = '', $tablePrefix = '', $config = [])
     {
-
-        // First we will setup the default properties. We keep track of the DB
+        // First we will setup the default properties. We keep track of the DB connection
         // name we are connected to since it is needed when some reflective
         // type commands are run such as checking whether a table exists.
-        $this->database = $database;
+        $this->database = $connectionName;
 
-        $this->tablePrefix = $tablePrefix;
-
-        if (!$config) {
-            $this->setConnection($connectionName);
-        } else {
-            $this->config = $config;
-            $this->config['name'] = $connectionName;
-        }
+        $this->setConnection($connectionName, $config);
     }
 
     /**
@@ -57,10 +54,15 @@ class FileMakerConnection extends Connection
      * @param string $connection
      * @return $this
      */
-    public function setConnection($connection)
+    public function setConnection($connection, $config = [])
     {
-        $this->config = $this->getConnection($connection);
-        $this->config['name'] = $connection;
+        if (!$config) {
+            $config = $this->getConnection($connection);
+        }
+
+        $this->config = Arr::add($config, 'name', $connection);
+
+        $this->tablePrefix = $this->getConfig('prefix');
 
         return $this;
     }
@@ -119,17 +121,12 @@ class FileMakerConnection extends Connection
         // perform the login
         $response = Http::withBasicAuth($this->config['username'], $this->config['password'])
             ->post($url, $postBody);
+
         // Check for errors
         $this->checkResponseForErrors($response);
 
         // Get the session token from the response
-        $token = $response['response']['token'];
-
-        // alternative - don't provide a body at all
-        /* $response = Http::withBasicAuth($this->username, $this->password)
-                    ->withBody(null, 'application/json')
-                    ->post($url);
-        */
+        $token = Arr::get($response, 'response.token');
 
         return $token;
     }
@@ -137,29 +134,6 @@ class FileMakerConnection extends Connection
     protected function getDatabaseUrl()
     {
         return ($this->config['protocol'] ?? 'https') . "://" . $this->config['host'] . '/fmi/data/' . ($this->config['version'] ?? 'vLatest') . '/databases/' . $this->config['database'];
-    }
-
-    /**
-     * @param $response
-     * @throws FileMakerDataApiException
-     */
-    protected function checkResponseForErrors($response)
-    {
-        $messages = $response['messages'];
-
-        foreach ($messages as $message) {
-            $code = $message['code'];
-
-            if ($code != 0) {
-                switch ($code) {
-                    case 952:
-                        // API token is expired. We should expire it in the cache so it isn't used again.
-                        $this->forgetSessionToken();
-                    default:
-                        throw new FileMakerDataApiException($message['message'], $code);
-                }
-            }
-        }
     }
 
     protected function getRecordUrl()
@@ -172,23 +146,43 @@ class FileMakerConnection extends Connection
         return $this->getDatabaseUrl() . '/layouts/' . $this->getLayout();
     }
 
+    /**
+     * @param $response
+     * @throws FileMakerDataApiException
+     */
+    protected function checkResponseForErrors($response)
+    {
+        $messages = Arr::get($response, 'messages', []);
+
+        foreach ($messages as $message) {
+            $code = (int)$message['code'];
+
+            if ($code !== 0) {
+                switch ($code) {
+                    case 952:
+                        // API token is expired. We should expire it in the cache so it isn't used again.
+                        $this->forgetSessionToken();
+                        return;
+                    default:
+                        throw new FileMakerDataApiException($message['message'], $code);
+                }
+            }
+        }
+    }
+
 
     public function uploadToContainerField(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
-        $this->login();
         $url = $this->getRecordUrl() . $query->getRecordId() . '/containers/' . $query->containerFieldName;
 
         $file = $query->containerFile;
 
         // create a stream resource
         $stream = fopen($file->getPathname(), 'r');
-        $response = Http::withToken($this->sessionToken)
-            ->attach('upload', $stream, $file->getFilename())
-            ->post($url)
-            ->json();
-        // Check for errors
-        $this->checkResponseForErrors($response);
+
+        $request = Http::attach('upload', $stream, $file->getFilename());
+        $response = $this->makeRequest('post', $url, [], $request)->json();
 
         return $response;
     }
@@ -197,14 +191,9 @@ class FileMakerConnection extends Connection
     public function getSingleRecordById(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
-        $this->login();
         $url = $this->getRecordUrl() . $query->getRecordId();
 
-        $response = Http::withToken($this->sessionToken)
-            ->get($url)
-            ->json();
-        // Check for errors
-        $this->checkResponseForErrors($response);
+        $response = $this->makeRequest('get', $url)->json();
 
         return $response;
 
@@ -213,14 +202,9 @@ class FileMakerConnection extends Connection
     public function deleteRecord(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
-        $this->login();
         $url = $this->getRecordUrl() . $query->getRecordId();
 
-        $response = Http::withToken($this->sessionToken)
-            ->delete($url)
-            ->json();
-        // Check for errors
-        $this->checkResponseForErrors($response);
+        $response = $this->makeRequest('delete', $url)->json();
 
         return true;
     }
@@ -228,16 +212,11 @@ class FileMakerConnection extends Connection
     public function duplicateRecord(FMBaseBuilder $query): array
     {
         $this->setLayout($query->from);
-        $this->login();
         $url = $this->getRecordUrl() . $query->getRecordId();
 
         // duplicate the record
-        $response = Http::withToken($this->sessionToken)
-            ->withBody(null, 'application/json')
-            ->post($url)
-            ->json();
-        // Check for errors
-        $this->checkResponseForErrors($response);
+        $request = Http::withBody(null, 'application/json');
+        $response = $this->makeRequest('post', $url, [], $request)->json();
 
         return $response;
     }
@@ -255,16 +234,12 @@ class FileMakerConnection extends Connection
         }
 
         // There are actually query parameters, so prepare to do our find
-        $this->login();
         $this->setLayout($query->from);
         $url = $this->getLayoutUrl() . '/_find';
 
         $postData = $this->buildPostDataFromQuery($query);
 
-
-        $response = Http::withToken($this->sessionToken)
-            ->post($url, $postData)
-            ->json();
+        $response = $this->makeRequest('post', $url, $postData)->json();
 
         // Check for errors
         $this->checkResponseForErrors($response);
@@ -275,53 +250,49 @@ class FileMakerConnection extends Connection
     public function getRecords(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
-        $this->login();
         $url = $this->getRecordUrl();
 
         // default to an empty array
-        $queryParameters = [];
+        $queryParams = [];
 
         // handle scripts
         if ($query->script !== null) {
-            $queryParameters['script'] = $query->script;
+            $queryParams['script'] = $query->script;
         }
         if ($query->scriptParam !== null) {
-            $queryParameters['script.param'] = $query->scriptParam;
+            $queryParams['script.param'] = $query->scriptParam;
         }
         if ($query->scriptPresort !== null) {
-            $queryParameters['script.presort'] = $query->scriptPresort;
+            $queryParams['script.presort'] = $query->scriptPresort;
         }
         if ($query->scriptPresortParam !== null) {
-            $queryParameters['script.presort.param'] = $query->scriptPresortParam;
+            $queryParams['script.presort.param'] = $query->scriptPresortParam;
         }
         if ($query->scriptPrerequest !== null) {
-            $queryParameters['script.prerequest'] = $query->scriptPrerequest;
+            $queryParams['script.prerequest'] = $query->scriptPrerequest;
         }
         if ($query->scriptPrerequestParam !== null) {
-            $queryParameters['script.prerequest.param'] = $query->scriptPrerequestParam;
+            $queryParams['script.prerequest.param'] = $query->scriptPrerequestParam;
         }
         if ($query->layoutResponse !== null) {
-            $queryParameters['layout.response'] = $query->layoutResponse;
+            $queryParams['layout.response'] = $query->layoutResponse;
         }
         if ($query->portal !== null) {
-            $queryParameters['portal'] = $query->portal;
+            $queryParams['portal'] = $query->portal;
         }
         if ($query->offset > 0) {
             // Offset is 1-indexed
-            $queryParameters['_offset'] = $query->offset + 1;
+            $queryParams['_offset'] = $query->offset + 1;
         }
         if ($query->limit > 0) {
-            $queryParameters['_limit'] = $query->limit;
+            $queryParams['_limit'] = $query->limit;
         }
         if (sizeof($query->sorts) > 0) {
             // sort can have many values, so it needs to get json_encoded and passed as a single string
-            $queryParameters['_sort'] = json_encode($query->sorts);
+            $queryParams['_sort'] = json_encode($query->sorts);
         }
 
-
-        $response = Http::withToken($this->sessionToken)->get($url, $queryParameters)->json();
-        // Check for errors
-        $this->checkResponseForErrors($response);
+        $response = $this->makeRequest('get', $url, $queryParams)->json();
 
         return $response;
     }
@@ -345,18 +316,12 @@ class FileMakerConnection extends Connection
     public function editRecord($query)
     {
         $this->setLayout($query->from);
-        $this->login();
         $url = $this->getRecordUrl() . $query->getRecordId();
-
 
         // prepare all the post data
         $postData = $this->buildPostDataFromQuery($query);
 
-        $response = Http::withToken($this->sessionToken)
-            ->patch($url, $postData)
-            ->json();
-        // Check for errors
-        $this->checkResponseForErrors($response);
+        $response = $this->makeRequest('patch', $url, $postData)->json();
 
         return $response;
     }
@@ -368,21 +333,13 @@ class FileMakerConnection extends Connection
      */
     public function createRecord($query)
     {
-
         $this->setLayout($query->from);
-        $this->login();
         $url = $this->getRecordUrl();
-
 
         // prepare all the post data
         $postData = $this->buildPostDataFromQuery($query);
 
-        $response = Http::withToken($this->sessionToken)
-            ->post($url, $postData)
-            ->json();
-
-        // Check for errors
-        $this->checkResponseForErrors($response);
+        $response = $this->makeRequest('post', $url, $postData)->json();
 
         return $response;
     }
@@ -449,11 +406,8 @@ class FileMakerConnection extends Connection
 
     public function executeScript(FMBaseBuilder $query)
     {
-
         $this->setLayout($query->from);
-        $this->login();
         $url = $this->getLayoutUrl() . "/script/" . $query->script;
-
 
         $queryParams = [];
         $param = $query->scriptParam;
@@ -461,12 +415,7 @@ class FileMakerConnection extends Connection
             $queryParams['script.param'] = $param;
         }
 
-        $response = Http::withToken($this->sessionToken)
-            ->get($url, $queryParams)
-            ->json();
-
-        // Check for errors
-        $this->checkResponseForErrors($response);
+        $response = $this->makeRequest('get', $url, $queryParams)->json();
 
         return $response;
     }
@@ -477,7 +426,8 @@ class FileMakerConnection extends Connection
      * @param FMBaseBuilder $query
      * @return array|mixed
      */
-    public function performScript(FMBaseBuilder $query){
+    public function performScript(FMBaseBuilder $query)
+    {
         return $this->executeScript($query);
     }
 
@@ -495,15 +445,9 @@ class FileMakerConnection extends Connection
      */
     public function disconnect()
     {
-        $this->login();
         $url = $this->getDatabaseUrl() . "/sessions/" . $this->sessionToken;
 
-        $response = Http::withToken($this->sessionToken)
-            ->delete($url)
-            ->json();
-
-        // Check for errors
-        $this->checkResponseForErrors($response);
+        $response = $this->makeRequest('delete', $url)->json();
 
         $this->forgetSessionToken();
 
@@ -526,24 +470,95 @@ class FileMakerConnection extends Connection
 
     public function setGlobalFields(array $globalFields)
     {
-
-        $this->login();
         $url = $this->getDatabaseUrl() . "/globals/";
-
 
         // Prepare the data to send
         $data = [
             'globalFields' => $globalFields
         ];
 
+        $response = $this->makeRequest('patch', $url, $data)->json();
 
-        $response = Http::withToken($this->sessionToken)
-            ->patch($url, $data)
-            ->json();
+        return $response;
+    }
+
+    protected function makeRequest($method, $url, $params = [], ?PendingRequest $request = null)
+    {
+        if (!$this->sessionToken) {
+            $this->login();
+        }
+
+        if ($request instanceof PendingRequest) {
+            $request->withToken($this->sessionToken);
+        } else {
+            $request = Http::withToken($this->sessionToken);
+        }
+
+        $response = $request->withMiddleware($this->retryMiddleware())
+            ->{$method}($url, $params);
 
         // Check for errors
         $this->checkResponseForErrors($response);
 
         return $response;
+    }
+
+    public function setRetries($retries)
+    {
+        $this->retries = $retries;
+
+        return $this;
+    }
+
+    protected function retryMiddleware()
+    {
+        return Middleware::retry(function (
+            $retries,
+            RequestInterface $request,
+            ResponseInterface $response = null,
+            RequestException $exception = null
+        ) {
+            // Limit the number of retries to 5
+            if ($retries >= $this->retries) {
+                return false;
+            }
+
+            $should_retry = false;
+            $refresh = false;
+            $log_message = null;
+
+            // Retry connection exceptions
+            if ($exception instanceof ConnectException) {
+                $should_retry = true;
+                $log_message = 'Connection Error: ' . $exception->getMessage();
+            }
+
+            if ($response) {
+                $code = (int)Arr::first(Arr::pluck(Arr::get($response, 'messages'), 'code'));
+                if ($code === 952 && $retries <= 1) {
+                    $refresh = true;
+                    $should_retry = true;
+                }
+            }
+
+            if ($log_message) {
+                error_log($log_message, 0);
+            }
+
+            if ($refresh) {
+                error_log("Refreshing Access Token…");
+                $this->login();
+            }
+
+            if ($should_retry) {
+                if ($retries > 0) {
+                    error_log('Retry ' . $retries . '…', 0);
+                }
+            }
+
+            return $should_retry;
+        }, function () {
+            return 0;
+        });
     }
 }
