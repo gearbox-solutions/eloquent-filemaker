@@ -5,7 +5,6 @@ namespace BlueFeather\EloquentFileMaker\Services;
 
 
 use BlueFeather\EloquentFileMaker\Database\Eloquent\FMEloquentBuilder;
-use BlueFeather\EloquentFileMaker\Database\Eloquent\FMModel;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use GuzzleHttp\Exception\ConnectException;
@@ -533,7 +532,7 @@ class FileMakerConnection extends Connection
                 $log_message = 'Connection Error: ' . $exception->getMessage();
             }
 
-            if ($response) {
+            if ($response && $response->getStatusCode() !== 200) {
                 $code = (int)Arr::first(Arr::pluck(Arr::get($response, 'messages'), 'code'));
                 if ($code === 952 && $retries <= 1) {
                     $refresh = true;
