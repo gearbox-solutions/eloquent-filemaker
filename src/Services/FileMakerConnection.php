@@ -205,7 +205,7 @@ class FileMakerConnection extends Connection
 
         $response = $this->makeRequest('delete', $url);
 
-        return true;
+        return $response;
     }
 
     public function duplicateRecord(FMBaseBuilder $query): array
