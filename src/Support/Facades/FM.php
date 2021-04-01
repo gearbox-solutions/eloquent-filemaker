@@ -16,16 +16,10 @@ use Illuminate\Support\Facades\Facade;
  * the connection, which would be a FileMakerConnection.
  *
  * @method static FileMakerConnection connection(string $name = null)
- * @method static array performScript($script = null, $param = null)
- * @method static array executeScript($script = null, $param = null)
  * @method static FMBaseBuilder layout($layoutName)
  * @method static FMBaseBuilder table($layoutName)
- * @method static FMBaseBuilder fieldData($array)
- * @method static FMBaseBuilder portalData($array)
- * @method static FMBaseBuilder setContainer($column, File $file)
- * @method static FMBaseBuilder findByRecordId($recordId)
- * @method static FMBaseBuilder modId(int $modId)
- * @method static FMBaseBuilder portal($portalName)
+ * @method static array setGlobalFields(array $globalFields)
+ * @method static FileMakerConnection setRetries(int $retries)
  *
  *
  * @see \Illuminate\Database\DatabaseManager
