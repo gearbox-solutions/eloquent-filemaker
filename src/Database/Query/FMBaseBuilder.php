@@ -226,6 +226,7 @@ class FMBaseBuilder extends Builder
     }
 
     /**
+     * Returns the internal FileMaker record ID returned in a previous query, used for things like edits and deletes. This is not the primary key in your database.
      * @return mixed
      */
     public function getRecordId()
@@ -247,6 +248,10 @@ class FMBaseBuilder extends Builder
     {
         $this->appendSortOrder($column, $direction);
         return $this;
+    }
+
+    public function sort($column, $direction = self::ASCEND){
+        $this->orderBy($column, $direction);
     }
 
     /**
