@@ -312,7 +312,7 @@ class FileMakerConnection extends Connection
      *
      * @param FMBaseBuilder $query
      */
-    public function editRecord($query)
+    public function editRecord(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
         $url = $this->getRecordUrl() . $query->getRecordId();
@@ -330,7 +330,7 @@ class FileMakerConnection extends Connection
      * @return bool
      * @throws FileMakerDataApiException
      */
-    public function createRecord($query)
+    public function createRecord(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
         $url = $this->getRecordUrl();
