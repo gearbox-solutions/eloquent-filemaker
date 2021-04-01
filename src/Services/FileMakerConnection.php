@@ -582,4 +582,27 @@ class FileMakerConnection extends Connection
     {
         return $this->table($layoutName);
     }
+
+    public function setGlobalFields(array $globalFields)
+    {
+
+        $this->login();
+        $url = $this->getDatabaseUrl() . "/globals/";
+
+
+        // Prepare the data to send
+        $data = [
+            'globalFields' => $globalFields
+        ];
+
+
+        $response = Http::withToken($this->sessionToken)
+            ->patch($url, $data)
+            ->json();
+
+        // Check for errors
+        $this->checkResponseForErrors($response);
+
+        return $response;
+    }
 }

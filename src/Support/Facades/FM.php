@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Facade;
 
 
 /**
+ * @method static FileMakerConnection connection(string $name = null)
  * @method static FMBaseBuilder performScript($script = null, $param = null)
  * @method static FMBaseBuilder layout($layoutName)
  * @method static FMBaseBuilder table($layoutName)
@@ -30,6 +31,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static FMBaseBuilder modId(int $modId)
  * @method static FMBaseBuilder portal($portalName)
  *
+ * @see \Illuminate\Database\DatabaseManager
  * @see FileMakerConnection
  *
  * */

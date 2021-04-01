@@ -114,6 +114,12 @@ class FMBaseBuilder extends Builder
      */
     public $fieldData;
 
+    /**
+     * An array of global fields to set
+     * @var array
+     */
+    public $globalFields = [];
+
 
     public const ASCEND = 'ascend';
     public const DESCEND = 'descend';
@@ -704,6 +710,11 @@ class FMBaseBuilder extends Builder
         }
 
         return [$value, $operator];
+    }
+
+    public function setGlobalFields(array $globals){
+        $this->globalFields = $globals;
+        return $this->connection->setGlobalFields($this);
     }
 
 }
