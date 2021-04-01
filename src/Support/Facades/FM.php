@@ -1,7 +1,7 @@
 <?php
 
 
-namespace BlueFeather\FileMaker_Laravel\Support\Facades;
+namespace BlueFeather\EloquentFileMaker\Support\Facades;
 
 
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
@@ -36,8 +36,6 @@ use Illuminate\Support\Facades\Facade;
 
 class FM extends Facade
 {
-
-
     /**
      * Get the registered name of the component.
      *

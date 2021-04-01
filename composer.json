@@ -22,7 +22,8 @@
     ],
     "autoload": {
         "psr-4": {
-            "BlueFeather\\EloquentFileMaker\\": "src/"
+            "BlueFeather\\EloquentFileMaker\\": "src/",
+            "Tests\\": "tests/"
         }
     },
     "require": {
@@ -31,8 +32,9 @@
         "illuminate/database": "^6.0 || ^7.0 || ^8.0",
         "illuminate/http": "^6.0 || ^7.0 || ^8.0",
         "illuminate/pagination": "^6.0 || ^7.0 || ^8.0"
-
-
+    },
+    "require-dev": {
+        "orchestra/testbench": "^4.0 || ^5.0 || ^6.0"
     },
     "extra": {
         "laravel": {

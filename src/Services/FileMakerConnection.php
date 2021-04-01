@@ -9,6 +9,7 @@ use BlueFeather\EloquentFileMaker\Database\Eloquent\FMModel;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -58,7 +59,6 @@ class FileMakerConnection extends Connection
      */
     public function setConnection($connection)
     {
-
         $this->config = $this->getConnection($connection);
         $this->config['name'] = $connection;
 
@@ -70,59 +70,27 @@ class FileMakerConnection extends Connection
         return config('database.connections')[$connection];
     }
 
-
-    /** Create a new FileMaker record from a model
-     * @param FMModel $model
-     * @param array $options
-     * @return bool
-     * @throws FileMakerDataApiException
-     */
-    public function createRecordFromModel(FMModel $model): bool
-    {
-        $this->setDatabaseName($model->getDatabase());
-        $this->setLayout($model->getLayout());
-        $this->login();
-        $url = $this->getRecordUrl();
-
-        $fieldData = $this->prepareFieldDataForFileMaker($model);
-
-        $postData = [
-            'fieldData' => $fieldData,
-        ];
-
-        $response = Http::withToken($this->sessionToken)
-            ->post($url, $postData)
-            ->json();
-
-        // Check for errors
-        $this->checkResponseForErrors($response);
-
-        $recordId = $response['response']['recordId'];
-        $modId = $response['response']['modId'];
-        $model->setRecordId($recordId);
-        $model->setModId($modId);
-
-        $this->saveContainers($model, isset($options['modId']));
-
-        // We don't get the actual new record back after creating it, so query so we get the new data from FileMaker
-        $record = $this->getSingleRecordById($recordId);
-
-        $model->fillFromRecord($record);
-        return true;
-    }
-
     /**
      * @param String $layout
+     * @return $this
      */
     public function setLayout($layout)
     {
-        $this->layout = $this->tablePrefix . $layout;
+        $this->layout = $layout;
+
         return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getLayout()
+    {
+        return $this->tablePrefix . $this->layout;
     }
 
     public function login()
     {
-
         // Cache a session token so we can reuse the same thing for 14.75 minutes
         // FileMaker data API sessions expire after 15 minutes
         // 14.75 * 60 = 885 seconds
@@ -132,10 +100,10 @@ class FileMakerConnection extends Connection
 
         // Store the session token
         $this->sessionToken = $token;
-
     }
 
-    /** Log in and get a session token to use with subsequent DataAPI requests which require authentication
+    /**
+     * Log in and get a session token to use with subsequent DataAPI requests which require authentication
      * @return mixed
      */
     protected function fetchNewSessionToken()
@@ -201,7 +169,7 @@ class FileMakerConnection extends Connection
 
     protected function getLayoutUrl()
     {
-        return $this->getDatabaseUrl() . '/layouts/' . $this->layout;
+        return $this->getDatabaseUrl() . '/layouts/' . $this->getLayout();
     }
 
     protected function prepareFieldDataForFileMaker(FMModel $model)
@@ -350,7 +318,6 @@ class FileMakerConnection extends Connection
      */
     public function performFind(FMBaseBuilder $query)
     {
-
         // if there are no query parameters we need to do a get all records instead of a find
         if (empty($query->wheres)) {
             return $this->getRecords($query);
@@ -372,8 +339,6 @@ class FileMakerConnection extends Connection
         $this->checkResponseForErrors($response);
 
         return $response;
-
-
     }
 
     public function getRecords(FMBaseBuilder $query)

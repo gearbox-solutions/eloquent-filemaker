@@ -158,7 +158,7 @@ class FMBaseBuilder extends Builder
                                 Grammar $grammar = null,
                                 Processor $processor = null)
     {
-        $this->connection = $connection;;
+        $this->connection = $connection;
     }
 
 

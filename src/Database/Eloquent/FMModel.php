@@ -42,12 +42,6 @@ abstract class FMModel extends Model
     ];
 
     /**
-     * The name of the database connection to be used from the database.php config file.
-     * @var
-     */
-    protected $database;
-
-    /**
      * The layout to be used when retrieving this model. This is equivalent to the standard laravel $table property and either one can be used.
      * @var
      */
@@ -285,17 +279,6 @@ abstract class FMModel extends Model
     public function setDatabase($database): void
     {
         $this->database = $database;
-    }
-
-
-    /**
-     * Get the database connection for the model.
-     *
-     */
-    public function getConnection()
-    {
-        return app(FileMakerConnection::class)
-            ->setDatabaseName($this->getDatabase());
     }
 
     /**

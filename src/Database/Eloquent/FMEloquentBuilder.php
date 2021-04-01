@@ -42,10 +42,12 @@ class FMEloquentBuilder extends Builder
      */
     public function setModel($model, $ids = [])
     {
+        $this->query = new FMBaseBuilder($model->getConnection());
+
         $this->model = $model;
         $this->query->layout($model->getLayout())
             ->setFieldMapping($model->getFieldMapping());
-        $this->query->getConnection()->setDatabaseName($model->getDatabase());
+
         return $this;
     }
 
