@@ -1,7 +1,7 @@
 <?php
 
 
-namespace BlueFeatherGroup\EloquentFileMaker\Database\Eloquent\Concerns;
+namespace BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns;
 
 use Illuminate\Support\Str;
 

@@ -1,11 +1,11 @@
 <?php
 
 
-namespace BlueFeatherGroup\EloquentFileMaker\Database\Query;
+namespace BlueFeather\EloquentFileMaker\Database\Query;
 
 
-use BlueFeatherGroup\EloquentFileMaker\Exceptions\FileMakerDataApiException;
-use BlueFeatherGroup\EloquentFileMaker\Services\FileMakerConnection;
+use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Grammars\Grammar;
 use Illuminate\Database\Query\Processors\Processor;

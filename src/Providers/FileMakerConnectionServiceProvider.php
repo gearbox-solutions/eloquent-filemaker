@@ -1,8 +1,8 @@
 <?php
 
-namespace BlueFeatherGroup\EloquentFileMaker\Providers;
+namespace BlueFeather\EloquentFileMaker\Providers;
 
-use BlueFeatherGroup\EloquentFileMaker\Services\FileMakerConnection;
+use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Support\ServiceProvider;
 
 class FileMakerConnectionServiceProvider extends ServiceProvider

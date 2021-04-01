@@ -1,5 +1,5 @@
 {
-    "name": "bluefeathergroup/eloquent-filemaker",
+    "name": "bluefeather/eloquent-filemaker",
     "description": "A package for getting FileMaker records as Eloquent models in Laravel",
     "type": "library",
     "license": "MIT",
@@ -22,7 +22,7 @@
     ],
     "autoload": {
         "psr-4": {
-            "BlueFeatherGroup\\EloquentFileMaker\\": "src/"
+            "BlueFeather\\EloquentFileMaker\\": "src/"
         }
     },
     "require": {
@@ -37,10 +37,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "BlueFeatherGroup\\EloquentFileMaker\\Providers\\FileMakerConnectionServiceProvider"
+                "BlueFeather\\EloquentFileMaker\\Providers\\FileMakerConnectionServiceProvider"
             ],
             "aliases": {
-                "FM": "BlueFeatherGroup\\EloquentFileMaker\\Support\\Facades\\FM"
+                "FM": "BlueFeather\\EloquentFileMaker\\Support\\Facades\\FM"
             }
         }
     }
