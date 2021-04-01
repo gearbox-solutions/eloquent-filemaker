@@ -15,8 +15,9 @@ abstract class FMModel extends Model
 
     use FMHasRelationships;
 
+
     /**
-     * Indicates if the model should be timestamped. FileMaker usually does this automatically, so this defaults to false for FMModel objects.
+     * Indicates if the model should be timestamped.
      *
      * @var bool
      */
@@ -364,25 +365,19 @@ abstract class FMModel extends Model
         // table from the database. Not all tables have to be incrementing though.
         $attributes = $this->getAttributes();
 
-        if ($this->getIncrementing()) {
-            $this->insertAndSetId($query, $attributes);
-        }
-
         // If the table isn't incrementing we'll simply insert these attributes as they
         // are. These attribute arrays must contain an "id" column previously placed
         // there by the developer as the manually determined key for these models.
-        else {
-            if (empty($attributes)) {
-                return true;
-            }
-
-            $attributes = $this->prepareAttributesForFileMaker($attributes)->toArray();
-
-            $response = $query->insert($attributes);
-            // inserting doesn't get us the ID back, so we have to set the record ID and re-query to get updates
-            $recordId = $response['response']['recordId'];
-            $this->setRecordId($recordId);
+        if (empty($attributes)) {
+            return true;
         }
+
+        $attributes = $this->prepareAttributesForFileMaker($attributes)->toArray();
+
+        $response = $query->insert($attributes);
+        // inserting doesn't get us the ID back, so we have to set the record ID and re-query to get updates
+        $recordId = $response['response']['recordId'];
+        $this->setRecordId($recordId);
 
         // We will go ahead and set the exists property to true, so that it is set when
         // the created event is fired, just in case the developer tries to update it
