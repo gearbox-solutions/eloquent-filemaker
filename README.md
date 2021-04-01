@@ -1,9 +1,9 @@
-#Eloquent FileMaker
+# Eloquent FileMaker
 Eloquent-filemaker is a PHP package for Laravel to make working with FileMaker databases through the FileMaker Data API easier. The goal of this project is to provide as similar an interface for working with FileMaker records through the Data API as you would get with working with MySQL in native Laravel.
 
 This package lets you easily connect to your FileMaker database through the Data API and get record data as Laravel Models, with as many native features supported as possible.
 
-##Features
+## Features
 * Uses the FileMaker Data API for accessing your FileMaker data
 * Support for accessing multiple files or with multiple sets of credentials
 * FMModel class
@@ -20,14 +20,14 @@ This package lets you easily connect to your FileMaker database through the Data
 * Running scripts
 * And more!
 
-#Installation
+# Installation
 Install bluefeathergroup\eloquent-filemaker in your project using Composer.
 
 ```composer require bluefeathergroup\eloquent-filemaker```
-#Usage
+# Usage
 With the package installed you can now have access to all the features of this package. There are a few different areas to configure.
 
-##Database configuration
+## Database configuration
 The first thing to do is to add a new data connection in your ```database.php``` config file. The connections you specify here will be used in your FMModel classes to configure which databases each model will connect to.
 
 You may use the following code block below as a template.
@@ -95,7 +95,7 @@ Here is an example of setting this attribute to fields you may not want to write
 ### Container Fields
 This package supports both reading and writing container field data. Container fields are retrieved from FileMaker as attributes on your model which will contain a URL which can be used to retrieve the file from the container.
 
-When setting a container field you should set it as an Illuminate/HTTP/File object. These attributes will be written back to your container fields along with any other model updates when the `save()` method is called on your model object.
+When setting a container field you should set it as an `Illuminate/HTTP/File` object. These attributes will be written back to your container fields along with any other model updates when the `save()` method is called on your model object.
 
 It is important for the class to know which fields are container fields so that they can be handled appropriately. Any container fields should be listed in a `$containerFields` property of your model.
 
