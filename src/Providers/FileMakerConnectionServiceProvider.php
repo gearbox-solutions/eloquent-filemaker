@@ -32,7 +32,7 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
             return $app['fm']->connection();
         });
         $this->app->bind(FileMakerConnection::class, function ($app) {
-            return $app['fm'];
+            return $app['fm.connection'];
         });
 
 
