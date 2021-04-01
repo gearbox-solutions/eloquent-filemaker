@@ -16,19 +16,22 @@ abstract class FMModel extends Model
     use FMHasRelationships;
 
     /**
-     * Indicates if the IDs are auto-incrementing.
-     *
-     * @var bool
-     */
-    public $incrementing = false;
-
-    /**
-     * Indicates if the model should be timestamped.
+     * Indicates if the model should be timestamped. FileMaker usually does this automatically, so this defaults to false for FMModel objects.
      *
      * @var bool
      */
     public $timestamps = false;
+
+    /**
+     * FileMaker fields which should be renamed for the purposes of working in this Laravel app. This is useful when FileMaker fields have be inconveniently named.
+     * @var array
+     */
     protected $fieldMapping = [];
+
+    /**
+     * Fields which should not be attempted to be written back to FileMaker. This might be IDs, timestamps, summaries, or calculation fields.
+     * @var string[]
+     */
     protected $readOnlyFields = [
         'id',
         'creationTimestamp',
@@ -36,11 +39,35 @@ abstract class FMModel extends Model
         'modificationTimestamp',
         'modificationAccount',
     ];
-    protected $primaryKey = 'id';
+
+    /**
+     * The name of the database connection to be used from the database.php config file.
+     * @var
+     */
     protected $database;
+
+    /**
+     * The layout to be used when retrieving this model. This is equivalent to the standard laravel $table property and either one can be used.
+     * @var
+     */
     protected $layout;
+
+    /**
+     * The internal FileMaker record ID. This is not the primary key of the record used in relationships. This field is automatically updated when records are retrieved or saved.
+     * @var
+     */
     protected $recordId;
+
+    /**
+     * The internal FileMaker ModId which keeps track of the modification number of a particular FileMaker record. This value is automatically set when records are retrieved or saved.
+     * @var
+     */
     protected $modId;
+
+    /**
+     * A list of the container fields for this model. These containers need to be listed specifically so that they can have their data stored correctly as part of the save() method;
+     * @var array
+     */
     protected $containerFields = [];
 
     public function __construct(array $attributes = [])
