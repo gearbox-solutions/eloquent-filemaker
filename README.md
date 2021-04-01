@@ -37,7 +37,7 @@ The first thing to do is to add a new data connection in your ```database.php```
 
 You may use the following code block below as a template.
 
-        my-filemaker-connection' => [
+        'my-filemaker-connection' => [
             'driver' => 'filemaker',
             'host' => env('DB_HOST', 'fms.mycompany.com'),
             'database' => env('DB_DATABASE', 'MyFileName'),
@@ -58,8 +58,6 @@ The prefix configuration option adds a prefix to each of the layout/table names 
 It is good practice to create layouts specifically for the Data API to use, rather than using your regular GUI or developer layouts, which may be slow and have unnecessary fields on them. Creating layouts specifically for your web applications allows for you to optimize your Data API usage and maximize the performance of your web application. With this in mind, an easy way to manage these layout is to organize them together in a folder and give them all a prefix so that you can know what they are used for. 
 
 As an example, let's say you have three tables - Organizations, Contacts, and Invoices. You may way to create layouts for your web application, such as "dapi-organizations", "dapi-contacts" and "dapi-invoices". If you prefix them all with the same text you can set the prefix value so that you can refer to them as just "organizations", "contacts" and "invoices" in Laravel. If you name your model classes correctly following Laravel's naming guidelines you'll even be able to have the layouts automatically resolve for you and you won't have to enter them manually!
-
-
 
 ## Model Classes
 Creating model classes is the easiest way to access your FileMaker data, and is the most Laravel-like way of doing things. Create a new model class and change the extension class from `Model` to `FMModel`. This class change enables you to use the features of this package with your models.
@@ -121,7 +119,7 @@ The FM facade provides access to the `FMBaseQueryBuilder` class, which is also u
 
 With this package in place the `DB` facade will still work for queries against your FileMaker database for basic record queries like `DB::table('pets')->where('name', 'Cosmo')->first()`, but the `FM` facade will allow you to access more FileMaker-specific functionality, and should generally be used instead of `DB` for accessing your FileMaker data.
 
-Like the FMModel class and Eloquent builder, the goal is to support the same set of features as the `DB` facade so check out the [Laravel Query Builder Docuemntation](https://laravel.com/docs/8.x/queries) to see what the basic query builder features are.
+Like the FMModel class and Eloquent builder, the goal is to support the same set of features as the `DB` facade so check out the [Laravel Query Builder Documentation](https://laravel.com/docs/8.x/queries) to see what the basic query builder features are.
 
 ### FileMaker-specific Features in the FilMaker Query Builder and FM Facade
 
