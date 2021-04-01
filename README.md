@@ -24,10 +24,10 @@ This package lets you easily connect to your FileMaker database through the Data
 Laravel 6.0 or later.
 
 # Installation
-Install `bluefeathergroup\eloquent-filemaker` in your project using Composer.
+Install `bluefeather\eloquent-filemaker` in your project using Composer.
 
 ```
-composer require bluefeathergroup\eloquent-filemaker
+composer require bluefeather\eloquent-filemaker
 ```
 # Usage
 With the package installed you can now have access to all the features of this package. There are a few different areas to configure.
