@@ -181,7 +181,7 @@ class FileMakerConnection extends Connection
         $stream = fopen($file->getPathname(), 'r');
 
         $request = Http::attach('upload', $stream, $file->getFilename());
-        $response = $this->makeRequest('post', $url, [], $request)->json();
+        $response = $this->makeRequest('post', $url, [], $request);
 
         return $response;
     }
@@ -192,7 +192,7 @@ class FileMakerConnection extends Connection
         $this->setLayout($query->from);
         $url = $this->getRecordUrl() . $query->getRecordId();
 
-        $response = $this->makeRequest('get', $url)->json();
+        $response = $this->makeRequest('get', $url);
 
         return $response;
 
@@ -203,7 +203,7 @@ class FileMakerConnection extends Connection
         $this->setLayout($query->from);
         $url = $this->getRecordUrl() . $query->getRecordId();
 
-        $response = $this->makeRequest('delete', $url)->json();
+        $response = $this->makeRequest('delete', $url);
 
         return true;
     }
@@ -215,7 +215,7 @@ class FileMakerConnection extends Connection
 
         // duplicate the record
         $request = Http::withBody(null, 'application/json');
-        $response = $this->makeRequest('post', $url, [], $request)->json();
+        $response = $this->makeRequest('post', $url, [], $request);
 
         return $response;
     }
@@ -238,7 +238,7 @@ class FileMakerConnection extends Connection
 
         $postData = $this->buildPostDataFromQuery($query);
 
-        $response = $this->makeRequest('post', $url, $postData)->json();
+        $response = $this->makeRequest('post', $url, $postData);
 
         // Check for errors
         $this->checkResponseForErrors($response);
@@ -291,7 +291,7 @@ class FileMakerConnection extends Connection
             $queryParams['_sort'] = json_encode($query->sorts);
         }
 
-        $response = $this->makeRequest('get', $url, $queryParams)->json();
+        $response = $this->makeRequest('get', $url, $queryParams);
 
         return $response;
     }
@@ -320,7 +320,7 @@ class FileMakerConnection extends Connection
         // prepare all the post data
         $postData = $this->buildPostDataFromQuery($query);
 
-        $response = $this->makeRequest('patch', $url, $postData)->json();
+        $response = $this->makeRequest('patch', $url, $postData);
 
         return $response;
     }
@@ -338,7 +338,7 @@ class FileMakerConnection extends Connection
         // prepare all the post data
         $postData = $this->buildPostDataFromQuery($query);
 
-        $response = $this->makeRequest('post', $url, $postData)->json();
+        $response = $this->makeRequest('post', $url, $postData);
 
         return $response;
     }
@@ -414,7 +414,7 @@ class FileMakerConnection extends Connection
             $queryParams['script.param'] = $param;
         }
 
-        $response = $this->makeRequest('get', $url, $queryParams)->json();
+        $response = $this->makeRequest('get', $url, $queryParams);
 
         return $response;
     }
@@ -446,7 +446,7 @@ class FileMakerConnection extends Connection
     {
         $url = $this->getDatabaseUrl() . "/sessions/" . $this->sessionToken;
 
-        $response = $this->makeRequest('delete', $url)->json();
+        $response = $this->makeRequest('delete', $url);
 
         $this->forgetSessionToken();
 
@@ -476,7 +476,7 @@ class FileMakerConnection extends Connection
             'globalFields' => $globalFields
         ];
 
-        $response = $this->makeRequest('patch', $url, $data)->json();
+        $response = $this->makeRequest('patch', $url, $data);
 
         return $response;
     }
@@ -494,7 +494,7 @@ class FileMakerConnection extends Connection
         }
 
         $response = $request->withMiddleware($this->retryMiddleware())
-            ->{$method}($url, $params);
+            ->{$method}($url, $params)->json();
 
         // Check for errors
         $this->checkResponseForErrors($response);
@@ -533,6 +533,7 @@ class FileMakerConnection extends Connection
             }
 
             if ($response && $response->getStatusCode() !== 200) {
+                dd(json_encode($response));
                 $code = (int)Arr::first(Arr::pluck(Arr::get($response, 'messages'), 'code'));
                 if ($code === 952 && $retries <= 1) {
                     $refresh = true;
