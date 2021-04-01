@@ -20,10 +20,15 @@ This package lets you easily connect to your FileMaker database through the Data
 * Running scripts
 * And more!
 
-# Installation
-Install bluefeathergroup\eloquent-filemaker in your project using Composer.
+## Requirements
+Laravel 6.0 or later.
 
-```composer require bluefeathergroup\eloquent-filemaker```
+# Installation
+Install `bluefeathergroup\eloquent-filemaker` in your project using Composer.
+
+```
+composer require bluefeathergroup\eloquent-filemaker
+```
 # Usage
 With the package installed you can now have access to all the features of this package. There are a few different areas to configure.
 
@@ -75,7 +80,9 @@ Because this class extends Model, all of the regular eloquent methods may show a
 ### Setting a layout
 Your queries against your FileMaker database require you to get data from a particular layout. Eloquent-FileMaker supports Laravel's name guessing for tables, but in case your layout names don't match you can specify a layout name to use with your models by setting the `$layout` property on your model class.
 
-`protected $layout = 'MyLayout';`
+```
+protected $layout = 'MyLayout';
+```
 
 ### Read-only fields
 Many fields in your FileMaker database will be read-only, though you'll still want to get them when retrieving data from your database. FMModels will attempt to write all modified attributes back to your FileMaker database unless you specify that they should not be attempted. You can specify fields to NOT write back to FileMaker using the `$readOnlyFields` attribute on your model.
@@ -133,7 +140,8 @@ where `host` is the IP address or host name of the master machine running FileMa
 Here are a list of methods which will allow you to set the  parameters for the Data API features. Note that most of these can be chain-called, like with the standard query builder.
 
 #### Chainable
-```limit
+```
+limit
 offset
 script
 scriptParam
