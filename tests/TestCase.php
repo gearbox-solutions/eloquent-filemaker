@@ -51,6 +51,8 @@ class TestCase extends OchestraTestCase
 
         $app['config']->set('database.default', 'filemaker');
         $app['config']->set('database.connections.filemaker', $config['connections']['filemaker']);
+        $app['config']->set('database.connections.filemaker2', $config['connections']['filemaker2']);
+        $app['config']->set('database.connections.prefix', $config['connections']['prefix']);
 
         $app['config']->set('auth.model', 'User');
         $app['config']->set('auth.providers.users.model', 'User');
