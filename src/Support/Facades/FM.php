@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @method static FileMakerConnection connection(string $name = null)
- * @method static FMBaseBuilder performScript($script = null, $param = null)
+ * @method static array performScript($script = null, $param = null)
  * @method static FMBaseBuilder layout($layoutName)
  * @method static FMBaseBuilder table($layoutName)
  * @method static FMBaseBuilder recordId($recordId)
@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static FMBaseBuilder findByRecordId($recordId)
  * @method static FMBaseBuilder modId(int $modId)
  * @method static FMBaseBuilder portal($portalName)
+ *
  *
  * @see \Illuminate\Database\DatabaseManager
  * @see FileMakerConnection

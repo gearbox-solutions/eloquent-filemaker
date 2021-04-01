@@ -195,16 +195,6 @@ class FileMakerConnection extends Connection
         return $fieldData;
     }
 
-    public function saveContainers(FMModel $model, bool $checkModId = false)
-    {
-
-        // Store container fields
-        // Only attempt to write modified container fields
-        $modifiedContainerFields = array_intersect(array_keys($model->getDirty()), $model->getContainerFields());
-        foreach ($modifiedContainerFields as $containerField) {
-            $this->setContainer($model, $containerField, $model->getAttribute($containerField), $checkModId);
-        }
-    }
 
     public function uploadToContainerField(FMBaseBuilder $query)
     {
@@ -226,42 +216,6 @@ class FileMakerConnection extends Connection
         return $response;
     }
 
-    /**
-     * Sets a container field and returns a the record's new ModId
-     *
-     * @param FMModel $model
-     * @param string $field
-     * @param File $file
-     * @param bool $checkModId
-     * @throws FileMakerDataApiException
-     */
-    protected function setContainer(FMModel $model, string $field, File $file, bool $checkModId = false)
-    {
-        $this->login();
-        $url = $this->getRecordUrl() . $model->getRecordId() . '/containers/' . $field;
-
-        // append mod ID if requested
-        if ($checkModId) {
-            // append the mod ID as a query parameter to cause a validation error if the record has been modified
-            $url = $url . "?modId=" . $model->getModId();
-        }
-
-        // create a stream resource
-        $stream = fopen($file->getPathname(), 'r');
-        $response = Http::withToken($this->sessionToken)
-            ->attach('upload', $stream, $file->getFilename())
-            ->post($url)
-            ->json();
-        // Check for errors
-        $this->checkResponseForErrors($response);
-
-        // Get the newly created recordId and return it
-        $modId = $response['response']['modId'];
-
-        $model->setModId($modId);
-
-        return;
-    }
 
     public function getSingleRecordById(FMBaseBuilder $query)
     {
@@ -538,6 +492,16 @@ class FileMakerConnection extends Connection
         $this->checkResponseForErrors($response);
 
         return $response;
+    }
+
+    /**
+     * Alias for executeScript()
+     *
+     * @param FMBaseBuilder $query
+     * @return array|mixed
+     */
+    public function performScript(FMBaseBuilder $query){
+        return $this->executeScript($query);
     }
 
     protected function getSessionTokenCacheKey()

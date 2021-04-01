@@ -152,6 +152,10 @@ class FMBaseBuilder extends Builder
     ];
 
 
+    public $containerFieldName;
+    public $containerFile;
+
+
     /**
      * Create a new query builder instance.
      *
@@ -499,8 +503,6 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    public $containerFieldName;
-    public $containerFile;
 
     public function setContainer($column, File $file)
     {
