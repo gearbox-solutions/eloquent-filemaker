@@ -172,29 +172,6 @@ class FileMakerConnection extends Connection
         return $this->getDatabaseUrl() . '/layouts/' . $this->getLayout();
     }
 
-    protected function prepareFieldDataForFileMaker(FMModel $model)
-    {
-
-        $fieldData = collect($model->toArray());
-        $fieldMapping = $model->getFieldMapping();
-
-        // Only try field mapping if the user has specified a mapping
-        // otherwise map directly
-        if (!empty($fieldMapping)) {
-            // Translate Laravel model fields into FileMaker fields using the field mapping
-            $fieldData = collect($fieldMapping)->mapWithKeys(function ($key, $value) use ($fieldData, $fieldMapping) {
-                return [$value => $fieldData[$key] ?? null];
-            });
-        }
-
-        // Remove any fields which have been marked as read-only so we don't try to write and cause an error
-        $fieldData->forget($model->getReadOnlyFields());
-
-        // Remove any container fields
-        $fieldData->forget($model->getContainerFields());
-        return $fieldData;
-    }
-
 
     public function uploadToContainerField(FMBaseBuilder $query)
     {
