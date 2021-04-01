@@ -11,19 +11,15 @@ use Illuminate\Support\Facades\Facade;
 
 
 /**
+ *
+ * Executes against DatabaseManager. If DatabaseManager doesn't have the functionality, it uses __call to call against
+ * the connection, which would be a FileMakerConnection.
+ *
  * @method static FileMakerConnection connection(string $name = null)
  * @method static array performScript($script = null, $param = null)
+ * @method static array executeScript($script = null, $param = null)
  * @method static FMBaseBuilder layout($layoutName)
  * @method static FMBaseBuilder table($layoutName)
- * @method static FMBaseBuilder recordId($recordId)
- * @method static FMBaseBuilder script($scriptName)
- * @method static FMBaseBuilder scriptParam($param)
- * @method static FMBaseBuilder scriptPresort($name)
- * @method static FMBaseBuilder scriptPresortParam($param)
- * @method static FMBaseBuilder scriptPrerequest($name)
- * @method static FMBaseBuilder scriptPrerequestParam($param)
- * @method static FMBaseBuilder layoutResponse($name)
- * @method static FMBaseBuilder omit($boolean = true)
  * @method static FMBaseBuilder fieldData($array)
  * @method static FMBaseBuilder portalData($array)
  * @method static FMBaseBuilder setContainer($column, File $file)
