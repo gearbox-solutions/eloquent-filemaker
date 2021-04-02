@@ -3,7 +3,6 @@
 namespace BlueFeather\EloquentFileMaker\Providers;
 
 use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
 
 class FileMakerConnectionServiceProvider extends ServiceProvider
@@ -15,14 +14,12 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
      */
     public function register()
     {
-
         // extend DatabaseResolver to handle 'filemaker' as a driver and return a FileMakerConnection
         $this->app->resolving('db', function ($db) {
             $db->extend('filemaker', function ($config, $connectionName) {
                 return new FileMakerConnection($connectionName, $config['database'], $config['prefix'], $config);
             });
         });
-
 
         // register the FM facade
         $this->app->singleton('fm', function ($app) {
@@ -34,8 +31,6 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
         $this->app->bind(FileMakerConnection::class, function ($app) {
             return $app['fm.connection'];
         });
-
-
     }
 
     /**
