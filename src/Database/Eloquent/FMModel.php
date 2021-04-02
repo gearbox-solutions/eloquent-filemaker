@@ -315,13 +315,28 @@ abstract class FMModel extends Model
         $dirty = $this->getDirty();
 
         if (count($dirty) > 0) {
-            $this->newQuery()->setModel($this)->editRecord();
+            $query->editRecord();
+
             $this->syncChanges();
 
             $this->fireModelEvent('updated', false);
         }
 
         return true;
+    }
+
+    /**
+    /**
+     * Set the keys for a save update query.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function setKeysForSaveQuery($query)
+    {
+        $query->toBase()->recordId($this->recordId);
+
+        return $query;
     }
 
     /**
@@ -355,12 +370,8 @@ abstract class FMModel extends Model
             return true;
         }
 
-        $attributes = $this->prepareAttributesForFileMaker($attributes)->toArray();
+        $query->createRecord();
 
-        $response = $query->insert($attributes);
-        // inserting doesn't get us the ID back, so we have to set the record ID and re-query to get updates
-        $recordId = $response['response']['recordId'];
-        $this->setRecordId($recordId);
 
         // We will go ahead and set the exists property to true, so that it is set when
         // the created event is fired, just in case the developer tries to update it
@@ -377,13 +388,15 @@ abstract class FMModel extends Model
     /**
      * Strip out containers and read-only fields to prepare for a write query
      *
-     * @param FMModel $model
      * @return Collection
      */
-    protected function prepareAttributesForFileMaker($attributes)
+    public function getAttributesForFileMakerWrite()
     {
 
-        $fieldData = collect($attributes);
+        $fieldData = collect($this->getAttributes());
+
+        $fieldData = $fieldData->intersectByKeys($this->getDirty());
+
 
         // Remove any fields which have been marked as read-only so we don't try to write and cause an error
         $fieldData->forget($this->getReadOnlyFields());

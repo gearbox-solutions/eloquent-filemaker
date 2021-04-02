@@ -480,6 +480,11 @@ class FMBaseBuilder extends Builder
         return $response;
     }
 
+    public function createRecord(){
+        $response = $this->connection->createRecord($this);
+        return $response;
+    }
+
     /**
      * Set the field data to be used when creating or editing a record
      * @param $array array
@@ -520,9 +525,6 @@ class FMBaseBuilder extends Builder
      */
     public function insert(array $values)
     {
-        // Since every insert gets treated like a batch insert, we will make sure the
-        // bindings are structured in a way that is convenient when building these
-        // inserts statements by verifying these elements are actually an array.
         if (empty($values)) {
             return true;
         }

@@ -172,15 +172,17 @@ class FMEloquentBuilder extends Builder
     }
 
     /**
-     * Strip out containers and read-only fields to prepare for a write query
+     * Strip out containers, unmodified fields, and read-only fields to prepare for a write query
+     *
      *
      * @param FMModel $model
-     * @return Collection
+     * @return Collection A Collection of fields which need to be written to the database
      */
     protected function prepareFieldDataForFileMaker(FMModel $model)
     {
 
         $fieldData = collect($model->toArray());
+
 //        $fieldMapping = $model->getFieldMapping();
 //
 //        // Only try field mapping if the user has specified a mapping
@@ -192,6 +194,8 @@ class FMEloquentBuilder extends Builder
 //            });
 //        }
 
+        // Keep only modified fields
+        $fieldData = $fieldData->intersectByKeys($model->getDirty());
         // Remove any fields which have been marked as read-only so we don't try to write and cause an error
         $fieldData->forget($model->getReadOnlyFields());
 
@@ -202,18 +206,17 @@ class FMEloquentBuilder extends Builder
 
     public function editRecord()
     {
+        /** @var FMModel $model */
         $model = $this->model;
 
 
         // Map the columns to FileMaker fields and strip out read-only fields/containers
-        $editableFields = $this->prepareFieldDataForFileMaker($model);
+        $fieldsToWrite = $this->model->getAttributesForFileMakerWrite();
 
-        // Check if there's anything for us to modify on the record itself
-        $modifiedFields = array_intersect(array_keys($model->getDirty()), $editableFields->keys()->toArray());
-        if (sizeof($modifiedFields) > 0) {
+        if ($fieldsToWrite->count() > 0) {
             // we have some regular text fields to update
             // forward this request to a base query builder to execute the edit record request
-            $response = $this->query->fieldData($editableFields->toArray())->portalData($model->portalData)->recordId($model->getRecordId())->editRecord();
+            $response = $this->query->fieldData($fieldsToWrite->toArray())->portalData($model->portalData)->recordId($model->getRecordId())->editRecord();
 
             // update the model's mod ID from the response
             $this->model->setModId($this->getModIdFromFmResponse($response));
@@ -229,6 +232,48 @@ class FMEloquentBuilder extends Builder
         }
 
         return true;
+    }
+
+    public function createRecord(){
+        /** @var FMModel $model */
+        $model = $this->model;
+
+
+
+        // Map the columns to FileMaker fields and strip out read-only fields/containers
+        $fieldsToWrite = $this->model->getAttributesForFileMakerWrite();
+
+        // we always need to create the record, even if there are no regular or portal fields which have been set
+
+        // forward this request to a base query builder to execute the create record request
+        $response = $this->query->fieldData($fieldsToWrite->toArray())->portalData($model->portalData)->createRecord();
+
+        // Update the model's record ID from the response
+        $recordId = $response['response']['recordId'];
+        $this->model->setRecordId($recordId);
+        // update the model's mod ID from the response
+        $this->model->setModId($this->getModIdFromFmResponse($response));
+
+        // also set any container fields which have been set
+        // Only attempt to write modified container fields
+        $modifiedContainerFields = array_intersect(array_keys($model->getDirty()), $model->getContainerFields());
+        foreach ($modifiedContainerFields as $containerField) {
+            $eachResponse = $this->query->recordId($model->getRecordId())->setContainer($containerField, $model->getAttribute($containerField));
+            $this->model->setModId($this->getModIdFromFmResponse($eachResponse));
+        }
+
+        return true;
+    }
+
+    /**
+     * Update records in the database.
+     *
+     * @param  array  $values
+     * @return int
+     */
+    public function update(array $values)
+    {
+        return $this->editRecord();
     }
 
     protected function getModIdFromFmResponse($response)
