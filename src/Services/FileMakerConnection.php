@@ -483,9 +483,7 @@ class FileMakerConnection extends Connection
 
     protected function makeRequest($method, $url, $params = [], ?PendingRequest $request = null)
     {
-        if (!$this->sessionToken) {
-            $this->login();
-        }
+        $this->login();
 
         if ($request instanceof PendingRequest) {
             $request->withToken($this->sessionToken);
