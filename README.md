@@ -62,6 +62,7 @@ As an example, let's say you have three tables - Organizations, Contacts, and In
 ## Model Classes
 Creating model classes is the easiest way to access your FileMaker data, and is the most Laravel-like way of doing things. Create a new model class and change the extension class from `Model` to `FMModel`. This class change enables you to use the features of this package with your models.
 
+
 #### Things that work
 
 The FMModel class extends the base Laravel Model class, and can be used very similarly. It supports many standard Eloquent query builder features for working with data, such as where(), find(), id(), orderBy(), delete(), save(), and many more! 
@@ -83,19 +84,7 @@ protected $layout = 'MyLayout';
 ```
 
 ### Read-only fields
-Many fields in your FileMaker database will be read-only, though you'll still want to get them when retrieving data from your database. FMModels will attempt to write all modified attributes back to your FileMaker database unless you specify that they should not be attempted. You can specify fields to NOT write back to FileMaker using the `$readOnlyFields` attribute on your model.
-
-Here is an example of setting this attribute to fields you may not want to write:
-
-```
-    protected $readOnlyFields = [
-        'id',
-        'creationTimestamp',
-        'creationAccount',
-        'modificationTimestamp',
-        'modificationAccount',
-    ];
-```
+Many fields in your FileMaker database will be read-only, such as summaries and calculations, though you'll still want to get them when retrieving data from your database. FMModels will attempt to write all modified attributes back to your FileMaker database. If you write a read-only field, such as a calculation field, you will receive an error when attempting to write the field back to your FileMaker database.
 
 ### Container Fields
 This package supports both reading and writing container field data. Container fields are retrieved from FileMaker as attributes on your model which will contain a URL which can be used to retrieve the file from the container.
@@ -110,6 +99,35 @@ It is important for the class to know which fields are container fields so that 
     ];
 ```
 
+### Mapping FileMaker Fields
+Sometimes you might be working with a FileMaker database with inconvenient field names. These fields can be remapped to model attributes by setting the `$fieldMapping` attribute. This should be an array of strings, mapping FileMaker Field Name => New Attribute Name.
+
+
+#### Example FMModel Class
+```
+class Person extends FMModel
+{
+
+    protected $layout = "person";
+
+    // FileMaker Field Name => Model Attributes
+    protected $fieldMapping = [
+        'first name' => 'nameFirst',
+        'last name' => 'nameLast'
+    ];
+
+    // Array of FileMaker container fields
+    protected $containerFields = [
+        'photo'
+    ];
+
+    public function pets(){
+        return $this->hasMany(Pet::class);
+    }
+
+}
+
+```
 
 # The Base Query Builder and the FM Facade
 
@@ -137,8 +155,16 @@ where `host` is the IP address or host name of the master machine running FileMa
 
 Here are a list of methods which will allow you to set the  parameters for the Data API features. Note that most of these can be chain-called, like with the standard query builder.
 
+#### Start with
+```
+table
+connection
+layout (alias for table)
+```
+
 #### Chainable
 ```
+(standard query-builder stuff, like where, orderBy, etc)
 limit
 offset
 script
@@ -153,13 +179,23 @@ sort (alias for the native orderBy)
 omit
 fieldData
 portalData
-layout (alias for table)
 ```
 
 #### Final-chain-link methods
 ```
+(standard query-builder stuff, like get, first, etc.)
 findByRecordId
 performScript
 setContainer
 duplicate
+```
+
+#### Examples:
+```
+// A person named Jaina
+$person = FM::table('person')->where('nameFirst', 'Jaina')->first();
+```
+```
+// 10 most recent invoices
+$invoices = FM::layout('invoice')->where('customer_id', $customer->id)->orderByDesc('date')->limit(10)->get();
 ```
