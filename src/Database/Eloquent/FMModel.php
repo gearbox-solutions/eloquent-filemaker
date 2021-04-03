@@ -4,7 +4,6 @@ namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
 
 use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -17,6 +16,12 @@ abstract class FMModel extends Model
 
 
     /**
+     * The text format to use when saving/retrieving Date fields from FileMaker
+     * @var string
+     */
+    protected $dateFormat = 'n/d/Y G:i:s';
+
+    /**
      * Indicates if the model should be timestamped.
      *
      * @var bool
@@ -24,43 +29,44 @@ abstract class FMModel extends Model
     public $timestamps = false;
 
     /**
-     * FileMaker fields which should be renamed for the purposes of working in this Laravel app. This is useful when FileMaker fields have be inconveniently named.
+     * FileMaker fields which should be renamed for the purposes of working in this Laravel app. This is useful when
+     * FileMaker fields have be inconveniently named.
      * @var array
      */
     protected $fieldMapping = [];
 
     /**
-     * Fields which should not be attempted to be written back to FileMaker. This might be IDs, timestamps, summaries, or calculation fields.
+     * Fields which should not be attempted to be written back to FileMaker. This might be IDs, timestamps, summaries,
+     * or calculation fields.
      * @var string[]
      */
     protected $readOnlyFields = [
-        'id',
-        'creationTimestamp',
-        'creationAccount',
-        'modificationTimestamp',
-        'modificationAccount',
     ];
 
     /**
-     * The layout to be used when retrieving this model. This is equivalent to the standard laravel $table property and either one can be used.
+     * The layout to be used when retrieving this model. This is equivalent to the standard laravel $table property and
+     * either one can be used.
      * @var
      */
     protected $layout;
 
     /**
-     * The internal FileMaker record ID. This is not the primary key of the record used in relationships. This field is automatically updated when records are retrieved or saved.
+     * The internal FileMaker record ID. This is not the primary key of the record used in relationships. This field is
+     * automatically updated when records are retrieved or saved.
      * @var
      */
     protected $recordId;
 
     /**
-     * The internal FileMaker ModId which keeps track of the modification number of a particular FileMaker record. This value is automatically set when records are retrieved or saved.
+     * The internal FileMaker ModId which keeps track of the modification number of a particular FileMaker record. This
+     * value is automatically set when records are retrieved or saved.
      * @var
      */
     protected $modId;
 
     /**
-     * A list of the container fields for this model. These containers need to be listed specifically so that they can have their data stored correctly as part of the save() method;
+     * A list of the container fields for this model. These containers need to be listed specifically so that they can
+     * have their data stored correctly as part of the save() method;
      * @var array
      */
     protected $containerFields = [];
@@ -107,10 +113,10 @@ abstract class FMModel extends Model
             })->toArray();
         }
 
-        // fill in the data we've mapped and retrieved
+        // fill in the field data we've mapped and retrieved
         $instance = tap($instance)->forceFill($fieldData);
 
-        // fill in the data we've mapped and retrieved
+        // fill in the portal data we've mapped and retrieved
         $instance = tap($instance)->forceFill($portalData);
 
         $recordId = $record['recordId'];
@@ -135,7 +141,7 @@ abstract class FMModel extends Model
         $collection = collect([]);
 
         // return an empty collection if an empty collection was passed in.
-        if ($records->count() === 0){
+        if ($records->count() === 0) {
             return $collection;
         }
 
@@ -326,10 +332,10 @@ abstract class FMModel extends Model
     }
 
     /**
-    /**
+     *
      * Set the keys for a save update query.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     protected function setKeysForSaveQuery($query)
@@ -414,6 +420,81 @@ abstract class FMModel extends Model
     public function getTable()
     {
         return $this->layout ?? $this->table ?? Str::snake(Str::pluralStudly(class_basename($this)));
+    }
+
+    /**
+     * Convert a DateTime to a storable string.
+     *
+     * @param mixed $value
+     * @return string|null
+     */
+    public function fromDateTime($value)
+    {
+
+        $format = $this->getDateFormat();
+        // Check if this is just a date, and then use just the date part of the format to parse the date
+        $exploded = explode(' ', $format);
+        if (!str_contains($value, ' ')) {
+            $format = $exploded[0];
+        };
+
+        return empty($value) ? $value : $this->asDateTime($value)->format($format);
+    }
+
+    /**
+     * Set a given attribute on the model.
+     *
+     * @param string $key
+     * @param mixed $value
+     * @return mixed
+     */
+    public function setAttribute($key, $value)
+    {
+        // First we will check for the presence of a mutator for the set operation
+        // which simply lets the developers tweak the attribute as it is set on
+        // the model, such as "json_encoding" an listing of data for storage.
+        if ($this->hasSetMutator($key)) {
+            return $this->setMutatedAttributeValue($key, $value);
+        }
+
+        // If an attribute is listed as a "date", we'll convert it from a DateTime
+        // instance into a form proper for storage on the database tables using
+        // the connection grammar's date format. We will auto set the values.
+        elseif ($value && $this->isDateAttribute($key)) {
+            $value = $this->fromDateTime($value);
+
+            // When writing dates the regular datetime format won't work, so we have to get JUST the date value
+
+            if ($this->casts[$key] === 'date') {
+                $exploded = explode(' ', $value);
+                $value = $exploded[0];
+            }
+        }
+
+        if ($this->isClassCastable($key)) {
+            $this->setClassCastableAttribute($key, $value);
+
+            return $this;
+        }
+
+        if (!is_null($value) && $this->isJsonCastable($key)) {
+            $value = $this->castAttributeAsJson($key, $value);
+        }
+
+        // If this attribute contains a JSON ->, we'll set the proper value in the
+        // attribute's underlying array. This takes care of properly nesting an
+        // attribute in the array's value in the case of deeply nested items.
+        if (Str::contains($key, '->')) {
+            return $this->fillJsonAttribute($key, $value);
+        }
+
+        if (!is_null($value) && $this->isEncryptedCastable($key)) {
+            $value = $this->castAttributeAsEncryptedString($key, $value);
+        }
+
+        $this->attributes[$key] = $value;
+
+        return $this;
     }
 
 
