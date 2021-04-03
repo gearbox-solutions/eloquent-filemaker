@@ -102,6 +102,24 @@ It is important for the class to know which fields are container fields so that 
 ### Mapping FileMaker Fields
 Sometimes you might be working with a FileMaker database with inconvenient field names. These fields can be remapped to model attributes by setting the `$fieldMapping` attribute. This should be an array of strings, mapping FileMaker Field Name => New Attribute Name.
 
+### Casting FileMaker Timestamp and Date fields
+This package has special handling for casting FileMaker Timestamp and Date fields to Carbon instances for you. To take advantage of this, you must map the fields as you would with a native Laravel Model class. You can use the `$casts` property as you normally would for these attributes.
+
+```
+    protected $casts = [
+        'nextAppointment' => 'datetime',
+        'birthday' => 'date',
+    ];
+```
+
+The format Date and Timestamp fields should be set in the `$dateFormat` property of your model. This value must be compatible with the format output from the FileMaker Data API for Timestamp values and will be the format written back into your database. One important difference is that this must be a full timestamp format, not just a date format.
+
+Here are some example formats:
+```
+    protected $dateFormat = 'n/j/Y g:i:s A'; // 7/1/1920 4:01:01 PM
+    protected $dateFormat = 'n/j/Y G:i:s'; // 7/1/1920 16:01:01
+```
+
 
 #### Example FMModel Class
 ```
