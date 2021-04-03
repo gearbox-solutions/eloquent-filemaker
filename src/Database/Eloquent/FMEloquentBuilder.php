@@ -234,10 +234,10 @@ class FMEloquentBuilder extends Builder
         return true;
     }
 
-    public function createRecord(){
+    public function createRecord()
+    {
         /** @var FMModel $model */
         $model = $this->model;
-
 
 
         // Map the columns to FileMaker fields and strip out read-only fields/containers
@@ -268,7 +268,7 @@ class FMEloquentBuilder extends Builder
     /**
      * Update records in the database.
      *
-     * @param  array  $values
+     * @param array $values
      * @return int
      */
     public function update(array $values)
