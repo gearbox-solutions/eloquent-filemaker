@@ -179,6 +179,10 @@ class FMBaseBuilder extends Builder
     public function where($column, $operator = null, $value = null, $boolean = 'and'): FMBaseBuilder
     {
 
+        // This is an "orWhere" type query, so add a find request and then work from there
+        if ($boolean === 'or'){
+            $this->addFindRequest();
+        }
         // If the column is an array, we will assume it is an array of key-value pairs
         // and can add them each as a where clause. We will maintain the boolean we
         // received when the method was called and pass it into the nested where.
@@ -571,34 +575,17 @@ class FMBaseBuilder extends Builder
      */
     public function whereNull($columns, $boolean = 'and', $not = false)
     {
-        $this->where($columns, null);
-
+        if ($not){
+            // where NOT null
+            $this->where($columns, null, '*', $boolean);
+        } else{
+            // where null
+            $this->where($columns, null, '=', $boolean);
+        }
         return $this;
     }
 
-    /**
-     * Add an "or where null" clause to the query.
-     *
-     * @param string $column
-     * @return $this
-     */
-    public function orWhereNull($column)
-    {
-        $this->addFindRequest();
-        return $this->whereNull($column);
-    }
 
-    /**
-     * Add a "where not null" clause to the query.
-     *
-     * @param string|array $columns
-     * @param string $boolean
-     * @return $this
-     */
-    public function whereNotNull($columns, $boolean = 'and')
-    {
-        return $this->where($columns, "*");
-    }
 
     protected function addFindRequest()
     {
@@ -611,31 +598,10 @@ class FMBaseBuilder extends Builder
      */
     public function whereBetween($column, array $values, $boolean = 'and', $not = false)
     {
-        $this->where($column, $values[0] . "..." & $values[1]);
+        $this->where($column, null, $values[0] . "..." & $values[1], $boolean);
         return $this;
     }
 
-    /**
-     * Add an or where between statement to the query.
-     *
-     */
-    public function orWhereBetween($column, array $values)
-    {
-        $this->addFindRequest();
-        return $this->whereBetween($column, $values, 'or');
-    }
-
-    /**
-     * Add an "or where not null" clause to the query.
-     *
-     * @param string $column
-     * @return $this
-     */
-    public function orWhereNotNull($column)
-    {
-        $this->addFindRequest();
-        return $this->whereNotNull($column);
-    }
 
     public function modId(int $modId)
     {
