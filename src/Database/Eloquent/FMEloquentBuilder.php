@@ -344,7 +344,31 @@ class FMEloquentBuilder extends Builder
             'path' => Paginator::resolveCurrentPath(),
             'pageName' => $pageName,
         ]);
+    }
 
+    /**
+     *
+     * Retrieve the "count" result of the query.
+     *
+     * @param string $columns
+     * @return int
+     * @throws FileMakerDataApiException
+     */
+    public function count($columns = '*'): int
+    {
+        /** @var FMBaseBuilder $query */
+        $query = $this->query->limit(1);
+        try {
+            $response = $this->getQuery()->getConnection()->performFind($query);
+        } catch (FileMakerDataApiException $e) {
+            if ($e->getCode() == 401) {
+                $count = 0;
+            } else {
+                throw $e;
+            }
+        }
+        $count = $response['response']['dataInfo']['foundCount'];
+        return $count;
     }
 
 
