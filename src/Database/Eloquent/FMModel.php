@@ -272,22 +272,6 @@ abstract class FMModel extends Model
     }
 
     /**
-     * @return mixed
-     */
-    public function getDatabase()
-    {
-        return $this->database;
-    }
-
-    /**
-     * @param mixed $database
-     */
-    public function setDatabase($database): void
-    {
-        $this->database = $database;
-    }
-
-    /**
      * Create a new Eloquent query builder for the model.
      *
      * @param FMBaseBuilder $query
