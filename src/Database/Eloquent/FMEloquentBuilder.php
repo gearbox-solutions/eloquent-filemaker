@@ -213,10 +213,21 @@ class FMEloquentBuilder extends Builder
         // Map the columns to FileMaker fields and strip out read-only fields/containers
         $fieldsToWrite = $this->model->getAttributesForFileMakerWrite();
 
-        if ($fieldsToWrite->count() > 0) {
+
+        $modifiedPortals = null;
+        foreach($fieldsToWrite as $key => $value) {
+            // Check if the field is a portal (it should be an array if it is)
+            if (is_array($value)) {
+
+                $modifiedPortals[$key] = $this->getOnlyModifiedPortalFields($fieldsToWrite[$key], $this->model->getOriginal($key));
+                $fieldsToWrite->forget($key);
+            }
+        }
+
+        if ($fieldsToWrite->count() > 0 || sizeof($modifiedPortals ?? []) > 0) {
             // we have some regular text fields to update
             // forward this request to a base query builder to execute the edit record request
-            $response = $this->query->fieldData($fieldsToWrite->toArray())->portalData($model->portalData)->recordId($model->getRecordId())->editRecord();
+            $response = $this->query->fieldData($fieldsToWrite->toArray())->portalData($modifiedPortals)->recordId($model->getRecordId())->editRecord();
 
             // update the model's mod ID from the response
             $this->model->setModId($this->getModIdFromFmResponse($response));
@@ -369,6 +380,37 @@ class FMEloquentBuilder extends Builder
         }
         $count = $response['response']['dataInfo']['foundCount'];
         return $count;
+    }
+
+    /**
+     * Compares a model's modified portal data and original portal data and returns portal data with only modified fields and recordIds
+     *
+     * @param $array1 array The modified portal data
+     * @param $array2 array The model's original portal data
+     * @return array
+     */
+    protected function getOnlyModifiedPortalFields($array1, $array2): array
+    {
+        $result = [];
+        foreach($array1 as $key => $val) {
+            if($array2[$key] != $val){
+                // go recursive if we're comparing two arrays
+                if(is_array($val)  && is_array($array2[$key])){
+                    $result[$key] = $this->getOnlyModifiedPortalFields($val, $array2[$key]);
+                } else{
+                    // These are normal values, so compare directly
+                    $result[$key] = $val;
+                    // at least one field is modified, so also set the recordID if it isn't set yet
+                    if(!isset($result['recordId'])){
+                        $result['recordId'] = $array1['recordId'];
+                    }
+                }
+            } else {
+                // The values are equal
+            }
+        }
+
+        return $result;
     }
 
 
