@@ -3,7 +3,9 @@
 
 namespace BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns;
 
-use Illuminate\Support\Str;
+use BlueFeather\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 trait FMHasRelationships
 {
@@ -11,9 +13,9 @@ trait FMHasRelationships
     /**
      * Define a one-to-one relationship.
      *
-     * @param  string  $related
-     * @param  string|null  $foreignKey
-     * @param  string|null  $localKey
+     * @param string $related
+     * @param string|null $foreignKey
+     * @param string|null $localKey
      */
     public function hasOne($related, $foreignKey = null, $localKey = null)
     {
@@ -23,16 +25,16 @@ trait FMHasRelationships
 
         $localKey = $localKey ?: $this->getKeyName();
 
-        return $instance->where($foreignKey, $this->getAttribute($localKey))->first();
+        return $this->newHasOne($instance->newQuery(), $this, $foreignKey, $localKey);
     }
 
 
     /**
      * Define a one-to-many relationship.
      *
-     * @param  string  $related
-     * @param  string|null  $foreignKey
-     * @param  string|null  $localKey
+     * @param string $related
+     * @param string|null $foreignKey
+     * @param string|null $localKey
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function hasMany($related, $foreignKey = null, $localKey = null)
@@ -43,44 +45,25 @@ trait FMHasRelationships
 
         $localKey = $localKey ?: $this->getKeyName();
 
-        return $instance->where($foreignKey, $this->getAttribute($localKey))->get();
-
+        return $this->newHasMany(
+            $instance->newQuery(), $this, $foreignKey, $localKey
+        );
     }
 
     /**
-     * Define an inverse one-to-one or many relationship.
+     * Instantiate a new BelongsTo relationship.
      *
-     * @param  string  $related
-     * @param  string|null  $foreignKey
-     * @param  string|null  $ownerKey
-     * @param  string|null  $relation
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \Illuminate\Database\Eloquent\Model $child
+     * @param string $foreignKey
+     * @param string $ownerKey
+     * @param string $relation
      */
-    public function belongsTo($related, $foreignKey = null, $ownerKey = null, $relation = null)
+    protected function newBelongsTo(Builder $query, Model $child, $foreignKey, $ownerKey, $relation)
     {
-        // If no relation name was given, we will use this debug backtrace to extract
-        // the calling method's name and use that as the relationship name as most
-        // of the time this will be what we desire to use for the relationships.
-        if (is_null($relation)) {
-            $relation = $this->guessBelongsToRelation();
-        }
-
-        $instance = $this->newRelatedInstance($related);
-
-        // If no foreign key was supplied, we can use a backtrace to guess the proper
-        // foreign key name by using the name of the relationship function, which
-        // when combined with an "_id" should conventionally match the columns.
-        if (is_null($foreignKey)) {
-            $foreignKey = Str::snake($relation).'_'.$instance->getKeyName();
-        }
-
-        // Once we have the foreign key names, we'll just create a new Eloquent query
-        // for the related models and returns the relationship instance which will
-        // actually be responsible for retrieving and hydrating every relations.
-        $ownerKey = $ownerKey ?: $instance->getKeyName();
-
-        return $instance->where($ownerKey, $this->getAttribute($foreignKey))->first();
-
+        // custom version of this so we can return our own BelongsTo class with a custom constraint for FM
+        return new BelongsTo($query, $child, $foreignKey, $ownerKey, $relation);
     }
+
 
 }
