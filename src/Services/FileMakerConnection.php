@@ -338,6 +338,11 @@ class FileMakerConnection extends Connection
         // prepare all the post data
         $postData = $this->buildPostDataFromQuery($query);
 
+        // fieldData is required for create, so fill a blank value if none exists
+        if (!isset($postData['fieldData'])){
+            $postData['fieldData'] = json_decode("{}");
+        }
+
         $response = $this->makeRequest('post', $url, $postData);
 
         return $response;
