@@ -6,6 +6,7 @@ use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\File;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -64,12 +65,6 @@ abstract class FMModel extends Model
      */
     protected $modId;
 
-    /**
-     * A list of the container fields for this model. These containers need to be listed specifically so that they can
-     * have their data stored correctly as part of the save() method;
-     * @var array
-     */
-    protected $containerFields = [];
 
     public function __construct(array $attributes = [])
     {
@@ -249,10 +244,6 @@ abstract class FMModel extends Model
         return $newRecordId;
     }
 
-    public function getContainerFields()
-    {
-        return $this->containerFields;
-    }
 
 
     /**
@@ -391,9 +382,33 @@ abstract class FMModel extends Model
         // Remove any fields which have been marked as read-only so we don't try to write and cause an error
         $fieldData->forget($this->getReadOnlyFields());
 
-        // Remove any container fields
-        $fieldData->forget($this->getContainerFields());
+        // Remove any fields which have been set to write a file, as they should be handled as containers
+        foreach ($fieldData as $key => $field){
+            // remove any containers to be written.
+            if (is_a($field, File::class)){
+                $fieldData->forget($key);
+            }
+        }
+        //$fieldData->forget($this->getContainerFields());
         return $fieldData;
+    }
+
+    public function getContainersToWrite(){
+        // get dirty fields
+        $fieldData = collect($this->getAttributes());
+        $fieldData = $fieldData->intersectByKeys($this->getDirty());
+
+        $containers = collect([]);
+
+        // Track any fields which have been set to write a file, as they should be handled as containers
+        foreach ($fieldData as $key => $field){
+            // remove any containers to be written.
+            if (is_a($field, File::class)){
+                $containers->push($key);
+            }
+        }
+
+        return $containers;
     }
 
     /**

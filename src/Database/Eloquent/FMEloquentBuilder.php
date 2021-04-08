@@ -203,7 +203,7 @@ class FMEloquentBuilder extends Builder
 
         // also update any container fields which have changed
         // Only attempt to write modified container fields
-        $modifiedContainerFields = array_intersect(array_keys($model->getDirty()), $model->getContainerFields());
+        $modifiedContainerFields = $this->model->getContainersToWrite();
         foreach ($modifiedContainerFields as $containerField) {
             $eachResponse = $this->query->recordId($model->getRecordId())->setContainer($containerField, $model->getAttribute($containerField));
             $this->model->setModId($this->getModIdFromFmResponse($eachResponse));
@@ -234,7 +234,7 @@ class FMEloquentBuilder extends Builder
 
         // also set any container fields which have been set
         // Only attempt to write modified container fields
-        $modifiedContainerFields = array_intersect(array_keys($model->getDirty()), $model->getContainerFields());
+        $modifiedContainerFields = $this->model->getContainersToWrite();
         foreach ($modifiedContainerFields as $containerField) {
             $eachResponse = $this->query->recordId($model->getRecordId())->setContainer($containerField, $model->getAttribute($containerField));
             $this->model->setModId($this->getModIdFromFmResponse($eachResponse));
