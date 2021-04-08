@@ -19,7 +19,7 @@ class BelongsTo extends \Illuminate\Database\Eloquent\Relations\BelongsTo
             // of the related models matching on the foreign key that's on a parent.
             $table = $this->related->getTable();
 
-            $this->query->where($this->ownerKey, $this->child->{$this->foreignKey});
+            $this->query->where($this->ownerKey, '=', $this->child->{$this->foreignKey});
         }
     }
 }
