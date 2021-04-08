@@ -9,9 +9,9 @@ This package lets you easily connect to your FileMaker database through the Data
 * FMModel class
     * Extends the base Model class, allowing compatibility with many standard model features
     * Relationship support
-    * Container data handling
+    * Container data read/write
     * Automatic name/layout/table resolution
-    * Portal data support
+    * Portal data read/write
     * FileMaker -> Laravel field name remapping
 * Automatic authentication and session management
 * Eloquent query builder and base query builder
@@ -91,14 +91,6 @@ This package supports both reading and writing container field data. Container f
 
 When setting a container field you should set it as an `Illuminate/HTTP/File` object. These attributes will be written back to your container fields along with any other model updates when the `save()` method is called on your model object.
 
-It is important for the class to know which fields are container fields so that they can be handled appropriately. Any container fields should be listed in a `$containerFields` property of your model.
-
-```
-    protected $containerFields = [
-        'photo'
-    ];
-```
-
 ### Mapping FileMaker Fields
 Sometimes you might be working with a FileMaker database with inconvenient field names. These fields can be remapped to model attributes by setting the `$fieldMapping` attribute. This should be an array of strings, mapping FileMaker Field Name => New Attribute Name.
 
@@ -134,10 +126,6 @@ class Person extends FMModel
         'last name' => 'nameLast'
     ];
 
-    // Array of FileMaker container fields
-    protected $containerFields = [
-        'photo'
-    ];
 
     public function pets(){
         return $this->hasMany(Pet::class);
