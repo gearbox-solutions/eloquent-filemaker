@@ -307,9 +307,15 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    public function script($scriptName): FMBaseBuilder
+    public function script($name, $param = null): FMBaseBuilder
     {
-        $this->script = $scriptName;
+        $this->script = $name;
+
+        // set the script parameter if one was passed in
+        if ($param){
+            $this->scriptParam = $param;
+        }
+
         return $this;
     }
 
@@ -319,9 +325,15 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    public function scriptPresort($name): FMBaseBuilder
+    public function scriptPresort($name, $param = null): FMBaseBuilder
     {
         $this->scriptPresort = $name;
+
+        // set the script parameter if one was passed in
+        if ($param){
+            $this->scriptPresortParam = $param;
+        }
+
         return $this;
     }
 
@@ -331,9 +343,15 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    public function scriptPrerequest($name): FMBaseBuilder
+    public function scriptPrerequest($name, $param = null): FMBaseBuilder
     {
         $this->scriptPrerequest = $name;
+
+        // set the script parameter if one was passed in
+        if ($param){
+            $this->scriptPrerequestParam = $param;
+        }
+
         return $this;
     }
 
