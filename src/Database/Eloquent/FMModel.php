@@ -74,16 +74,6 @@ abstract class FMModel extends Model
     }
 
     /**
-     * Get a new query builder for the model's table.
-     *
-     */
-    public function newQuery()
-    {
-        return app(FMEloquentBuilder::class)->setModel($this);
-    }
-
-
-    /**
      * Create a model object from the returned FileMaker data
      *
      * @param array $record
