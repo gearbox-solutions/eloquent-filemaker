@@ -205,3 +205,30 @@ $person = FM::table('person')->where('nameFirst', 'Jaina')->first();
 // 10 most recent invoices
 $invoices = FM::layout('invoice')->where('customer_id', $customer->id)->orderByDesc('date')->limit(10)->get();
 ```
+
+## Relating Native Laravel models to FMModels
+It is possible to have relationships between native Laravel Model objects from your MySQL database and FMModels created from your FileMaker database. To do this, you will need to set up both connections in your `database.config` file and then make sure your models are pointing to the right connection by setting the `$connection` propety in your Model and FMModel classes.
+```
+protected $connection = 'theConnectionName';
+```
+
+Once they're set correctly, you can create relationships, such as a belongsTo, by manually creating a new eloquent-filemaker belongsTo object and setting the appropriate keys.
+
+Here is an example of setting a native Laravel User Model to belong to a FileMaker-based Company FMModel class. 
+
+User.php
+
+```
+    public function company()
+    {
+        return new \BlueFeather\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo(Company::query(), $this, 'company_id', 'id', '');
+    }
+
+```
+
+With this relationship created we can now get an FMModel of the Company the User belongs to like a normal relationship in a single database.
+
+```
+// set $company to a FMModel of the User's Company 
+$company = $user->company;
+```
