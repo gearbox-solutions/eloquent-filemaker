@@ -671,7 +671,7 @@ class FMBaseBuilder extends Builder
         }
 
         if ($param) {
-            $this->param = $param;
+            $this->scriptParam = $param;
         }
 
         $result = $this->connection->executeScript($this);
