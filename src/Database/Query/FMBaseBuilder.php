@@ -452,21 +452,15 @@ class FMBaseBuilder extends Builder
 
         $count = sizeof($this->wheres);
         if ($count == 0) {
-            $currentFind = collect([]);
+            $currentFind = [];
+            $count = 1;
         } else {
             $currentFind = $this->wheres[sizeof($this->wheres) - 1];
         }
 
-        if ($boolean = false) {
-            // the user is removing an omit which was already set
-            $currentFind->forget('omit');
-        } else {
-            // add the omit flag to the current find request
-            // we have to set it to the word 'true'
-            $currentFind->put('omit', 'true');
-        }
+        $currentFind['omit'] = $boolean ? 'true' : 'false';
 
-        $this->wheres[$count] = $currentFind;
+        $this->wheres[$count -1] = $currentFind;
 
         return $this;
     }
