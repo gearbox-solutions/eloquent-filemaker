@@ -67,7 +67,7 @@ Creating model classes is the easiest way to access your FileMaker data, and is 
 
 The FMModel class extends the base Laravel Model class, and can be used very similarly. It supports many standard Eloquent query builder features for working with data, such as where(), find(), id(), orderBy(), delete(), save(), and many more! 
 
-Model features like accessors and mutators are supported, as well as automatic table/layout name resolution, event triggers, observers, belogsTo, hasOne, and hasMany relationships, serialization (with protected attributes, etc), and as many other things as we can make sure are compatible.
+Model features like accessors and mutators are supported, as well as automatic table/layout name resolution, event triggers, observers, belongsTo, hasOne, and hasMany relationships, serialization (with protected attributes, etc), and as many other things as we can make sure are compatible.
 
 Our goal is to be able to use any of these Eloquent features which make sense, so this package will attempt to support as many as possible. Submit a pull request with an update or let us know if you think there's something not working which should be supported.
 
