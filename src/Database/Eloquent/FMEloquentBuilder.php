@@ -283,24 +283,19 @@ class FMEloquentBuilder extends Builder
 
         $perPage = $perPage ?: $this->model->getPerPage();
 
-//        $results = ($total = $this->toBase()->getCountForPagination())
-//            ? $this->forPage($page, $perPage)->get($columns)
-//            : $this->model->newCollection();
-
         /** @var FMBaseBuilder $query */
-        $query = $this->getQuery()->forPage($page, $perPage);
-
+        $query = $this->toBase()->forPage($page, $perPage);
 
         // prep items and total as null so we can handle 401 errors
-
         $total = null;
-        $items = null;
+        $results = null;
+
         // do the query and check for a 401. The query will 401 error if there are no rows which match the request
         try {
             $response = $this->getQuery()->getConnection()->performFind($query);
         } catch (FileMakerDataApiException $e) {
             if ($e->getCode() == 401) {
-                $items = collect([]);
+                $results = $this->model->newCollection();
                 $total = 0;
             } else {
                 throw $e;
@@ -308,17 +303,17 @@ class FMEloquentBuilder extends Builder
         }
 
         // We didn't get a 401 and have received a real response, so parse it for the paginator
-        if ($total === null && $items === null) {
+        if ($total === null && $results === null) {
 
             $total = $response['response']['dataInfo']['foundCount'];
 
             $records = collect($response['response']['data']);
 
             // start items as an empty array, but fill if the records
-            $items = $this->model->createModelsFromRecordSet($records);
+            $results = $this->model->createModelsFromRecordSet($records);
         }
 
-        return $this->paginator($items, $total, $perPage, $page, [
+        return $this->paginator($results, $total, $perPage, $page, [
             'path' => Paginator::resolveCurrentPath(),
             'pageName' => $pageName,
         ]);
