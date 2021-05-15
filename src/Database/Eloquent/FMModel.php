@@ -481,6 +481,11 @@ abstract class FMModel extends Model
             $value = $this->castAttributeAsEncryptedString($key, $value);
         }
 
+        // FileMaker can't handle true and false, so we need to change to 1 and 0
+        if (is_bool($value)){
+            $value = $value ? 1 : 0;
+        }
+
         $this->attributes[$key] = $value;
 
         return $this;
