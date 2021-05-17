@@ -412,25 +412,6 @@ abstract class FMModel extends Model
     }
 
     /**
-     * Convert a DateTime to a storable string.
-     *
-     * @param mixed $value
-     * @return string|null
-     */
-    public function fromDateTime($value)
-    {
-
-        $format = $this->getDateFormat();
-        // Check if this is just a date, and then use just the date part of the format to parse the date
-        $exploded = explode(' ', $format);
-        if (!str_contains($value, ' ')) {
-            $format = $exploded[0];
-        };
-
-        return empty($value) ? $value : $this->asDateTime($value)->format($format);
-    }
-
-    /**
      * Set a given attribute on the model.
      *
      * @param string $key
