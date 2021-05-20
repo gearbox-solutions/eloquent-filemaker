@@ -6,6 +6,7 @@ namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
 use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
@@ -107,31 +108,29 @@ class FMEloquentBuilder extends Builder
      * @param mixed $id
      * @return $this
      */
-    public function whereKey($id)
-    {
-        return $this->where($this->model->getKeyName(), $id);
-    }
-
-    /**
-     * Add a where clause on the primary key to the query.
-     *
-     * @param mixed $id
-     * @return $this
-     */
     public function whereKeyNot($id)
     {
-        return $this->where($this->model->getKeyName(), $id)->omit();
+
+        if (is_array($id) || $id instanceof Arrayable) {
+            $this->query->whereNotIn($this->model->getQualifiedKeyName(), $id);
+
+            return $this;
+        }
+
+        if ($id !== null && $this->model->getKeyType() === 'string') {
+            $id = (string) $id;
+        }
+
+        // If this is our first where clause we can add the omit directly
+        if (sizeof($this->wheres) === 0){
+            return $this->where($this->model->getKeyName(), $id)->omit();
+        }
+
+        // otherwise we need to add a find and omit
+        return $this->orWhere($this->model->getKeyName(), $id)->omit();
     }
 
 
-    /** Find a model by its primary key
-     *
-     * @param $id
-     */
-    public function find($id, $columns = ['*'])
-    {
-        return $this->where($this->model->getKeyName(), $id)->first();
-    }
 
     public function findByRecordId($recordId)
     {
