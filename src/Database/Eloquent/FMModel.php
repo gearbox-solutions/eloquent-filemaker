@@ -68,8 +68,11 @@ abstract class FMModel extends Model
 
     public function __construct(array $attributes = [])
     {
-        // FileMaker users tables, but the connections use layouts, so we'll use that as a standard
-        $this->setTable($this->layout ?? $this->table);
+        // Laravel uses tables normally, but FileMaker users layouts, so we'll let users set either one for clarity
+        // Set table if the user didn't set it and set $layout instead
+        if (!$this->table){
+            $this->setTable($this->layout);
+        }
         parent::__construct($attributes);
     }
 
@@ -408,7 +411,7 @@ abstract class FMModel extends Model
      */
     public function getTable()
     {
-        return $this->layout ?? $this->table ?? Str::snake(Str::pluralStudly(class_basename($this)));
+        return $this->table ?? $this->layout ?? Str::snake(Str::pluralStudly(class_basename($this)));
     }
 
     /**
@@ -477,5 +480,18 @@ abstract class FMModel extends Model
         return $this;
     }
 
+
+    /**
+     * Qualify the given column name by the model's table.
+     *
+     * @param  string  $column
+     * @return string
+     */
+    public function qualifyColumn($column)
+    {
+        // we shouldn't ever qualify columns because they could be related data
+        // so just return without the table
+        return $column;
+    }
 
 }
