@@ -497,7 +497,7 @@ class FileMakerConnection extends Connection
         }
 
         $response = $request->withMiddleware($this->retryMiddleware())
-            ->{$method}($url, $params)->json();
+            ->{$method}($url, $params)->throw()->json();
 
         // Check for errors
         $this->checkResponseForErrors($response);
@@ -537,7 +537,7 @@ class FileMakerConnection extends Connection
 
             $contents = $response->getBody()->getContents();
             $contents = json_decode($contents, true);
-            if ($response && $response->getStatusCode() !== 200) {
+            if ($response && $response->getStatusCode() !== 200 && $contents !== null) {
                 $code = (int)Arr::first(Arr::pluck(Arr::get($contents, 'messages'), 'code'));;
                 if ($code === 952 && $retries <= 1) {
                     $refresh = true;
