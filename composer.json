@@ -32,7 +32,8 @@
         "illuminate/database": "^7.0 || ^8.0",
         "illuminate/http": "^7.0 || ^8.0",
         "illuminate/pagination": "^7.0 || ^8.0",
-        "guzzlehttp/guzzle": "^7.3"
+        "guzzlehttp/guzzle": "^7.3",
+        "ext-json": "*"
     },
     "require-dev": {
         "orchestra/testbench": "^5.0 || ^6.0",
