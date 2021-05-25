@@ -197,14 +197,37 @@ duplicate
 ```
 
 #### Examples:
+Perform a find for a person named Jaina
 ```
-// A person named Jaina
 $person = FM::table('person')->where('nameFirst', 'Jaina')->first();
 ```
+
+Find the 10 most recent invoices for a customer
 ```
-// 10 most recent invoices
 $invoices = FM::layout('invoice')->where('customer_id', $customer->id)->orderByDesc('date')->limit(10)->get();
 ```
+
+Run a script
+```
+$result = FM::layout('MyLayoutName')->performScript('MyScriptName');
+```
+
+Run a script with JSON data as a parameter
+```
+$json = json_encode ([
+      'name' => 'Joe Smith',
+      'birthday' => '1/1/1970'
+      'favorite_color' => 'blue'
+]);
+
+$result = FM::layout('globals')->performScript('New Contact Request'; $json);
+```
+
+Perform a script on a database other than the default database connection
+```
+$result = FM::connection('MyOtherDatabaseConnectionName')->layout('MyLayoutName')->performScript('MyScriptName');
+```
+
 
 ## Relating Native Laravel models to FMModels
 It is possible to have relationships between native Laravel Model objects from your MySQL database and FMModels created from your FileMaker database. To do this, you will need to set up both connections in your `database.config` file and then make sure your models are pointing to the right connection by setting the `$connection` propety in your Model and FMModel classes.
