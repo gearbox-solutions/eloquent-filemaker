@@ -153,20 +153,25 @@ class FileMakerConnection extends Connection
     {
         $messages = Arr::get($response, 'messages', []);
 
-        foreach ($messages as $message) {
-            $code = (int)$message['code'];
+        if ($messages){
+            foreach ($messages as $message) {
+                $code = (int)$message['code'];
 
-            if ($code !== 0) {
-                switch ($code) {
-                    case 952:
-                        // API token is expired. We should expire it in the cache so it isn't used again.
-                        $this->forgetSessionToken();
-                        return;
-                    default:
-                        throw new FileMakerDataApiException($message['message'], $code);
+                if ($code !== 0) {
+                    switch ($code) {
+                        case 952:
+                            // API token is expired. We should expire it in the cache so it isn't used again.
+                            $this->forgetSessionToken();
+                            return;
+                        default:
+                            throw new FileMakerDataApiException($message['message'], $code);
+                    }
                 }
             }
+        } else{
+            $response->throw();
         }
+
     }
 
 
@@ -497,12 +502,14 @@ class FileMakerConnection extends Connection
         }
 
         $response = $request->withMiddleware($this->retryMiddleware())
-            ->{$method}($url, $params)->throw()->json();
+            ->{$method}($url, $params);
 
         // Check for errors
         $this->checkResponseForErrors($response);
 
-        return $response;
+        // Return the JSON response
+        $json = $response->json();
+        return $json;
     }
 
     public function setRetries($retries)
