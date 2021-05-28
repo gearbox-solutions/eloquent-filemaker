@@ -6,6 +6,8 @@ use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Http\File;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -335,16 +337,25 @@ abstract class FMModel extends Model
         // If the model has an incrementing key, we can use the "insertGetId" method on
         // the query builder, which will give us back the final inserted ID for this
         // table from the database. Not all tables have to be incrementing though.
-        $attributes = $this->getAttributes();
+        $attributes = $this->getAttributesForInsert();
+
+        if ($this->getIncrementing()) {
+            $query->createRecord();
+            // perform a refresh after the insert to get the generated primary key / ID and calculated data
+            $this->refresh();
+        }
 
         // If the table isn't incrementing we'll simply insert these attributes as they
         // are. These attribute arrays must contain an "id" column previously placed
         // there by the developer as the manually determined key for these models.
-        if (empty($attributes)) {
-            return true;
+        else {
+            if (empty($attributes)) {
+                return true;
+            }
+
+            $query->createRecord();
         }
 
-        $query->createRecord();
 
 
         // We will go ahead and set the exists property to true, so that it is set when
@@ -492,6 +503,31 @@ abstract class FMModel extends Model
         // we shouldn't ever qualify columns because they could be related data
         // so just return without the table
         return $column;
+    }
+    /**
+     * Reload the current model instance with fresh attributes from the database.
+     *
+     * @return $this
+     */
+    public function refresh()
+    {
+        // make sure we have a FileMaker internal recordId
+        if ($this->recordId === null) {
+            return $this;
+        }
+
+        $this->setRawAttributes(
+            $this->findByRecordId($this->recordId)->attributes
+        );
+
+        $this->load(collect($this->relations)->reject(function ($relation) {
+            return $relation instanceof Pivot
+                || (is_object($relation) && in_array(AsPivot::class, class_uses_recursive($relation), true));
+        })->keys()->all());
+
+        $this->syncOriginal();
+
+        return $this;
     }
 
 }
