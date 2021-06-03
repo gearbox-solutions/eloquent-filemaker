@@ -342,7 +342,9 @@ abstract class FMModel extends Model
         if ($this->getIncrementing()) {
             $query->createRecord();
             // perform a refresh after the insert to get the generated primary key / ID and calculated data
-            $this->refresh();
+            $this->setRawAttributes(
+                $this->findByRecordId($this->recordId)->attributes
+            );
         }
 
         // If the table isn't incrementing we'll simply insert these attributes as they
