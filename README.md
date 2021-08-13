@@ -194,6 +194,7 @@ findByRecordId
 performScript
 setContainer
 duplicate
+createRecord
 ```
 
 #### Examples:
@@ -226,6 +227,12 @@ $result = FM::layout('globals')->performScript('New Contact Request'; $json);
 Perform a script on a database other than the default database connection
 ```
 $result = FM::connection('MyOtherDatabaseConnectionName')->layout('MyLayoutName')->performScript('MyScriptName');
+```
+
+Create a record with an array of field data and then perform a script after record creation, within the same request
+```
+FM::layout('MyLayoutName')->script('ScriptName')->fieldData($data)->createRecord();
+
 ```
 
 
