@@ -37,7 +37,7 @@ The first thing to do is to add a new data connection in your ```database.php```
 
 You may use the following code block below as a template.
 
-        'my-filemaker-connection' => [
+        'filemaker' => [
             'driver' => 'filemaker',
             'host' => env('DB_HOST', 'fms.mycompany.com'),
             'database' => env('DB_DATABASE', 'MyFileName'),
