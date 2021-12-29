@@ -37,7 +37,7 @@ The first thing to do is to add a new data connection in your ```database.php```
 
 You may use the following code block below as a template.
 
-        'my-filemaker-connection' => [
+        'filemaker' => [
             'driver' => 'filemaker',
             'host' => env('DB_HOST', 'fms.mycompany.com'),
             'database' => env('DB_DATABASE', 'MyFileName'),
@@ -55,7 +55,7 @@ Sessions will be maintained on a per-connection basis and tokens will automatica
 #### Prefix
 The prefix configuration option adds a prefix to each of the layout/table names which you specify. You don't need to specify a prefix, but it can be very convenient to do so.
 
-It is good practice to create layouts specifically for the Data API to use, rather than using your regular GUI or developer layouts, which may be slow and have unnecessary fields on them. Creating layouts specifically for your web applications allows for you to optimize your Data API usage and maximize the performance of your web application. With this in mind, an easy way to manage these layout is to organize them together in a folder and give them all a prefix so that you can know what they are used for. 
+It is good practice to create layouts specifically for the Data API to use, rather than using your regular GUI or developer layouts, which may be slow and have unnecessary fields on them. Creating layouts specifically for your web applications allows for you to optimize your Data API usage and maximize the performance of your web application. With this in mind, an easy way to manage these layout is to organize them together in a folder and give them all a prefix so that you can know what they are used for.
 
 As an example, let's say you have three tables - Organizations, Contacts, and Invoices. You may way to create layouts for your web application, such as "dapi-organizations", "dapi-contacts" and "dapi-invoices". If you prefix them all with the same text you can set the prefix value so that you can refer to them as just "organizations", "contacts" and "invoices" in Laravel. If you name your model classes correctly following Laravel's naming guidelines you'll even be able to have the layouts automatically resolve for you and you won't have to enter them manually!
 
@@ -65,7 +65,7 @@ Creating model classes is the easiest way to access your FileMaker data, and is 
 
 #### Things that work
 
-The FMModel class extends the base Laravel Model class, and can be used very similarly. It supports many standard Eloquent query builder features for working with data, such as where(), find(), id(), orderBy(), delete(), save(), and many more! 
+The FMModel class extends the base Laravel Model class, and can be used very similarly. It supports many standard Eloquent query builder features for working with data, such as where(), find(), id(), orderBy(), delete(), save(), and many more!
 
 Model features like accessors and mutators are supported, as well as automatic table/layout name resolution, event triggers, observers, belongsTo, hasOne, and hasMany relationships, serialization (with protected attributes, etc), and as many other things as we can make sure are compatible.
 
@@ -91,8 +91,57 @@ This package supports both reading and writing container field data. Container f
 
 When setting a container field you should set it as an `Illuminate/HTTP/File` object. These attributes will be written back to your container fields along with any other model updates when the `save()` method is called on your model object.
 
-### Mapping FileMaker Fields
-Sometimes you might be working with a FileMaker database with inconvenient field names. These fields can be remapped to model attributes by setting the `$fieldMapping` attribute. This should be an array of strings, mapping FileMaker Field Name => New Attribute Name.
+### Renaming and Mapping FileMaker Fields
+Sometimes you might be working with a FileMaker database with inconvenient field names. These fields can be remapped to model attributes by setting the `$fieldMapping` attribute. This should be an array of strings, mapping FileMaker Field Name => New Attribute Name. You can then use these names as regular Eloquent attributes and they will work with the correct fields in FileMaker
+
+```
+protected $fieldMapping = [
+  'My Inconveniently Named Field' => 'a_much_better_name'
+];
+```
+
+and then you can get/set the attributes via....
+
+```
+ $myModel->a_much_better_name = 'my new value';
+```
+
+### Fields from related records
+If you have included fields from related records through relationships on your Data API layouts you will need to add a `$fieldMapping` property to be able to access your related data.
+
+For example, if you have a Person table with a one-to-one relationship to a record of the first car they owned:
+
+```
+protected $fieldMapping = [
+  'person_CARfirst::color' => 'first_car_color',
+  'person_CARfirst::make' => 'first_car_make',
+  'person_CARfirst::model' => 'first_car_model'
+];
+```
+
+The related data can be get/set just like any other attribute of the model. The data will be read from and written back to the first related record.
+
+```
+$personFirstCarColor = $person->first_car_color;
+```
+
+
+### Portal Data
+Portal data can be accessed as an attribute based on the portal's object name on your FileMaker Layout. Fields can be accessed using array keys of the field name.
+
+For example, if you have a portal on a layout whose object name is "person_pet_portal" based on the "person_PET" relationship you can access your portal data via an array of that attribute:
+
+```
+// Get the name of the first related Pet
+$firstPetName = $person->person_pet_portal[0]['person_PET::name'];
+```
+
+You can write back data to the portal the same way:
+```
+// Set the 'type' of the second related pet in the portal
+// $person->person_pet_portal[1]['person_PET::type'] = 'cat';
+```
+
 
 ### Casting FileMaker Timestamp and Date fields
 This package has special handling for casting FileMaker Timestamp and Date fields to Carbon instances for you. To take advantage of this, you must map the fields as you would with a native Laravel Model class. You can use the `$casts` property as you normally would for these attributes.
@@ -104,7 +153,7 @@ This package has special handling for casting FileMaker Timestamp and Date field
     ];
 ```
 
-The format Date and Timestamp fields should be set in the `$dateFormat` property of your model. This value must be compatible with the format output from the FileMaker Data API for Timestamp values and will be the format written back into your database. One important difference is that this must be a full timestamp format, not just a date format.
+The format Date and Timestamp fields written to FileMaker can be changed via the `$dateFormat` property of your model. This value must be compatible with the format output from the FileMaker Data API for Timestamp values and will be the format written back into your database. One important requirement is that this must be a full timestamp format, not just a date format.
 
 Here are some example formats:
 ```
@@ -113,17 +162,20 @@ Here are some example formats:
 ```
 
 
-#### Example FMModel Class
+## Example FMModel Class
 ```
 class Person extends FMModel
 {
 
     protected $layout = "person";
 
-    // FileMaker Field Name => Model Attributes
     protected $fieldMapping = [
         'first name' => 'nameFirst',
         'last name' => 'nameLast'
+    ];
+    
+    protected $casts = [
+        'birthday' => 'date',
     ];
 
 
@@ -149,9 +201,9 @@ Like the FMModel class and Eloquent builder, the goal is to support the same set
 
 In addition to the basic query builder features, the `FMBaseQueryBuilder` class, accessed through the `FM` facade or the FMModel eloquent builder has many new FileMaker-specific methods which are available.
 
-The FileMaker data API supports a number of parameters on requests for doing things like running scripts and passing parameters at different times in the query process. Check the [FileMaker Data API Guide](https://help.claris.com/en/data-api-guide) and more specifically, the Data API Reference Documentation to see which options each specific call supports. 
+The FileMaker data API supports a number of parameters on requests for doing things like running scripts and passing parameters at different times in the query process. Check the [FileMaker Data API Guide](https://help.claris.com/en/data-api-guide) and more specifically, the Data API Reference Documentation to see which options each specific call supports.
 
-The Data API Reference Documentation can be viewed on a running FileMaker server by following the instructions in the [API Guide](https://help.claris.com/en/data-api-guide/#reference-information) 
+The Data API Reference Documentation can be viewed on a running FileMaker server by following the instructions in the [API Guide](https://help.claris.com/en/data-api-guide/#reference-information)
 
 In general:
 
@@ -244,7 +296,7 @@ protected $connection = 'theConnectionName';
 
 Once they're set correctly, you can create relationships, such as a belongsTo, by manually creating a new eloquent-filemaker belongsTo object and setting the appropriate keys.
 
-Here is an example of setting a native Laravel User Model to belong to a FileMaker-based Company FMModel class. 
+Here is an example of setting a native Laravel User Model to belong to a FileMaker-based Company FMModel class.
 
 User.php
 
