@@ -250,7 +250,7 @@ class FMEloquentBuilder extends Builder
      */
     public function update(array $values)
     {
-        return $this->editRecord();
+        return $this->toBase()->update($values);
     }
 
     protected function getModIdFromFmResponse($response)

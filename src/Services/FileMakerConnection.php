@@ -331,6 +331,33 @@ class FileMakerConnection extends Connection
     }
 
     /**
+     * Attempt to emulate a sql update in FileMaker
+     *
+     * @param  FMBaseBuilder  $query
+     * @param  array  $bindings
+     * @return int
+     */
+    public function update($query, $bindings = [])
+    {
+        // find the records in the find request query
+        $findQuery = clone $query;
+        $findQuery->fieldData = null;
+        $results = $this->performFind($findQuery);
+
+        $records = $results['response']['data'];
+        foreach ($records as $record){
+            // update each record
+            $builder = new FMBaseBuilder($this);
+            $builder->recordId($record['recordId']);
+            $builder->fieldData = $query->fieldData;
+            $builder->layout($query->from);
+            $builder->editRecord();
+        }
+
+        return count($records);
+    }
+
+    /**
      * @param FMBaseBuilder $query
      * @return bool
      * @throws FileMakerDataApiException
