@@ -564,6 +564,21 @@ class FMBaseBuilder extends Builder
         return $response;
     }
 
+    /**
+     * Update records in the database.
+     *
+     * @param  array  $values
+     * @return int
+     */
+    public function update(array $values)
+    {
+        $this->applyBeforeQueryCallbacks();
+
+        $this->fieldData($values);
+
+        return $this->connection->update($this, null);
+    }
+
     public function layout($layoutName)
     {
         $this->from($layoutName);
