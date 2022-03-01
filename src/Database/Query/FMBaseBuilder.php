@@ -623,7 +623,7 @@ class FMBaseBuilder extends Builder
      * Add a where between statement to the query.
      *
      */
-    public function whereBetween($column, array $values, $boolean = 'and', $not = false)
+    public function whereBetween($column, iterable $values, $boolean = 'and', $not = false)
     {
         $this->where($column, null, $values[0] . "..." & $values[1], $boolean);
         return $this;
