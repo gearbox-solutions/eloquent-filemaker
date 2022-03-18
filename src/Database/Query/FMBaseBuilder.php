@@ -236,6 +236,10 @@ class FMBaseBuilder extends Builder
     {
         $this->recordId($recordId ?? $this->getRecordId());
 
+        // return 0 if there's no record ID, as we can't delete anything
+        // deleting nothing is supported normally, but should return a 0
+        if ($this->getRecordId() === null) return 0;
+
         return $this->connection->deleteRecord($this);
     }
 
