@@ -7,8 +7,6 @@ namespace BlueFeather\EloquentFileMaker\Database\Query;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Database\Query\Builder;
-use Illuminate\Database\Query\Grammars\Grammar;
-use Illuminate\Database\Query\Processors\Processor;
 use Illuminate\Http\File;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
@@ -156,21 +154,6 @@ class FMBaseBuilder extends Builder
     public $containerFile;
 
 
-    /**
-     * Create a new query builder instance.
-     *
-     * @param FileMakerConnection $connection
-     * @param \Illuminate\Database\Query\Grammars\Grammar|null $grammar
-     * @param \Illuminate\Database\Query\Processors\Processor|null $processor
-     * @return void
-     */
-    public function __construct(FileMakerConnection $connection,
-                                Grammar $grammar = null,
-                                Processor $processor = null)
-    {
-        $this->connection = $connection;
-    }
-
 
     /**
      * Add a basic where clause to the query.
@@ -219,28 +202,33 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    // convenience method for getting the first result of a find
-    public function first($columns = ['*'])
-    {
-        // set the limit so we don't query more than we need to
-        $result = $this->limit(1)->get()->first();
-        return $result;
-    }
-
     /**
      * Delete records from the database.
      *
      * @return int
+     * @throws FileMakerDataApiException
      */
     public function delete($recordId = null)
     {
-        $this->recordId($recordId ?? $this->getRecordId());
+        // If an ID is passed to the method we will delete the record with this internal FileMaker record ID
+        if (! is_null($recordId)) {
+            $this->recordId($recordId);
+        }
 
-        // return 0 if there's no record ID, as we can't delete anything
-        // deleting nothing is supported normally, but should return a 0
-        if ($this->getRecordId() === null) return 0;
+        $this->applyBeforeQueryCallbacks();
 
-        return $this->connection->deleteRecord($this);
+        try {
+            $this->connection->deleteRecord($this);
+        } catch (FileMakerDataApiException $e){
+            if ($e->getCode() === 101){
+                // no record was found to be deleted, return modified count of 0
+                return 0;
+            } else {
+                throw $e;
+            }
+        }
+        // we deleted the record, return modified count of 1
+        return 1;
     }
 
     /**
@@ -253,7 +241,8 @@ class FMBaseBuilder extends Builder
     }
 
     /**
-     * @param mixed $recordId
+     * Set the internal FileMaker Record ID to be used for these queries
+     * @param int $recordId
      */
     public function recordId($recordId)
     {
@@ -275,7 +264,8 @@ class FMBaseBuilder extends Builder
      * @param string $direction
      * @return $this
      */
-    public function sort($column, $direction = self::ASCEND){
+    public function sort($column, string $direction = self::ASCEND): FMBaseBuilder
+    {
         return $this->orderBy($column, $direction);
     }
 
@@ -289,7 +279,7 @@ class FMBaseBuilder extends Builder
 
     protected function appendSortOrder($column, $direction)
     {
-        array_push($this->sorts, ['fieldName' => $this->getMappedFieldName($column), 'sortOrder' => $direction]);
+        $this->sorts[] = ['fieldName' => $this->getMappedFieldName($column), 'sortOrder' => $direction];
     }
 
     /**
@@ -305,9 +295,9 @@ class FMBaseBuilder extends Builder
     }
 
 
-    public function offset($offset): FMBaseBuilder
+    public function offset($value): FMBaseBuilder
     {
-        $this->offset = $offset;
+        $this->offset = $value;
         return $this;
     }
 
@@ -388,26 +378,22 @@ class FMBaseBuilder extends Builder
             }
         }
         $records = collect($response['response']['data']);
+
+        // filter to only requested columns
+        if ($columns !== ['*']){
+            $records = $records->intersectByKeys(array_flip($columns));
+        }
         return $records;
     }
 
-    /**
-     * Get the database connection instance.
-     *
-     * @return FileMakerConnection
-     */
-    public function getConnection()
-    {
-        return $this->connection;
-    }
 
     /**
      * Gets the gets the name of the mapped FileMaker field for a particular column
      *
-     * @param $column
-     * @return mixed
+     * @param string $column
+     * @return string
      */
-    protected function getMappedFieldName($column)
+    protected function getMappedFieldName(string $column)
     {
         // remap the field name if the dev specified a mapping
         return array_flip($this->getFieldMapping())[$column] ?? $column;
@@ -419,7 +405,7 @@ class FMBaseBuilder extends Builder
      * @param $array array An array of columns and their values
      * @return array
      */
-    protected function mapFieldNamesForArray($array)
+    protected function mapFieldNamesForArray(array $array): array
     {
 
         $mappedArray = [];
@@ -441,7 +427,7 @@ class FMBaseBuilder extends Builder
     /**
      * @param array $fieldMapping
      */
-    public function setFieldMapping(array $fieldMapping): void
+    public function setFieldMapping($fieldMapping): void
     {
         $this->fieldMapping = $fieldMapping;
     }
@@ -449,9 +435,10 @@ class FMBaseBuilder extends Builder
     /**
      * Sets the current find request as an omit.
      * Optionally may pass false as a parameter to make a request NOT an omit if it was already set
-     *
+     * @param bool $boolean
+     * @return FMBaseBuilder
      */
-    public function omit($boolean = true)
+    public function omit($boolean = true): FMBaseBuilder
     {
 
         $count = sizeof($this->wheres);
@@ -473,6 +460,7 @@ class FMBaseBuilder extends Builder
      * Retrieve the minimum value of a given column.
      *
      * @param string $column
+     * @param string $direction
      * @return mixed
      */
     public function min($column, $direction = self::ASCEND)
@@ -494,12 +482,23 @@ class FMBaseBuilder extends Builder
         return $this->min($column, self::DESCEND);
     }
 
+    /**
+     * Edit the record and get the raw FileMaker Data API Response
+     *
+     * @throws FileMakerDataApiException
+     */
     public function editRecord()
     {
         $response = $this->connection->editRecord($this);
         return $response;
     }
 
+    /**
+     * Create a record and get the raw FileMaker Data API Response
+     *
+     * @return bool
+     * @throws FileMakerDataApiException
+     */
     public function createRecord(){
         $response = $this->connection->createRecord($this);
         return $response;
@@ -580,7 +579,7 @@ class FMBaseBuilder extends Builder
 
         $this->fieldData($values);
 
-        return $this->connection->update($this, null);
+        return $this->connection->update($this);
     }
 
     public function layout($layoutName)

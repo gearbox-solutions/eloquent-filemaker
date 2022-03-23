@@ -4,6 +4,7 @@ namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
 
 use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;
@@ -291,7 +292,16 @@ abstract class FMModel extends Model
         $dirty = $this->getDirty();
 
         if (count($dirty) > 0) {
-            $query->editRecord();
+            try {
+                $query->editRecord();
+            } catch (FileMakerDataApiException $e ){
+                // attempting to update and not actually modifying a record just returns a 0 by default to show no records were modified
+                // If we don't actually modify anything it isn't considered an error in Laravel and we just continue
+                if ($e->getCode() !== 101){
+                    // There was some error other than record missing, so throw it
+                    throw $e;
+                }
+            }
 
             $this->syncChanges();
 
@@ -305,8 +315,8 @@ abstract class FMModel extends Model
      *
      * Set the keys for a save update query.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param Builder $query
+     * @return Builder
      */
     protected function setKeysForSaveQuery($query)
     {
@@ -318,7 +328,7 @@ abstract class FMModel extends Model
     /**
      * Perform a model insert operation.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param Builder $query
      * @return bool
      */
     protected function performInsert(Builder $query)

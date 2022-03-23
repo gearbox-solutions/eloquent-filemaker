@@ -30,22 +30,6 @@ class FileMakerConnection extends Connection
     protected $retries = 1;
 
 
-    /**
-     * Create a new FileMakerConnection
-     * @param string $connectionName
-     * @param string $database
-     * @param string $tablePrefix
-     * @param array $config
-     */
-    public function __construct($connectionName, $database = '', $tablePrefix = '', $config = [])
-    {
-        // First we will setup the default properties. We keep track of the DB connection
-        // name we are connected to since it is needed when some reflective
-        // type commands are run such as checking whether a table exists.
-        $this->database = $connectionName;
-
-        $this->setConnection($connectionName, $config);
-    }
 
     /**
      * Set the name of the connected database.
@@ -316,6 +300,7 @@ class FileMakerConnection extends Connection
      * Edit a record in FileMaker
      *
      * @param FMBaseBuilder $query
+     * @throws FileMakerDataApiException
      */
     public function editRecord(FMBaseBuilder $query)
     {
@@ -339,23 +324,64 @@ class FileMakerConnection extends Connection
      */
     public function update($query, $bindings = [])
     {
+        // If there's no FM Record ID it means we need to find a set of records and then update the results
+        if (!$query->getRecordId()){
+            // There's no FileMaker Record ID
+            return $this->performFindAndUpdateResults($query);
+        }
+
+        // This is just a single record to edit
+        try{
+            // Do the update
+            $this->editRecord($query);
+        } catch (FileMakerDataApiException $e){
+            // Record is missing is ok for laravel functions
+            // Throw if it isn't error code 101, which is missing record
+            if ($e->getCode() !== 101){
+                throw $e;
+            }
+            // Error 101 - Record Not Found
+            // we didn't end up updating any records
+            return 0;
+        }
+        // one record has been edited
+        return 1;
+    }
+
+    /**
+     * @param FMBaseBuilder $query
+     * @return int
+     * @throws FileMakerDataApiException
+     */
+    protected function performFindAndUpdateResults(FMBaseBuilder $query){
         // find the records in the find request query
         $findQuery = clone $query;
         $findQuery->fieldData = null;
         $results = $this->performFind($findQuery);
 
         $records = $results['response']['data'];
+        $updatedCount = 0;
         foreach ($records as $record){
             // update each record
             $builder = new FMBaseBuilder($this);
             $builder->recordId($record['recordId']);
             $builder->fieldData = $query->fieldData;
             $builder->layout($query->from);
-            $builder->editRecord();
+            try{
+                // Do the update
+                $this->editRecord($builder);
+                // Upate if we don't get a record missing exception
+                $updatedCount++;
+            } catch (FileMakerDataApiException $e){
+                // Record is missing is ok for laravel functions
+                // Throw if it isn't error code 101, which is missing record
+                if ($e->getCode() !== 101){
+                    throw $e;
+                }
+            }
         }
 
-        return count($records);
-    }
+        return count($records);    }
 
     /**
      * @param FMBaseBuilder $query
@@ -518,6 +544,9 @@ class FileMakerConnection extends Connection
         return $response;
     }
 
+    /**
+     * @throws FileMakerDataApiException
+     */
     protected function makeRequest($method, $url, $params = [], ?PendingRequest $request = null)
     {
         $this->login();

@@ -62,7 +62,7 @@ class FMEloquentBuilder extends Builder
             $this->query->limit(1000000000000000000);
         }
 
-        $records = $this->query->get($this);
+        $records = $this->query->get();
         $models = $this->model->createModelsFromRecordSet($records);
         return $models;
     }
@@ -207,8 +207,6 @@ class FMEloquentBuilder extends Builder
             $eachResponse = $this->query->recordId($model->getRecordId())->setContainer($containerField, $model->getAttribute($containerField));
             $this->model->setModId($this->getModIdFromFmResponse($eachResponse));
         }
-
-        return true;
     }
 
     public function createRecord()
@@ -238,19 +236,6 @@ class FMEloquentBuilder extends Builder
             $eachResponse = $this->query->recordId($model->getRecordId())->setContainer($containerField, $model->getAttribute($containerField));
             $this->model->setModId($this->getModIdFromFmResponse($eachResponse));
         }
-
-        return true;
-    }
-
-    /**
-     * Update records in the database.
-     *
-     * @param array $values
-     * @return int
-     */
-    public function update(array $values)
-    {
-        return $this->toBase()->update($values);
     }
 
     protected function getModIdFromFmResponse($response)
