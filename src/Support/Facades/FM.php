@@ -6,7 +6,6 @@ namespace BlueFeather\EloquentFileMaker\Support\Facades;
 
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
-use Illuminate\Http\File;
 use Illuminate\Support\Facades\Facade;
 
 
