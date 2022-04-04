@@ -146,7 +146,12 @@ class FileMakerConnection extends Connection
                         case 952:
                             // API token is expired. We should expire it in the cache so it isn't used again.
                             $this->forgetSessionToken();
-                            return;
+                            break;
+                        case 105:
+                            // Layout is missing error
+                            // Add the layout name to the message for clarity
+                            $message = $message['message'] . ": " . $this->layout;
+                            throw new FileMakerDataApiException($message, $code);
                         default:
                             throw new FileMakerDataApiException($message['message'], $code);
                     }
