@@ -716,5 +716,27 @@ class FMBaseBuilder extends Builder
         $this->globalFields = $globals;
         return $this->connection->setGlobalFields($this);
     }
+    /**
+     * Retrieve the "count" result of the query.
+     *
+     * @param  string  $columns
+     * @return int
+     */
+    public function count($columns = '*')
+    {
+        $this->limit(1);
+        try {
+            $result = $this->connection->performFind($this);
+        } catch (FileMakerDataApiException $e){
+            if ($e->getCode() === 401){
+                // no records found - this is ok
+                // return 0
+                return 0;
+            }
+        }
+
+        $count = $result['response']['dataInfo']['foundCount'];
+        return (int) $count;
+    }
 
 }
