@@ -317,6 +317,7 @@ class FMEloquentBuilder extends Builder
         $query = $this->query->limit(1);
         try {
             $response = $this->getQuery()->getConnection()->performFind($query);
+            $count = $response['response']['dataInfo']['foundCount'];
         } catch (FileMakerDataApiException $e) {
             if ($e->getCode() == 401) {
                 $count = 0;
@@ -324,7 +325,6 @@ class FMEloquentBuilder extends Builder
                 throw $e;
             }
         }
-        $count = $response['response']['dataInfo']['foundCount'];
         return $count;
     }
 
