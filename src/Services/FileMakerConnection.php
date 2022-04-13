@@ -362,7 +362,16 @@ class FileMakerConnection extends Connection
         // find the records in the find request query
         $findQuery = clone $query;
         $findQuery->fieldData = null;
-        $results = $this->performFind($findQuery);
+        try {
+            $results = $this->performFind($findQuery);
+        } catch (FileMakerDataApiException $e){
+            if ($e->getCode() === 401){
+                // no records match request
+                // we should exit here
+                // return 0 to show that no records were updated;
+                return 0;
+            }
+        }
 
         $records = $results['response']['data'];
         $updatedCount = 0;
@@ -375,7 +384,7 @@ class FileMakerConnection extends Connection
             try{
                 // Do the update
                 $this->editRecord($builder);
-                // Upate if we don't get a record missing exception
+                // Update if we don't get a record missing exception
                 $updatedCount++;
             } catch (FileMakerDataApiException $e){
                 // Record is missing is ok for laravel functions
