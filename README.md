@@ -89,7 +89,21 @@ Many fields in your FileMaker database will be read-only, such as summaries and 
 ### Container Fields
 This package supports both reading and writing container field data. Container fields are retrieved from FileMaker as attributes on your model which will contain a URL which can be used to retrieve the file from the container.
 
-When setting a container field you should set it as an `Illuminate/HTTP/File` object. These attributes will be written back to your container fields along with any other model updates when the `save()` method is called on your model object.
+#### Writing to container fields
+When setting a container field you should set the value to be an `Illuminate/HTTP/File` or `Illuminate/HTTP/UploadedFile` object. These attributes will be written back to your container fields along with any other model updates when the `save()` method is called on your model object.
+```
+  $file = new File(storage_path('app/public/gator.jpg'));
+  $newPet->photo = $file;
+  $newPet->save();
+```
+
+#### Custom filenames when inserting files into containers
+By default, files are inserted into containers using the filename of the file you are inserting. If you wish to set a new filename when the file is inserted into the container you can do so by passing the file and filename together in an array when setting your container.
+```
+  $file = new File(storage_path('app/public/gator.jpg'));
+  $newPet->photo = [$file, 'fluffy.jpg'];
+  $newPet->save();
+```
 
 ### Renaming and Mapping FileMaker Fields
 Sometimes you might be working with a FileMaker database with inconvenient field names. These fields can be remapped to model attributes by setting the `$fieldMapping` attribute. This should be an array of strings, mapping FileMaker Field Name => New Attribute Name. You can then use these names as regular Eloquent attributes and they will work with the correct fields in FileMaker

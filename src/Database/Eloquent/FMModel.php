@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Http\File;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -401,11 +402,11 @@ abstract class FMModel extends Model
         // Remove any fields which have been set to write a file, as they should be handled as containers
         foreach ($fieldData as $key => $field){
             // remove any containers to be written.
-            if (is_a($field, File::class)){
+            // users can set the field to be a File, UploadFile, or array [$file, 'MyFile.pdf']
+            if ($this->isContainer($field)){
                 $fieldData->forget($key);
             }
         }
-        //$fieldData->forget($this->getContainerFields());
         return $fieldData;
     }
 
@@ -419,12 +420,22 @@ abstract class FMModel extends Model
         // Track any fields which have been set to write a file, as they should be handled as containers
         foreach ($fieldData as $key => $field){
             // remove any containers to be written.
-            if (is_a($field, File::class)){
+            if ($this->isContainer($field)){
                 $containers->push($key);
             }
         }
 
         return $containers;
+    }
+
+    protected function isContainer($field){
+        return
+            is_a($field, File::class) ||
+            is_a($field, UploadedFile::class) ||
+            (
+                is_array($field) &&
+                sizeof($field) === 2
+            );
     }
 
     /**

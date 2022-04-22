@@ -30,7 +30,6 @@ class FileMakerConnection extends Connection
     protected $retries = 1;
 
 
-
     /**
      * Set the name of the connected database.
      *
@@ -137,7 +136,7 @@ class FileMakerConnection extends Connection
     {
         $messages = Arr::get($response, 'messages', []);
 
-        if ($messages){
+        if ($messages) {
             foreach ($messages as $message) {
                 $code = (int)$message['code'];
 
@@ -157,7 +156,7 @@ class FileMakerConnection extends Connection
                     }
                 }
             }
-        } else{
+        } else {
             $response->throw();
         }
 
@@ -169,12 +168,24 @@ class FileMakerConnection extends Connection
         $this->setLayout($query->from);
         $url = $this->getRecordUrl() . $query->getRecordId() . '/containers/' . $query->containerFieldName;
 
-        $file = $query->containerFile;
+        /*
+         * The user can insert an array for the file to specify the file name, so we can check for that here
+         * The array should be in the format:
+         * [ $file, 'myFile.pdf' ]
+         */
+        if (is_array($query->containerFile)){
+            // we have a file and file name
+            $file = $query->containerFile[0];
+            $filename = $query->containerFile[1];
+        } else{
+            $file = $query->containerFile;
+            $filename = $file->getFilename();
+        }
 
         // create a stream resource
         $stream = fopen($file->getPathname(), 'r');
 
-        $request = Http::attach('upload', $stream, $file->getFilename());
+        $request = Http::attach('upload', $stream, $filename);
         $response = $this->makeRequest('post', $url, [], $request);
 
         return $response;
@@ -323,26 +334,26 @@ class FileMakerConnection extends Connection
     /**
      * Attempt to emulate a sql update in FileMaker
      *
-     * @param  FMBaseBuilder  $query
-     * @param  array  $bindings
+     * @param FMBaseBuilder $query
+     * @param array $bindings
      * @return int
      */
     public function update($query, $bindings = [])
     {
         // If there's no FM Record ID it means we need to find a set of records and then update the results
-        if (!$query->getRecordId()){
+        if (!$query->getRecordId()) {
             // There's no FileMaker Record ID
             return $this->performFindAndUpdateResults($query);
         }
 
         // This is just a single record to edit
-        try{
+        try {
             // Do the update
             $this->editRecord($query);
-        } catch (FileMakerDataApiException $e){
+        } catch (FileMakerDataApiException $e) {
             // Record is missing is ok for laravel functions
             // Throw if it isn't error code 101, which is missing record
-            if ($e->getCode() !== 101){
+            if ($e->getCode() !== 101) {
                 throw $e;
             }
             // Error 101 - Record Not Found
@@ -358,14 +369,15 @@ class FileMakerConnection extends Connection
      * @return int
      * @throws FileMakerDataApiException
      */
-    protected function performFindAndUpdateResults(FMBaseBuilder $query){
+    protected function performFindAndUpdateResults(FMBaseBuilder $query)
+    {
         // find the records in the find request query
         $findQuery = clone $query;
         $findQuery->fieldData = null;
         try {
             $results = $this->performFind($findQuery);
-        } catch (FileMakerDataApiException $e){
-            if ($e->getCode() === 401){
+        } catch (FileMakerDataApiException $e) {
+            if ($e->getCode() === 401) {
                 // no records match request
                 // we should exit here
                 // return 0 to show that no records were updated;
@@ -375,27 +387,28 @@ class FileMakerConnection extends Connection
 
         $records = $results['response']['data'];
         $updatedCount = 0;
-        foreach ($records as $record){
+        foreach ($records as $record) {
             // update each record
             $builder = new FMBaseBuilder($this);
             $builder->recordId($record['recordId']);
             $builder->fieldData = $query->fieldData;
             $builder->layout($query->from);
-            try{
+            try {
                 // Do the update
                 $this->editRecord($builder);
                 // Update if we don't get a record missing exception
                 $updatedCount++;
-            } catch (FileMakerDataApiException $e){
+            } catch (FileMakerDataApiException $e) {
                 // Record is missing is ok for laravel functions
                 // Throw if it isn't error code 101, which is missing record
-                if ($e->getCode() !== 101){
+                if ($e->getCode() !== 101) {
                     throw $e;
                 }
             }
         }
 
-        return count($records);    }
+        return count($records);
+    }
 
     /**
      * @param FMBaseBuilder $query
@@ -411,7 +424,7 @@ class FileMakerConnection extends Connection
         $postData = $this->buildPostDataFromQuery($query);
 
         // fieldData is required for create, so fill a blank value if none exists
-        if (!isset($postData['fieldData'])){
+        if (!isset($postData['fieldData'])) {
             $postData['fieldData'] = json_decode("{}");
         }
 

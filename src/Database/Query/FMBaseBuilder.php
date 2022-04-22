@@ -8,6 +8,7 @@ use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
@@ -528,7 +529,12 @@ class FMBaseBuilder extends Builder
     }
 
 
-    public function setContainer($column, File $file)
+    /**
+     * @param String $column The name of the container field
+     * @param File | UploadedFile | array $file The file to be uploaded to the container or a file and filename array ex: [$file, 'MyFile.pdf']
+     * @return mixed
+     */
+    public function setContainer($column, $file)
     {
         $this->containerFieldName = $this->getMappedFieldName($column);
         $this->containerFile = $file;
