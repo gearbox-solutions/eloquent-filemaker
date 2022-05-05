@@ -52,6 +52,10 @@ class FMEloquentBuilder extends Builder
         return $this;
     }
 
+    /**
+     * @return Collection
+     * @throws FileMakerDataApiException
+     */
     public function all()
     {
         // Set the limit if the user hasn't already set one
@@ -62,9 +66,7 @@ class FMEloquentBuilder extends Builder
             $this->query->limit(1000000000000000000);
         }
 
-        $records = $this->query->get();
-        $models = $this->model->createModelsFromRecordSet($records);
-        return $models;
+        return $this->get();
     }
 
 
