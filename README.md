@@ -1,4 +1,4 @@
-# Eloquent FileMaker
+# Eloquent-FileMaker
 Eloquent-FileMaker is a PHP package for Laravel to make working with FileMaker databases through the FileMaker Data API easier. The goal of this project is to provide as similar an interface for working with FileMaker records through the Data API as you would get with working with MySQL in native Laravel.
 
 This package lets you easily connect to your FileMaker database through the Data API and get record data as Laravel Models, with as many native features supported as possible.
@@ -211,7 +211,7 @@ With this package in place the `DB` facade will still work for queries against y
 
 Like the FMModel class and Eloquent builder, the goal is to support the same set of features as the `DB` facade so check out the [Laravel Query Builder Documentation](https://laravel.com/docs/8.x/queries) to see what the basic query builder features are.
 
-### FileMaker-specific Features in the FilMaker Query Builder and FM Facade
+### FileMaker-specific Features in the FileMaker Query Builder and FM Facade
 
 In addition to the basic query builder features, the `FMBaseQueryBuilder` class, accessed through the `FM` facade or the FMModel eloquent builder has many new FileMaker-specific methods which are available.
 
@@ -300,6 +300,21 @@ Create a record with an array of field data and then perform a script after reco
 FM::layout('MyLayoutName')->script('ScriptName')->fieldData($data)->createRecord();
 
 ```
+
+## Logging out, disconnecting, and ending your Data API session
+
+Eloquent-FileMaker attempts to automatically re-use session tokens by caching the session token between requests. This means that you will see the session remain open in your FileMaker Server admin console. It will be automatically disconnected by your server based on your server or database's disconnection settings.
+
+If you would like to manually log out and end your session you can do so either through the FM facade or through a model.
+
+```
+FM::connection()->disconnect();
+```
+ or
+```
+MyModel::getConnectionResolver()->connection()->disconnect();
+```
+
 
 
 ## Relating Native Laravel models to FMModels
