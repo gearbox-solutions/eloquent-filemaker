@@ -17,6 +17,7 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
         // extend DatabaseResolver to handle 'filemaker' as a driver and return a FileMakerConnection
         $this->app->resolving('db', function ($db) {
             $db->extend('filemaker', function ($config, $connectionName) {
+                $config['name'] = $connectionName;
                 return new FileMakerConnection($connectionName, $config['database'], $config['prefix'], $config);
             });
         });
