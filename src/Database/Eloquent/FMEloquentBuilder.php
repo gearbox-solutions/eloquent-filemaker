@@ -15,13 +15,6 @@ class FMEloquentBuilder extends Builder
 {
     use FMHasRelationships;
 
-
-    public function __construct(FMBaseBuilder $query)
-    {
-        Parent::__construct($query);
-    }
-
-
     /**
      * @return Collection
      * @throws FileMakerDataApiException
