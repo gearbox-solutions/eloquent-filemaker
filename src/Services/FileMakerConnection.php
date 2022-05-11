@@ -31,30 +31,6 @@ class FileMakerConnection extends Connection
 
 
     /**
-     * Set the name of the connected database.
-     *
-     * @param string $connection
-     * @return $this
-     */
-    public function setConnection($connection, $config = [])
-    {
-        if (!$config) {
-            $config = $this->getConnection($connection);
-        }
-
-        $this->config = Arr::add($config, 'name', $connection);
-
-        $this->tablePrefix = $this->getConfig('prefix');
-
-        return $this;
-    }
-
-    protected function getConnection($connection)
-    {
-        return config('database.connections')[$connection];
-    }
-
-    /**
      * @param String $layout
      * @return $this
      */
@@ -291,9 +267,9 @@ class FileMakerConnection extends Connection
         if ($query->limit > 0) {
             $queryParams['_limit'] = $query->limit;
         }
-        if (sizeof($query->sorts) > 0) {
+        if ($query->orders !== null && sizeof($query->orders) > 0) {
             // sort can have many values, so it needs to get json_encoded and passed as a single string
-            $queryParams['_sort'] = json_encode($query->sorts);
+            $queryParams['_sort'] = json_encode($query->orders);
         }
 
         $response = $this->makeRequest('get', $url, $queryParams);
@@ -446,7 +422,7 @@ class FileMakerConnection extends Connection
         // attribute => parameter
         $params = [
             'wheres' => 'query',
-            'sorts' => 'sort',
+            'orders' => 'sort',
             'script' => 'script',
             'scriptParam' => 'script.param',
             'scriptPrerequest' => 'script.prerequest',

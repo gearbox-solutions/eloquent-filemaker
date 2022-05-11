@@ -5,7 +5,6 @@ namespace BlueFeather\EloquentFileMaker\Database\Query;
 
 
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
-use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
@@ -14,13 +13,6 @@ use InvalidArgumentException;
 
 class FMBaseBuilder extends Builder
 {
-
-    /**
-     * The database connection instance.
-     *
-     * @var FileMakerConnection
-     */
-    public $connection;
 
     /**
      * The internal FileMaker Record ID to act on
@@ -33,29 +25,6 @@ class FMBaseBuilder extends Builder
      * @var array
      */
     protected $fieldMapping = [];
-
-    /**
-     * The collection of sort orders for the query
-     *
-     * @var array
-     */
-    public $sorts = [];
-
-
-    /**
-     * The maximum number of records to return.
-     * Default is 100 for the FileMaker data API
-     *
-     * @var int
-     */
-    public $limit;
-
-    /**
-     * The number of records to skip.
-     *
-     * @var int
-     */
-    public $offset;
 
     /**
      * The name of the FileMaker script to be run after the action specified by the API call and after the subsequent sort.
@@ -280,7 +249,7 @@ class FMBaseBuilder extends Builder
 
     protected function appendSortOrder($column, $direction)
     {
-        $this->sorts[] = ['fieldName' => $this->getMappedFieldName($column), 'sortOrder' => $direction];
+        $this->orders[] = ['fieldName' => $this->getMappedFieldName($column), 'sortOrder' => $direction];
     }
 
     /**
