@@ -3,6 +3,10 @@ Eloquent-FileMaker is a PHP package for Laravel to make working with FileMaker d
 
 This package lets you easily connect to your FileMaker database through the Data API and get record data as Laravel Models, with as many native features supported as possible.
 
+## Support
+
+This package is built and maintained by [Blue Feather](https://www.bluefeathergroup.com/). We build fantastic web apps with technologies like Laravel, Vue, React, and Node. If you would like assistance building your own web app, either using this package or other technologies, please [contact us](https://www.bluefeathergroup.com/contact/) for a free introductory consultation to discuss your project.
+
 ## Features
 * Uses the FileMaker Data API for accessing your FileMaker data
 * Support for accessing multiple files or with multiple sets of credentials
@@ -343,3 +347,6 @@ With this relationship created we can now get an FMModel of the Company the User
 // set $company to a FMModel of the User's Company 
 $company = $user->company;
 ```
+
+## License
+Eloquent-FileMaker is open-sourced software licensed under the MIT license.
