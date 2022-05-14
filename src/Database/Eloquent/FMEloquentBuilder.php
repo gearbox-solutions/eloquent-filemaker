@@ -118,11 +118,11 @@ class FMEloquentBuilder extends Builder
 
         // If this is our first where clause we can add the omit directly
         if (sizeof($this->wheres) === 0){
-            return $this->where($this->model->getKeyName(), $id)->omit();
+            return $this->where($this->model->getKeyName(), '==', $id)->omit();
         }
 
         // otherwise we need to add a find and omit
-        return $this->orWhere($this->model->getKeyName(), $id)->omit();
+        return $this->orWhere($this->model->getKeyName(), '==', $id)->omit();
     }
 
 

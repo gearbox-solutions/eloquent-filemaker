@@ -15,7 +15,7 @@ class HasMany extends \Illuminate\Database\Eloquent\Relations\HasMany
     public function addConstraints()
     {
         if (static::$constraints) {
-            $this->query->where($this->foreignKey, '=', $this->getParentKey());
+            $this->query->where($this->foreignKey, '==', $this->getParentKey());
         }
     }
 

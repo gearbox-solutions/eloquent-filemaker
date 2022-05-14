@@ -14,7 +14,7 @@ class HasOne extends \Illuminate\Database\Eloquent\Relations\HasOne
     public function addConstraints()
     {
         if (static::$constraints) {
-            $this->query->where($this->foreignKey, '=', $this->getParentKey());
+            $this->query->where($this->foreignKey, '==', $this->getParentKey());
         }
     }
 }
