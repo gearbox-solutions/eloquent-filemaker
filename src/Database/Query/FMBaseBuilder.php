@@ -603,7 +603,7 @@ class FMBaseBuilder extends Builder
      */
     public function whereBetween($column, iterable $values, $boolean = 'and', $not = false)
     {
-        $this->where($column, null, $values[0] . "..." & $values[1], $boolean);
+        $this->where($column, null, $values[0] . "..." . $values[1], $boolean);
         return $this;
     }
 
