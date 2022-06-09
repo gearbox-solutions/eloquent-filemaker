@@ -708,6 +708,9 @@ class FMBaseBuilder extends Builder
                 // return 0
                 return 0;
             }
+
+            // not a 401, so throw it
+             throw $e;
         }
 
         $count = $result['response']['dataInfo']['foundCount'];
