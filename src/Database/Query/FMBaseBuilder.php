@@ -123,7 +123,10 @@ class FMBaseBuilder extends Builder
     public $containerFieldName;
     public $containerFile;
 
-
+    public function whereIn($column, $values, $boolean = 'or', $not = false)
+    {
+        collect($values)->each(fn($value) => $this->where($column, $value, boolean: $boolean));
+    }
 
     /**
      * Add a basic where clause to the query.
