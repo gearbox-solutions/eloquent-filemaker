@@ -125,7 +125,7 @@ class FileMakerConnection extends Connection
                         case 105:
                             // Layout is missing error
                             // Add the layout name to the message for clarity
-                            $message = $message['message'] . ": " . $this->layout;
+                            $message = $message['message'] . ": " . $this->getLayout();
                             throw new FileMakerDataApiException($message, $code);
                         default:
                             throw new FileMakerDataApiException($message['message'], $code);
