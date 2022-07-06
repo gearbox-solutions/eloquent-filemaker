@@ -4,10 +4,12 @@
 namespace BlueFeather\EloquentFileMaker\Database\Query;
 
 
+use _PHPStan_59fb0a3b2\Symfony\Component\String\Exception\RuntimeException;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
@@ -122,6 +124,8 @@ class FMBaseBuilder extends Builder
 
     public $containerFieldName;
     public $containerFile;
+
+    protected $whereIns = [];
 
 
 
@@ -337,6 +341,8 @@ class FMBaseBuilder extends Builder
      */
     public function get($columns = ['*'])
     {
+        $this->computeWhereIns();
+
         // Run the query and catch a 401 error if there are no records found - just return an empty collection
         try {
             $response = $this->connection->performFind($this);
@@ -424,6 +430,51 @@ class FMBaseBuilder extends Builder
         $this->wheres[$count -1] = $currentFind;
 
         return $this;
+    }
+
+    public function whereIn($column, $values, $boolean = 'and', $not = false)
+    {
+        throw_if($boolean === 'or', new \RuntimeException('Eloquent FileMaker does not currently support or within a where in'));
+
+        $this->whereIns[] = [
+            'column' => $this->getMappedFieldName($column),
+            'values' => $values,
+            'boolean' => $boolean,
+            'not' => $not
+        ];
+    }
+
+    protected function computeWhereIns()
+    {
+        // If no where in clauses return
+        if(empty($this->whereIns)) {
+            return;
+        }
+
+        $whereIns = array_map(function($whereIn) {
+            $finds = [];
+
+            foreach($whereIn['values'] as $value) {
+                $find = [
+                    $whereIn['column'] => $value,
+                ];
+
+                if($whereIn['not']) {
+                    $find['omit'] = true;
+                }
+
+                $finds[] = $find;
+            }
+
+            return $finds;
+        }, $this->whereIns);
+
+        if(empty($this->wheres)) {
+            $this->wheres = Arr::flatten($whereIns, 1);
+            return;
+        }
+
+        $this->wheres = Arr::crossJoin($this->wheres, ...$whereIns);
     }
 
     /**

@@ -23,7 +23,15 @@ class FMEloquentBuilder extends Builder
     {
         $records = $this->tobase()->get();
         $models = $this->model->createModelsFromRecordSet($records);
-        return $models;
+
+        // If we actually found models we will also eager load any relationships that
+        // have been specified as needing to be eager loaded, which will solve the
+        // n+1 query issue for the developers to avoid running a lot of queries.
+        if (count($models) > 0) {
+            $models = $this->eagerLoadRelations($models->all());
+        }
+
+        return $this->getModel()->newCollection($models);
     }
 
 
