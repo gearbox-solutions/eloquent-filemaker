@@ -29,6 +29,8 @@ class FMEloquentBuilder extends Builder
         // n+1 query issue for the developers to avoid running a lot of queries.
         if (count($models) > 0) {
             $models = $this->eagerLoadRelations($models->all());
+        } else {
+            $models = $models->all();
         }
 
         return $this->getModel()->newCollection($models);
