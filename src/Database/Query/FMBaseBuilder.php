@@ -164,7 +164,7 @@ class FMBaseBuilder extends Builder
         // Create a new find array if null
         $count = sizeof($this->wheres);
         if ($count == 0) {
-            $currentFind = collect([]);
+            $currentFind = [];
         } else {
             $currentFind = $this->wheres[sizeof($this->wheres) - 1];
         }
