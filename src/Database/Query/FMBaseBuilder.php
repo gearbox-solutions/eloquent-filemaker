@@ -167,7 +167,8 @@ class FMBaseBuilder extends Builder
 
         $currentFind[$this->getMappedFieldName($column)] = $operator . $value;
 
-        $this->wheres[] = $currentFind;
+        // add the where clause KvP to the last item in the array of wheres
+        $this->wheres[$count > 1 ? $count - 1 : 0] = $currentFind;
 
         return $this;
     }
