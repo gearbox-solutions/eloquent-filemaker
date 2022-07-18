@@ -719,4 +719,14 @@ class FMBaseBuilder extends Builder
         return (int)$count;
     }
 
+    public function whereDate($column, $operator, $value = null, $boolean = 'and')
+    {
+
+        if ($operator instanceof DateTimeInterface) {
+            $operator = $operator->format('n/j/Y');
+        }
+
+        return $this->where($column, $operator, $value, $boolean);
+    }
+
 }
