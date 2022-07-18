@@ -116,13 +116,12 @@ class FMBaseBuilder extends Builder
      * @var string[]
      */
     public $operators = [
-        '=','==', '≠', '!', '<', '>', '<=', '≤', '>=', '≥', '~',
+        '=', '==', '≠', '!', '<', '>', '<=', '≤', '>=', '≥', '~',
     ];
 
 
     public $containerFieldName;
     public $containerFile;
-
 
 
     /**
@@ -133,7 +132,7 @@ class FMBaseBuilder extends Builder
     {
 
         // This is an "orWhere" type query, so add a find request and then work from there
-        if ($boolean === 'or'){
+        if ($boolean === 'or') {
             $this->addFindRequest();
         }
         // If the column is an array, we will assume it is an array of key-value pairs
@@ -181,7 +180,7 @@ class FMBaseBuilder extends Builder
     public function delete($recordId = null)
     {
         // If an ID is passed to the method we will delete the record with this internal FileMaker record ID
-        if (! is_null($recordId)) {
+        if (!is_null($recordId)) {
             $this->recordId($recordId);
         }
 
@@ -189,8 +188,8 @@ class FMBaseBuilder extends Builder
 
         try {
             $this->connection->deleteRecord($this);
-        } catch (FileMakerDataApiException $e){
-            if ($e->getCode() === 101){
+        } catch (FileMakerDataApiException $e) {
+            if ($e->getCode() === 101) {
                 // no record was found to be deleted, return modified count of 0
                 return 0;
             } else {
@@ -276,7 +275,7 @@ class FMBaseBuilder extends Builder
         $this->script = $name;
 
         // set the script parameter if one was passed in
-        if ($param){
+        if ($param) {
             $this->scriptParam = $param;
         }
 
@@ -294,7 +293,7 @@ class FMBaseBuilder extends Builder
         $this->scriptPresort = $name;
 
         // set the script parameter if one was passed in
-        if ($param){
+        if ($param) {
             $this->scriptPresortParam = $param;
         }
 
@@ -312,7 +311,7 @@ class FMBaseBuilder extends Builder
         $this->scriptPrerequest = $name;
 
         // set the script parameter if one was passed in
-        if ($param){
+        if ($param) {
             $this->scriptPrerequestParam = $param;
         }
 
@@ -350,7 +349,7 @@ class FMBaseBuilder extends Builder
         $records = collect($response['response']['data']);
 
         // filter to only requested columns
-        if ($columns !== ['*']){
+        if ($columns !== ['*']) {
             $records = $records->intersectByKeys(array_flip($columns));
         }
         return $records;
@@ -421,7 +420,7 @@ class FMBaseBuilder extends Builder
 
         $currentFind['omit'] = $boolean ? 'true' : 'false';
 
-        $this->wheres[$count -1] = $currentFind;
+        $this->wheres[$count - 1] = $currentFind;
 
         return $this;
     }
@@ -469,7 +468,8 @@ class FMBaseBuilder extends Builder
      * @return bool
      * @throws FileMakerDataApiException
      */
-    public function createRecord(){
+    public function createRecord()
+    {
         $response = $this->connection->createRecord($this);
         return $response;
     }
@@ -545,7 +545,7 @@ class FMBaseBuilder extends Builder
     /**
      * Update records in the database.
      *
-     * @param  array  $values
+     * @param array $values
      * @return int
      */
     public function update(array $values)
@@ -580,16 +580,15 @@ class FMBaseBuilder extends Builder
      */
     public function whereNull($columns, $boolean = 'and', $not = false)
     {
-        if ($not){
+        if ($not) {
             // where NOT null
             $this->where($columns, null, '*', $boolean);
-        } else{
+        } else {
             // where null
             $this->where($columns, null, '=', $boolean);
         }
         return $this;
     }
-
 
 
     protected function addFindRequest()
@@ -652,7 +651,8 @@ class FMBaseBuilder extends Builder
      * @param null $script
      * @param null $param
      */
-    public function executeScript($script = null, $param = null){
+    public function executeScript($script = null, $param = null)
+    {
         if ($script) {
             $this->script = $script;
         }
@@ -669,9 +669,9 @@ class FMBaseBuilder extends Builder
     /**
      * Prepare the value and operator for a where clause.
      *
-     * @param  string  $value
-     * @param  string  $operator
-     * @param  bool  $useDefault
+     * @param string $value
+     * @param string $operator
+     * @param bool $useDefault
      * @return array
      *
      * @throws \InvalidArgumentException
@@ -687,14 +687,16 @@ class FMBaseBuilder extends Builder
         return [$value, $operator];
     }
 
-    public function setGlobalFields(array $globals){
+    public function setGlobalFields(array $globals)
+    {
         $this->globalFields = $globals;
         return $this->connection->setGlobalFields($this);
     }
+
     /**
      * Retrieve the "count" result of the query.
      *
-     * @param  string  $columns
+     * @param string $columns
      * @return int
      */
     public function count($columns = '*')
@@ -702,19 +704,19 @@ class FMBaseBuilder extends Builder
         $this->limit(1);
         try {
             $result = $this->connection->performFind($this);
-        } catch (FileMakerDataApiException $e){
-            if ($e->getCode() === 401){
+        } catch (FileMakerDataApiException $e) {
+            if ($e->getCode() === 401) {
                 // no records found - this is ok
                 // return 0
                 return 0;
             }
 
             // not a 401, so throw it
-             throw $e;
+            throw $e;
         }
 
         $count = $result['response']['dataInfo']['foundCount'];
-        return (int) $count;
+        return (int)$count;
     }
 
 }
