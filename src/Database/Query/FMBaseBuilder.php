@@ -167,7 +167,7 @@ class FMBaseBuilder extends Builder
 
         $currentFind[$this->getMappedFieldName($column)] = $operator . $value;
 
-        $this->wheres[$count > 1 ? $count - 1 : 0] = $currentFind;
+        $this->wheres[] = $currentFind;
 
         return $this;
     }
