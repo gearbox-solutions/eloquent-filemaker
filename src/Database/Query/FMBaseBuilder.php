@@ -5,6 +5,7 @@ namespace BlueFeather\EloquentFileMaker\Database\Query;
 
 
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use DateTimeInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
