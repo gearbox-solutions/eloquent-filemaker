@@ -19,13 +19,6 @@ abstract class FMModel extends Model
 
     use FMHasRelationships;
 
-
-    /**
-     * The text format to use when saving/retrieving Date fields from FileMaker
-     * @var string
-     */
-    protected $dateFormat = 'n/j/Y g:i:s A';
-
     /**
      * Indicates if the model should be timestamped.
      *
