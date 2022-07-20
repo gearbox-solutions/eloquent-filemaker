@@ -188,8 +188,23 @@ class FMBaseBuilder extends Builder
 
         $this->applyBeforeQueryCallbacks();
 
+        // If no record ID is set, we execute the query like a Filemaker Find request, so we can delete the records one at a time
+        $records = null;
+        if(is_null($this->recordId)) {
+            $records = $this->get();
+        }
+
         try {
-            $this->connection->deleteRecord($this);
+            if ($records) {
+                // If no record ID was set, use the found set to delete records one at a time
+                foreach ($records as $record) {
+                    $this->recordId($record['fieldData']['id']);
+                    $this->connection->deleteRecord($this);
+                }
+            } else {
+                // Else we just delete as usual
+                $this->connection->deleteRecord($this);
+            }
         } catch (FileMakerDataApiException $e) {
             if ($e->getCode() === 101) {
                 // no record was found to be deleted, return modified count of 0
