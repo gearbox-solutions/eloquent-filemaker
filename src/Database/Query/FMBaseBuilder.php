@@ -198,8 +198,7 @@ class FMBaseBuilder extends Builder
             if ($records) {
                 // If no record ID was set, use the found set to delete records one at a time
                 foreach ($records as $record) {
-                    $this->recordId($record['fieldData']['id']);
-                    $this->connection->deleteRecord($this);
+                    $this->connection->deleteRecord($this->recordId($record['fieldData'][$this->defaultKeyName()]));
                 }
             } else {
                 // Else we just delete as usual
