@@ -176,17 +176,24 @@ class FMBaseBuilder extends Builder
     /**
      * Delete records from the database.
      *
+     * @param null $recordId
      * @return int
      * @throws FileMakerDataApiException
      */
-    public function delete($recordId = null)
+    public function delete($id = null): int
     {
         // If an ID is passed to the method we will delete the record with this internal FileMaker record ID
-        if (!is_null($recordId)) {
-            $this->recordId($recordId);
+        if (! is_null($id)) {
+            $this->where($this->defaultKeyName(), '=', $id);
+        }
+        $this->applyBeforeQueryCallbacks();
+
+        // Check if we have a record ID to delete or if this is a query for a bulk delete
+        if ($this->getRecordId() === null){
+            // There's no individual record ID to delete, so do a bulk delete
+            return $this->bulkDeleteFromQuery();
         }
 
-        $this->applyBeforeQueryCallbacks();
 
         try {
             $this->connection->deleteRecord($this);
@@ -200,6 +207,64 @@ class FMBaseBuilder extends Builder
         }
         // we deleted the record, return modified count of 1
         return 1;
+    }
+
+    /**
+     * Do a bulk delete from a where query
+     *
+     * @return int
+     * @throws FileMakerDataApiException
+     */
+    protected function bulkDeleteFromQuery(): int
+    {
+
+        $records = $this->get();
+        $deleteCount = 0;
+        foreach ($records as $record) {
+            try {
+                $recordId = $record['recordId'];
+                $this->deleteByRecordId($recordId);
+                // increment our delete counter if we didn't hit an exception
+                $deleteCount++;
+            } catch (FileMakerDataApiException $e) {
+                if ($e->getCode() === 101) {
+                    // no record was found to be deleted
+                    // continue on to the next record to attempt to delete without incrementing $deleteCount
+                } else {
+                    throw $e;
+                }
+            }
+        }
+        // Return the count of deleted records
+        return $deleteCount;
+
+    }
+
+    /**
+     * Delete a record using the internal FileMaker record ID
+     *
+     * @param $recordId
+     * @return int
+     * @throws FileMakerDataApiException
+     */
+    public function deleteByRecordId($recordId): int
+    {
+
+        $this->recordId = $recordId;
+
+        try {
+            $this->connection->deleteRecord($this);
+        } catch (FileMakerDataApiException $e) {
+            if ($e->getCode() === 101) {
+                // no record was found to be deleted, return modified count of 0
+                return 0;
+            } else {
+                throw $e;
+            }
+        }
+        // we deleted the record, return modified count of 1
+        return 1;
+
     }
 
     /**
