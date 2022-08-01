@@ -19,13 +19,6 @@ abstract class FMModel extends Model
 
     use FMHasRelationships;
 
-
-    /**
-     * The text format to use when saving/retrieving Date fields from FileMaker
-     * @var string
-     */
-    protected $dateFormat = 'n/j/Y g:i:s A';
-
     /**
      * Indicates if the model should be timestamped.
      *
@@ -428,14 +421,26 @@ abstract class FMModel extends Model
         return $containers;
     }
 
-    protected function isContainer($field){
-        return
-            is_a($field, File::class) ||
-            is_a($field, UploadedFile::class) ||
-            (
-                is_array($field) &&
-                sizeof($field) === 2
-            );
+    protected function isContainer($field)
+    {
+
+        // if this is a file then we know it's a container
+        if ($this->isFile($field)) {
+            return true;
+        }
+
+        // if it's an array, it could be a file => filename key-value pair.
+        // it's a conainer if the first object in the array is a file
+        if (is_array($field) && sizeof($field) === 2 && $this->isFile($field[0]) ){
+                return true;
+        }
+
+        return false;
+    }
+
+    protected function isFile($object){
+        return (is_a($object, File::class) ||
+        is_a($object, UploadedFile::class));
     }
 
     /**

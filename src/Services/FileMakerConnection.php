@@ -6,6 +6,7 @@ namespace BlueFeather\EloquentFileMaker\Services;
 
 use BlueFeather\EloquentFileMaker\Database\Eloquent\FMEloquentBuilder;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use BlueFeather\EloquentFileMaker\Database\Query\Grammars\FMGrammar;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
@@ -630,5 +631,10 @@ class FileMakerConnection extends Connection
         }, function () {
             return 0;
         });
+    }
+
+    protected function getDefaultQueryGrammar()
+    {
+        return new FMGrammar();
     }
 }

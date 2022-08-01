@@ -6,6 +6,7 @@ namespace BlueFeather\EloquentFileMaker\Database\Query;
 
 use _PHPStan_59fb0a3b2\Symfony\Component\String\Exception\RuntimeException;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use DateTimeInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
@@ -118,7 +119,7 @@ class FMBaseBuilder extends Builder
      * @var string[]
      */
     public $operators = [
-        '=','==', '≠', '!', '<', '>', '<=', '≤', '>=', '≥', '~',
+        '=', '==', '≠', '!', '<', '>', '<=', '≤', '>=', '≥', '~',
     ];
 
 
@@ -126,7 +127,6 @@ class FMBaseBuilder extends Builder
     public $containerFile;
 
     protected $whereIns = [];
-
 
 
     /**
@@ -137,7 +137,7 @@ class FMBaseBuilder extends Builder
     {
 
         // This is an "orWhere" type query, so add a find request and then work from there
-        if ($boolean === 'or'){
+        if ($boolean === 'or') {
             $this->addFindRequest();
         }
         // If the column is an array, we will assume it is an array of key-value pairs
@@ -171,6 +171,7 @@ class FMBaseBuilder extends Builder
 
         $currentFind[$this->getMappedFieldName($column)] = $operator . $value;
 
+        // add the where clause KvP to the last item in the array of wheres
         $this->wheres[$count > 1 ? $count - 1 : 0] = $currentFind;
 
         return $this;
@@ -179,22 +180,29 @@ class FMBaseBuilder extends Builder
     /**
      * Delete records from the database.
      *
+     * @param null $recordId
      * @return int
      * @throws FileMakerDataApiException
      */
-    public function delete($recordId = null)
+    public function delete($id = null): int
     {
         // If an ID is passed to the method we will delete the record with this internal FileMaker record ID
-        if (! is_null($recordId)) {
-            $this->recordId($recordId);
+        if (! is_null($id)) {
+            $this->where($this->defaultKeyName(), '=', $id);
+        }
+        $this->applyBeforeQueryCallbacks();
+
+        // Check if we have a record ID to delete or if this is a query for a bulk delete
+        if ($this->getRecordId() === null){
+            // There's no individual record ID to delete, so do a bulk delete
+            return $this->bulkDeleteFromQuery();
         }
 
-        $this->applyBeforeQueryCallbacks();
 
         try {
             $this->connection->deleteRecord($this);
-        } catch (FileMakerDataApiException $e){
-            if ($e->getCode() === 101){
+        } catch (FileMakerDataApiException $e) {
+            if ($e->getCode() === 101) {
                 // no record was found to be deleted, return modified count of 0
                 return 0;
             } else {
@@ -203,6 +211,64 @@ class FMBaseBuilder extends Builder
         }
         // we deleted the record, return modified count of 1
         return 1;
+    }
+
+    /**
+     * Do a bulk delete from a where query
+     *
+     * @return int
+     * @throws FileMakerDataApiException
+     */
+    protected function bulkDeleteFromQuery(): int
+    {
+
+        $records = $this->get();
+        $deleteCount = 0;
+        foreach ($records as $record) {
+            try {
+                $recordId = $record['recordId'];
+                $this->deleteByRecordId($recordId);
+                // increment our delete counter if we didn't hit an exception
+                $deleteCount++;
+            } catch (FileMakerDataApiException $e) {
+                if ($e->getCode() === 101) {
+                    // no record was found to be deleted
+                    // continue on to the next record to attempt to delete without incrementing $deleteCount
+                } else {
+                    throw $e;
+                }
+            }
+        }
+        // Return the count of deleted records
+        return $deleteCount;
+
+    }
+
+    /**
+     * Delete a record using the internal FileMaker record ID
+     *
+     * @param $recordId
+     * @return int
+     * @throws FileMakerDataApiException
+     */
+    public function deleteByRecordId($recordId): int
+    {
+
+        $this->recordId = $recordId;
+
+        try {
+            $this->connection->deleteRecord($this);
+        } catch (FileMakerDataApiException $e) {
+            if ($e->getCode() === 101) {
+                // no record was found to be deleted, return modified count of 0
+                return 0;
+            } else {
+                throw $e;
+            }
+        }
+        // we deleted the record, return modified count of 1
+        return 1;
+
     }
 
     /**
@@ -280,7 +346,7 @@ class FMBaseBuilder extends Builder
         $this->script = $name;
 
         // set the script parameter if one was passed in
-        if ($param){
+        if ($param) {
             $this->scriptParam = $param;
         }
 
@@ -298,7 +364,7 @@ class FMBaseBuilder extends Builder
         $this->scriptPresort = $name;
 
         // set the script parameter if one was passed in
-        if ($param){
+        if ($param) {
             $this->scriptPresortParam = $param;
         }
 
@@ -316,7 +382,7 @@ class FMBaseBuilder extends Builder
         $this->scriptPrerequest = $name;
 
         // set the script parameter if one was passed in
-        if ($param){
+        if ($param) {
             $this->scriptPrerequestParam = $param;
         }
 
@@ -356,7 +422,7 @@ class FMBaseBuilder extends Builder
         $records = collect($response['response']['data']);
 
         // filter to only requested columns
-        if ($columns !== ['*']){
+        if ($columns !== ['*']) {
             $records = $records->intersectByKeys(array_flip($columns));
         }
         return $records;
@@ -427,7 +493,7 @@ class FMBaseBuilder extends Builder
 
         $currentFind['omit'] = $boolean ? 'true' : 'false';
 
-        $this->wheres[$count -1] = $currentFind;
+        $this->wheres[$count - 1] = $currentFind;
 
         return $this;
     }
@@ -522,7 +588,8 @@ class FMBaseBuilder extends Builder
      * @return bool
      * @throws FileMakerDataApiException
      */
-    public function createRecord(){
+    public function createRecord()
+    {
         $response = $this->connection->createRecord($this);
         return $response;
     }
@@ -598,7 +665,7 @@ class FMBaseBuilder extends Builder
     /**
      * Update records in the database.
      *
-     * @param  array  $values
+     * @param array $values
      * @return int
      */
     public function update(array $values)
@@ -635,16 +702,15 @@ class FMBaseBuilder extends Builder
      */
     public function whereNull($columns, $boolean = 'and', $not = false)
     {
-        if ($not){
+        if ($not) {
             // where NOT null
             $this->where($columns, null, '*', $boolean);
-        } else{
+        } else {
             // where null
             $this->where($columns, null, '=', $boolean);
         }
         return $this;
     }
-
 
 
     protected function addFindRequest()
@@ -707,7 +773,8 @@ class FMBaseBuilder extends Builder
      * @param null $script
      * @param null $param
      */
-    public function executeScript($script = null, $param = null){
+    public function executeScript($script = null, $param = null)
+    {
         if ($script) {
             $this->script = $script;
         }
@@ -724,9 +791,9 @@ class FMBaseBuilder extends Builder
     /**
      * Prepare the value and operator for a where clause.
      *
-     * @param  string  $value
-     * @param  string  $operator
-     * @param  bool  $useDefault
+     * @param string $value
+     * @param string $operator
+     * @param bool $useDefault
      * @return array
      *
      * @throws \InvalidArgumentException
@@ -742,14 +809,16 @@ class FMBaseBuilder extends Builder
         return [$value, $operator];
     }
 
-    public function setGlobalFields(array $globals){
+    public function setGlobalFields(array $globals)
+    {
         $this->globalFields = $globals;
         return $this->connection->setGlobalFields($this);
     }
+
     /**
      * Retrieve the "count" result of the query.
      *
-     * @param  string  $columns
+     * @param string $columns
      * @return int
      */
     public function count($columns = '*')
@@ -757,19 +826,29 @@ class FMBaseBuilder extends Builder
         $this->limit(1);
         try {
             $result = $this->connection->performFind($this);
-        } catch (FileMakerDataApiException $e){
-            if ($e->getCode() === 401){
+        } catch (FileMakerDataApiException $e) {
+            if ($e->getCode() === 401) {
                 // no records found - this is ok
                 // return 0
                 return 0;
             }
 
             // not a 401, so throw it
-             throw $e;
+            throw $e;
         }
 
         $count = $result['response']['dataInfo']['foundCount'];
-        return (int) $count;
+        return (int)$count;
+    }
+
+    public function whereDate($column, $operator, $value = null, $boolean = 'and')
+    {
+
+        if ($operator instanceof DateTimeInterface) {
+            $operator = $operator->format('n/j/Y');
+        }
+
+        return $this->where($column, $operator, $value, $boolean);
     }
 
 }
