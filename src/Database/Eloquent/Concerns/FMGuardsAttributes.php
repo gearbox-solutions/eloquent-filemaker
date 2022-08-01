@@ -2,13 +2,15 @@
 
 namespace BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns;
 
+use Illuminate\Support\Facades\Cache;
+
 trait FMGuardsAttributes
 {
 
     /**
      * Determine if the given key is guarded.
      *
-     * @param  string  $key
+     * @param string $key
      * @return bool
      */
     public function isGuarded($key)
@@ -18,38 +20,58 @@ trait FMGuardsAttributes
         }
 
         return $this->getGuarded() == ['*'] ||
-            ! empty(preg_grep('/^'.preg_quote($key).'$/i', $this->getGuarded())) ||
-            ! $this->isGuardableColumn($key);
+            !empty(preg_grep('/^' . preg_quote($key) . '$/i', $this->getGuarded())) ||
+            !$this->isGuardableColumn($key);
     }
 
     /**
      * Determine if the given column is a valid, guardable column.
      *
-     * @param  string  $key
+     * @param string $key
      * @return bool
      */
     protected function isGuardableColumn($key)
     {
-        if (! isset(static::$guardableColumns[get_class($this)])) {
-            $columns = $this->getColumns();
+        $this->primeGuardableColumns();
+
+        if(in_array($key, static::$guardableColumns[get_class($this)])) {
+            return true;
+        }
+
+        $this->primeGuardableColumns(true);
+
+        return in_array($key, static::$guardableColumns[get_class($this)]);
+    }
+
+    protected function primeGuardableColumns($forceRefresh = false)
+    {
+        if (!isset(static::$guardableColumns[get_class($this)])) {
+            $columns = $this->getColumns($forceRefresh);
 
             if (empty($columns)) {
                 return true;
             }
             static::$guardableColumns[get_class($this)] = $columns;
         }
-
-        return in_array($key, static::$guardableColumns[get_class($this)]);
     }
 
 
+    protected function getColumns($forceRefresh = false): array
+    {
+        $cacheKey = "{$this->table}-columns";
+        $refreshCallback = function() {
+            $layoutMetaData = $this->getConnection()->getLayoutMetadata($this->table);
 
-    protected function getColumns(): array{
-        $layoutMetaData = $this->getConnection()->getLayoutMetadata($this->table);
-        $fieldMetaData = $layoutMetaData['fieldMetaData'];
-        $columns = array_column($fieldMetaData, 'name');
+            return array_column($layoutMetaData['fieldMetaData'], 'name');
+        };
 
-        return $columns;
+        if($forceRefresh) {
+            Cache::forever($cacheKey, $columns = $refreshCallback());
+
+            return $columns;
+        }
+
+        return Cache::rememberForever($cacheKey, $refreshCallback);
     }
 
 }
