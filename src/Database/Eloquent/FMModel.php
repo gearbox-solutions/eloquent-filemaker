@@ -16,7 +16,6 @@ use Illuminate\Support\Str;
 
 abstract class FMModel extends Model
 {
-
     use FMHasRelationships;
 
     /**
@@ -29,6 +28,7 @@ abstract class FMModel extends Model
     /**
      * FileMaker fields which should be renamed for the purposes of working in this Laravel app. This is useful when
      * FileMaker fields have be inconveniently named.
+     *
      * @var array
      */
     protected $fieldMapping = [];
@@ -36,6 +36,7 @@ abstract class FMModel extends Model
     /**
      * Fields which should not be attempted to be written back to FileMaker. This might be IDs, timestamps, summaries,
      * or calculation fields.
+     *
      * @var string[]
      */
     protected $readOnlyFields = [
@@ -44,6 +45,7 @@ abstract class FMModel extends Model
     /**
      * The layout to be used when retrieving this model. This is equivalent to the standard laravel $table property and
      * either one can be used.
+     *
      * @var
      */
     protected $layout;
@@ -51,6 +53,7 @@ abstract class FMModel extends Model
     /**
      * The internal FileMaker record ID. This is not the primary key of the record used in relationships. This field is
      * automatically updated when records are retrieved or saved.
+     *
      * @var
      */
     protected $recordId;
@@ -58,16 +61,16 @@ abstract class FMModel extends Model
     /**
      * The internal FileMaker ModId which keeps track of the modification number of a particular FileMaker record. This
      * value is automatically set when records are retrieved or saved.
+     *
      * @var
      */
     protected $modId;
-
 
     public function __construct(array $attributes = [])
     {
         // Laravel uses tables normally, but FileMaker users layouts, so we'll let users set either one for clarity
         // Set table if the user didn't set it and set $layout instead
-        if (!$this->table){
+        if (! $this->table) {
             $this->setTable($this->layout);
         }
         parent::__construct($attributes);
@@ -76,7 +79,7 @@ abstract class FMModel extends Model
     /**
      * Create a model object from the returned FileMaker data
      *
-     * @param array $record
+     * @param  array  $record
      * @return FMModel
      */
     public static function createFromRecord($record)
@@ -91,7 +94,7 @@ abstract class FMModel extends Model
         $fieldMapping = $instance->getFieldMapping();
 
         // Only do field mapping if one has been defined
-        if (!empty($fieldMapping)) {
+        if (! empty($fieldMapping)) {
             // Fill the attributes from fieldMapping with the fieldData retrieved from FileMaker
             $fieldData = collect($fieldData)->mapWithKeys(function ($value, $key) use ($fieldMapping) {
                 return [$fieldMapping[$key] ?? $key => $value];
@@ -111,12 +114,12 @@ abstract class FMModel extends Model
         $instance->exists = true;
         // Sync the original data array so we know if it's been modified
         $instance->syncOriginal();
-        return $instance;
 
+        return $instance;
     }
 
     /**
-     * @param Collection $records
+     * @param  Collection  $records
      * @return Collection
      */
     public static function createModelsFromRecordSet(Collection $records): Collection
@@ -139,7 +142,6 @@ abstract class FMModel extends Model
         return $collection;
     }
 
-
     /** Fill in data for this existing model with record data from FileMaker
      * @param $record
      * @return FMModel
@@ -153,7 +155,7 @@ abstract class FMModel extends Model
         $fieldMapping = $this->getFieldMapping();
 
         // Only do field mapping if one has been defined
-        if (!empty($fieldMapping)) {
+        if (! empty($fieldMapping)) {
             // Fill the attributes from fieldMapping with the fieldData retrieved from FileMaker
             $fieldData = collect($fieldData)->mapWithKeys(function ($value, $key) use ($fieldMapping) {
                 return [$fieldMapping[$key] ?? $key => $value];
@@ -168,8 +170,8 @@ abstract class FMModel extends Model
 
         // Sync the original data array so we know if it's been modified
         $this->syncOriginal();
-        return $this;
 
+        return $this;
     }
 
     public function getRecordId()
@@ -191,7 +193,7 @@ abstract class FMModel extends Model
     }
 
     /**
-     * @param int $modId
+     * @param  int  $modId
      */
     public function setModId($modId): void
     {
@@ -225,7 +227,6 @@ abstract class FMModel extends Model
             return false;
         }
 
-
         $response = $this->newQuery()->duplicate();
         // Get the newly created recordId and return it
         $newRecordId = $response['response']['recordId'];
@@ -233,8 +234,6 @@ abstract class FMModel extends Model
 
         return $newRecordId;
     }
-
-
 
     /**
      * @return string
@@ -245,7 +244,7 @@ abstract class FMModel extends Model
     }
 
     /**
-     * @param mixed $layout
+     * @param  mixed  $layout
      */
     public function setLayout($layout): void
     {
@@ -255,7 +254,7 @@ abstract class FMModel extends Model
     /**
      * Create a new Eloquent query builder for the model.
      *
-     * @param FMBaseBuilder $query
+     * @param  FMBaseBuilder  $query
      * @return FMEloquentBuilder
      */
     public function newEloquentBuilder($query)
@@ -288,10 +287,10 @@ abstract class FMModel extends Model
         if (count($dirty) > 0) {
             try {
                 $query->editRecord();
-            } catch (FileMakerDataApiException $e ){
+            } catch (FileMakerDataApiException $e) {
                 // attempting to update and not actually modifying a record just returns a 0 by default to show no records were modified
                 // If we don't actually modify anything it isn't considered an error in Laravel and we just continue
-                if ($e->getCode() !== 101){
+                if ($e->getCode() !== 101) {
                     // There was some error other than record missing, so throw it
                     throw $e;
                 }
@@ -306,10 +305,9 @@ abstract class FMModel extends Model
     }
 
     /**
-     *
      * Set the keys for a save update query.
      *
-     * @param Builder $query
+     * @param  Builder  $query
      * @return Builder
      */
     protected function setKeysForSaveQuery($query)
@@ -322,7 +320,7 @@ abstract class FMModel extends Model
     /**
      * Perform a model insert operation.
      *
-     * @param Builder $query
+     * @param  Builder  $query
      * @return bool
      */
     protected function performInsert(Builder $query)
@@ -362,8 +360,6 @@ abstract class FMModel extends Model
             $query->createRecord();
         }
 
-
-
         // We will go ahead and set the exists property to true, so that it is set when
         // the created event is fired, just in case the developer tries to update it
         // during the event. This will allow them to do so and run an update here.
@@ -383,27 +379,27 @@ abstract class FMModel extends Model
      */
     public function getAttributesForFileMakerWrite()
     {
-
         $fieldData = collect($this->getAttributes());
 
         $fieldData = $fieldData->intersectByKeys($this->getDirty());
-
 
         // Remove any fields which have been marked as read-only so we don't try to write and cause an error
         $fieldData->forget($this->getReadOnlyFields());
 
         // Remove any fields which have been set to write a file, as they should be handled as containers
-        foreach ($fieldData as $key => $field){
+        foreach ($fieldData as $key => $field) {
             // remove any containers to be written.
             // users can set the field to be a File, UploadFile, or array [$file, 'MyFile.pdf']
-            if ($this->isContainer($field)){
+            if ($this->isContainer($field)) {
                 $fieldData->forget($key);
             }
         }
+
         return $fieldData;
     }
 
-    public function getContainersToWrite(){
+    public function getContainersToWrite()
+    {
         // get dirty fields
         $fieldData = collect($this->getAttributes());
         $fieldData = $fieldData->intersectByKeys($this->getDirty());
@@ -411,9 +407,9 @@ abstract class FMModel extends Model
         $containers = collect([]);
 
         // Track any fields which have been set to write a file, as they should be handled as containers
-        foreach ($fieldData as $key => $field){
+        foreach ($fieldData as $key => $field) {
             // remove any containers to be written.
-            if ($this->isContainer($field)){
+            if ($this->isContainer($field)) {
                 $containers->push($key);
             }
         }
@@ -431,16 +427,17 @@ abstract class FMModel extends Model
 
         // if it's an array, it could be a file => filename key-value pair.
         // it's a conainer if the first object in the array is a file
-        if (is_array($field) && sizeof($field) === 2 && $this->isFile($field[0]) ){
-                return true;
+        if (is_array($field) && count($field) === 2 && $this->isFile($field[0])) {
+            return true;
         }
 
         return false;
     }
 
-    protected function isFile($object){
-        return (is_a($object, File::class) ||
-        is_a($object, UploadedFile::class));
+    protected function isFile($object)
+    {
+        return is_a($object, File::class) ||
+        is_a($object, UploadedFile::class);
     }
 
     /**
@@ -456,8 +453,8 @@ abstract class FMModel extends Model
     /**
      * Set a given attribute on the model.
      *
-     * @param string $key
-     * @param mixed $value
+     * @param  string  $key
+     * @param  mixed  $value
      * @return mixed
      */
     public function setAttribute($key, $value)
@@ -489,7 +486,7 @@ abstract class FMModel extends Model
             return $this;
         }
 
-        if (!is_null($value) && $this->isJsonCastable($key)) {
+        if (! is_null($value) && $this->isJsonCastable($key)) {
             $value = $this->castAttributeAsJson($key, $value);
         }
 
@@ -500,17 +497,17 @@ abstract class FMModel extends Model
             return $this->fillJsonAttribute($key, $value);
         }
 
-        if (!is_null($value) && $this->isEncryptedCastable($key)) {
+        if (! is_null($value) && $this->isEncryptedCastable($key)) {
             $value = $this->castAttributeAsEncryptedString($key, $value);
         }
 
         // FileMaker can't handle true and false, so we need to change to 1 and 0
-        if (is_bool($value)){
+        if (is_bool($value)) {
             $value = $value ? 1 : 0;
         }
 
         // FileMaker can't handle null, so change it to ''
-        if (is_null($value)){
+        if (is_null($value)) {
             $value = '';
         }
 
@@ -518,7 +515,6 @@ abstract class FMModel extends Model
 
         return $this;
     }
-
 
     /**
      * Qualify the given column name by the model's table.
@@ -532,6 +528,7 @@ abstract class FMModel extends Model
         // so just return without the table
         return $column;
     }
+
     /**
      * Reload the current model instance with fresh attributes from the database.
      *
@@ -557,5 +554,4 @@ abstract class FMModel extends Model
 
         return $this;
     }
-
 }

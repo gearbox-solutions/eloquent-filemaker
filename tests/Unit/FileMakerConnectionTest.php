@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-
 use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
@@ -67,13 +66,13 @@ class FileMakerConnectionTest extends TestCase
     {
         $this->overrideDBHost();
         Http::fake([
-            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200)
+            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200),
         ]);
         $connection = app(FileMakerConnection::class)->setConnection('filemaker');
 
         $connection->login();
 
-        $token = Cache::get('filemaker-session-' . $connection->getName());
+        $token = Cache::get('filemaker-session-'.$connection->getName());
 
         $this->assertEquals('new-token', $token);
     }
@@ -82,13 +81,13 @@ class FileMakerConnectionTest extends TestCase
     {
         $this->overrideDBHost();
         Http::fake([
-            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200)
+            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200),
         ]);
         $connection = app(FileMakerConnection::class)->setConnection('filemaker');
 
         $connection->login();
 
-        $token = Cache::get('filemaker-session-' . $connection->getName());
+        $token = Cache::get('filemaker-session-'.$connection->getName());
 
         $this->assertEquals('new-token', $token);
     }

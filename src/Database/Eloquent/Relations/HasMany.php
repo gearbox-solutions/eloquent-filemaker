@@ -1,12 +1,9 @@
 <?php
 
-
 namespace BlueFeather\EloquentFileMaker\Database\Eloquent\Relations;
-
 
 class HasMany extends \Illuminate\Database\Eloquent\Relations\HasMany
 {
-
     /**
      * Set the base constraints on the relation query.
      *
@@ -18,5 +15,4 @@ class HasMany extends \Illuminate\Database\Eloquent\Relations\HasMany
             $this->query->where($this->foreignKey, '==', $this->getParentKey());
         }
     }
-
 }

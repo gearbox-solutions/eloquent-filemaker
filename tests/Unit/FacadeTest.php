@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-
 use BlueFeather\EloquentFileMaker\Support\Facades\FM;
 use Tests\TestCase;
 

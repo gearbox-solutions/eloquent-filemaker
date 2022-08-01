@@ -1,6 +1,5 @@
 <?php
 
-
 namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
 
 use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
@@ -17,21 +16,22 @@ class FMEloquentBuilder extends Builder
 
     /**
      * @return Collection
+     *
      * @throws FileMakerDataApiException
      */
     public function get($columns = ['*'])
     {
         $records = $this->tobase()->get();
         $models = $this->model->createModelsFromRecordSet($records);
+
         return $models;
     }
-
 
     /**
      * Set the affected Eloquent model and instance ids.
      *
-     * @param FMModel $model
-     * @param int|array $ids
+     * @param  FMModel  $model
+     * @param  int|array  $ids
      * @return $this
      */
     public function setModel($model, $ids = [])
@@ -47,6 +47,7 @@ class FMEloquentBuilder extends Builder
 
     /**
      * @return Collection
+     *
      * @throws FileMakerDataApiException
      */
     public function all()
@@ -61,7 +62,6 @@ class FMEloquentBuilder extends Builder
 
         return $this->get();
     }
-
 
     /**
      * Determine if any rows exist for the current query.
@@ -93,19 +93,17 @@ class FMEloquentBuilder extends Builder
      */
     public function doesntExist()
     {
-        return !$this->exists();
+        return ! $this->exists();
     }
-
 
     /**
      * Add a where clause on the primary key to the query.
      *
-     * @param mixed $id
+     * @param  mixed  $id
      * @return $this
      */
     public function whereKeyNot($id)
     {
-
         if (is_array($id) || $id instanceof Arrayable) {
             $this->query->whereNotIn($this->model->getQualifiedKeyName(), $id);
 
@@ -117,7 +115,7 @@ class FMEloquentBuilder extends Builder
         }
 
         // If this is our first where clause we can add the omit directly
-        if (sizeof($this->wheres) === 0){
+        if (count($this->wheres) === 0) {
             return $this->where($this->model->getKeyName(), '==', $id)->omit();
         }
 
@@ -125,21 +123,19 @@ class FMEloquentBuilder extends Builder
         return $this->orWhere($this->model->getKeyName(), '==', $id)->omit();
     }
 
-
-
     public function findByRecordId($recordId)
     {
         $response = $this->query->findByRecordId($recordId);
         $newRecord = $response['response']['data'][0];
         $newModel = $this->model::createFromRecord($newRecord);
+
         return $newModel;
     }
-
 
     /**
      * Get a single column's value from the first result of a query.
      *
-     * @param string $column
+     * @param  string  $column
      * @return mixed
      */
     public function value($column)
@@ -170,22 +166,19 @@ class FMEloquentBuilder extends Builder
         /** @var FMModel $model */
         $model = $this->model;
 
-
         // Map the columns to FileMaker fields and strip out read-only fields/containers
         $fieldsToWrite = $this->model->getAttributesForFileMakerWrite();
 
-
         $modifiedPortals = null;
-        foreach($fieldsToWrite as $key => $value) {
+        foreach ($fieldsToWrite as $key => $value) {
             // Check if the field is a portal (it should be an array if it is)
             if (is_array($value)) {
-
                 $modifiedPortals[$key] = $this->getOnlyModifiedPortalFields($fieldsToWrite[$key], $this->model->getOriginal($key));
                 $fieldsToWrite->forget($key);
             }
         }
 
-        if ($fieldsToWrite->count() > 0 || sizeof($modifiedPortals ?? []) > 0) {
+        if ($fieldsToWrite->count() > 0 || count($modifiedPortals ?? []) > 0) {
             // we have some regular text fields to update
             // forward this request to a base query builder to execute the edit record request
             $response = $this->query->fieldData($fieldsToWrite->toArray())->portalData($modifiedPortals)->recordId($model->getRecordId())->editRecord();
@@ -193,7 +186,6 @@ class FMEloquentBuilder extends Builder
             // update the model's mod ID from the response
             $this->model->setModId($this->getModIdFromFmResponse($response));
         }
-
 
         // also update any container fields which have changed
         // Only attempt to write modified container fields
@@ -208,7 +200,6 @@ class FMEloquentBuilder extends Builder
     {
         /** @var FMModel $model */
         $model = $this->model;
-
 
         // Map the columns to FileMaker fields and strip out read-only fields/containers
         $fieldsToWrite = $this->model->getAttributesForFileMakerWrite();
@@ -241,23 +232,23 @@ class FMEloquentBuilder extends Builder
     public function duplicate()
     {
         $response = $this->query->duplicate($this->model->getRecordId());
+
         return $response;
     }
 
     /**
      * Paginate the given query.
      *
-     * @param int|null $perPage
-     * @param array $columns
-     * @param string $pageName
-     * @param int|null $page
+     * @param  int|null  $perPage
+     * @param  array  $columns
+     * @param  string  $pageName
+     * @param  int|null  $page
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      *
      * @throws \InvalidArgumentException
      */
     public function paginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null)
     {
-
         $page = $page ?: Paginator::resolveCurrentPage($pageName);
 
         $perPage = $perPage ?: $this->model->getPerPage();
@@ -283,7 +274,6 @@ class FMEloquentBuilder extends Builder
 
         // We didn't get a 401 and have received a real response, so parse it for the paginator
         if ($total === null && $results === null) {
-
             $total = $response['response']['dataInfo']['foundCount'];
 
             $records = collect($response['response']['data']);
@@ -299,11 +289,11 @@ class FMEloquentBuilder extends Builder
     }
 
     /**
-     *
      * Retrieve the "count" result of the query.
      *
-     * @param string $columns
+     * @param  string  $columns
      * @return int
+     *
      * @throws FileMakerDataApiException
      */
     public function count($columns = '*'): int
@@ -320,6 +310,7 @@ class FMEloquentBuilder extends Builder
                 throw $e;
             }
         }
+
         return $count;
     }
 
@@ -333,16 +324,16 @@ class FMEloquentBuilder extends Builder
     protected function getOnlyModifiedPortalFields($array1, $array2): array
     {
         $result = [];
-        foreach($array1 as $key => $val) {
-            if($array2[$key] != $val){
+        foreach ($array1 as $key => $val) {
+            if ($array2[$key] != $val) {
                 // go recursive if we're comparing two arrays
-                if(is_array($val)  && is_array($array2[$key])){
+                if (is_array($val) && is_array($array2[$key])) {
                     $result[$key] = $this->getOnlyModifiedPortalFields($val, $array2[$key]);
-                } else{
+                } else {
                     // These are normal values, so compare directly
                     $result[$key] = $val;
                     // at least one field is modified, so also set the recordID if it isn't set yet
-                    if(!isset($result['recordId'])){
+                    if (! isset($result['recordId'])) {
                         $result['recordId'] = $array1['recordId'];
                     }
                 }
@@ -353,6 +344,4 @@ class FMEloquentBuilder extends Builder
 
         return $result;
     }
-
-
 }

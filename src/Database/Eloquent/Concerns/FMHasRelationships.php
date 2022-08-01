@@ -1,6 +1,5 @@
 <?php
 
-
 namespace BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns;
 
 use BlueFeather\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo;
@@ -11,13 +10,12 @@ use Illuminate\Database\Eloquent\Model;
 
 trait FMHasRelationships
 {
-
     /**
      * Define a one-to-one relationship.
      *
-     * @param string $related
-     * @param string|null $foreignKey
-     * @param string|null $localKey
+     * @param  string  $related
+     * @param  string|null  $foreignKey
+     * @param  string|null  $localKey
      */
     public function hasOne($related, $foreignKey = null, $localKey = null)
     {
@@ -30,13 +28,12 @@ trait FMHasRelationships
         return $this->newHasOne($instance->newQuery(), $this, $foreignKey, $localKey);
     }
 
-
     /**
      * Define a one-to-many relationship.
      *
-     * @param string $related
-     * @param string|null $foreignKey
-     * @param string|null $localKey
+     * @param  string  $related
+     * @param  string|null  $foreignKey
+     * @param  string|null  $localKey
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function hasMany($related, $foreignKey = null, $localKey = null)
@@ -55,11 +52,11 @@ trait FMHasRelationships
     /**
      * Instantiate a new BelongsTo relationship.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param \Illuminate\Database\Eloquent\Model $child
-     * @param string $foreignKey
-     * @param string $ownerKey
-     * @param string $relation
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  \Illuminate\Database\Eloquent\Model  $child
+     * @param  string  $foreignKey
+     * @param  string  $ownerKey
+     * @param  string  $relation
      * @return BelongsTo
      */
     protected function newBelongsTo(Builder $query, Model $child, $foreignKey, $ownerKey, $relation)
@@ -71,10 +68,10 @@ trait FMHasRelationships
     /**
      * Instantiate a new HasMany relationship.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param \Illuminate\Database\Eloquent\Model $parent
-     * @param string $foreignKey
-     * @param string $localKey
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  \Illuminate\Database\Eloquent\Model  $parent
+     * @param  string  $foreignKey
+     * @param  string  $localKey
      * @return HasMany
      */
     protected function newHasMany(Builder $query, Model $parent, $foreignKey, $localKey)
@@ -112,10 +109,10 @@ trait FMHasRelationships
     /**
      * Instantiate a new HasOne relationship.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param \Illuminate\Database\Eloquent\Model $parent
-     * @param string $foreignKey
-     * @param string $localKey
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  \Illuminate\Database\Eloquent\Model  $parent
+     * @param  string  $foreignKey
+     * @param  string  $localKey
      * @return HasOne
      */
     protected function newHasOne(Builder $query, Model $parent, $foreignKey, $localKey)
@@ -123,6 +120,4 @@ trait FMHasRelationships
         // custom version of this so we can return our own BelongsTo class with a custom constraint for FM
         return new HasOne($query, $parent, $foreignKey, $localKey);
     }
-
-
 }
