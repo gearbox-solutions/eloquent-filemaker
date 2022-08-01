@@ -607,6 +607,8 @@ class FMBaseBuilder extends Builder
 
         $this->fieldData($values);
 
+        $this->computeWhereIns();
+
         return $this->connection->update($this);
     }
 
