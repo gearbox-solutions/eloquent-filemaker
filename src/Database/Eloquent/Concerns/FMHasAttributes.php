@@ -3,17 +3,15 @@
 namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns;
 
 use DateTime;
-use Illuminate\Database\Eloquent\Concerns\HasAttributes;
 use Illuminate\Support\Arr;
 
 trait FMHasAttributes
 {
-
     /**
      * Set a given attribute on the model.
      *
-     * @param string $key
-     * @param mixed $value
+     * @param  string  $key
+     * @param  mixed  $value
      * @return mixed
      */
     public function setAttribute($key, $value)
@@ -36,7 +34,7 @@ trait FMHasAttributes
         // When writing dates the regular datetime format won't work, so we have to get JUST the date value
         // check the key's cast to see if it is cast to a date or custom date:format
         $castType = $this->getCasts()[$key] ?? '';
-        $isDate = $castType == "date" || str_starts_with($castType, 'date:');
+        $isDate = $castType == 'date' || str_starts_with($castType, 'date:');
         if ($isDate) {
             $value = Arr::first(explode(' ', $value));
         }
@@ -55,5 +53,4 @@ trait FMHasAttributes
 
         return $this;
     }
-
 }
