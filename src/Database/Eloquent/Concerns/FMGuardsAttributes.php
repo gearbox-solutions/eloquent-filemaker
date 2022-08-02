@@ -58,7 +58,7 @@ trait FMGuardsAttributes
 
     protected function getColumns($forceRefresh = false): array
     {
-        $cacheKey = "{$this->table}-columns";
+        $cacheKey = "eloquent-filemaker-{$this->table}-columns";
         $refreshCallback = function() {
             $layoutMetaData = $this->getConnection()->getLayoutMetadata($this->table);
 
