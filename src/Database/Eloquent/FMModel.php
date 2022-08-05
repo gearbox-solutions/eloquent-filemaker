@@ -64,6 +64,13 @@ abstract class FMModel extends Model
      */
     protected $modId;
 
+    /**
+     * The "type" of the primary key ID. FileMaker uses UUID strings by default.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
+
 
     public function __construct(array $attributes = [])
     {
