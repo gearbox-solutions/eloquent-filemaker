@@ -38,4 +38,30 @@ class BelongsTo extends \Illuminate\Database\Eloquent\Relations\BelongsTo
 
         $this->query->{$whereIn}($key, $this->getEagerModelKeys($models));
     }
+
+    /**
+     * Gather the keys from an array of related models.
+     *
+     * @param  array  $models
+     * @return array
+     */
+    protected function getEagerModelKeys(array $models)
+    {
+        $keys = [];
+
+        // First we need to gather all of the keys from the parent models so we know what
+        // to query for via the eager loading query. We will add them to an array then
+        // execute a "where in" statement to gather up all of those related records.
+        // Unlike other DB Engines FM does not support nulls and uses an empty string instead.
+        foreach ($models as $model) {
+            $value = $model->{$this->foreignKey};
+            if (! is_null($value) && $value !== '') {
+                $keys[] = $value;
+            }
+        }
+
+        sort($keys);
+
+        return array_values(array_unique($keys));
+    }
 }
