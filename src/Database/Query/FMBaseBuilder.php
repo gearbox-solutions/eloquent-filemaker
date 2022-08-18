@@ -187,13 +187,13 @@ class FMBaseBuilder extends Builder
     public function delete($id = null): int
     {
         // If an ID is passed to the method we will delete the record with this internal FileMaker record ID
-        if (! is_null($id)) {
+        if (!is_null($id)) {
             $this->where($this->defaultKeyName(), '=', $id);
         }
         $this->applyBeforeQueryCallbacks();
 
         // Check if we have a record ID to delete or if this is a query for a bulk delete
-        if ($this->getRecordId() === null){
+        if ($this->getRecordId() === null) {
             // There's no individual record ID to delete, so do a bulk delete
             return $this->bulkDeleteFromQuery();
         }
@@ -508,24 +508,26 @@ class FMBaseBuilder extends Builder
             'boolean' => $boolean,
             'not' => $not
         ];
+
+        return $this;
     }
 
     protected function computeWhereIns()
     {
         // If no where in clauses return
-        if(empty($this->whereIns)) {
+        if (empty($this->whereIns)) {
             return;
         }
 
-        $whereIns = array_map(function($whereIn) {
+        $whereIns = array_map(function ($whereIn) {
             $finds = [];
 
-            foreach($whereIn['values'] as $value) {
+            foreach ($whereIn['values'] as $value) {
                 $find = [
                     $whereIn['column'] => $value,
                 ];
 
-                if($whereIn['not']) {
+                if ($whereIn['not']) {
                     $find['omit'] = true;
                 }
 
@@ -535,12 +537,12 @@ class FMBaseBuilder extends Builder
             return $finds;
         }, $this->whereIns);
 
-        if(empty($this->wheres)) {
+        if (empty($this->wheres)) {
             $this->wheres = Arr::flatten($whereIns, 1);
             return;
         }
 
-        $this->wheres = Arr::map(Arr::crossJoin($this->wheres, ...$whereIns), function($conditions) {
+        $this->wheres = Arr::map(Arr::crossJoin($this->wheres, ...$whereIns), function ($conditions) {
             return array_merge(...array_values($conditions));
         });
     }
