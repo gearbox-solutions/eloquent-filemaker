@@ -474,9 +474,21 @@ abstract class FMModel extends Model
     {
         parent::setAttribute($key, $value);
 
+        $value = $this->attributes[$key];
+
         // When writing dates the regular datetime format won't work, so we have to get JUST the date value
         if ($this->isDateAttribute($key) && $this->hasCast($key, ['date'])) {
-            $value = Arr::first(explode(' ', $this->attributes[$key]));
+            $value = Arr::first(explode(' ', $value));
+        }
+
+        // FileMaker can't handle true and false, so we need to change to 1 and 0
+        if (is_bool($value)) {
+            $value = $value ? 1 : 0;
+        }
+
+        // FileMaker can't handle null, so change it to ''
+        if (is_null($value)) {
+            $value = '';
         }
 
         $this->attributes[$key] = $value;
