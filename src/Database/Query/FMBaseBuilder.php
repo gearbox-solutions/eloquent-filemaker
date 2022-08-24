@@ -542,9 +542,12 @@ class FMBaseBuilder extends Builder
             return;
         }
 
-        $this->wheres = Arr::map(Arr::crossJoin($this->wheres, ...$whereIns), function ($conditions) {
+        $arr = Arr::crossJoin($this->wheres, ...$whereIns);
+        $function = function ($conditions) {
             return array_merge(...array_values($conditions));
-        });
+        };
+
+        $this->wheres = array_map($function, $arr);
     }
 
     /**
