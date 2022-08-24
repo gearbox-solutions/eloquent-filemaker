@@ -2,6 +2,7 @@
 
 namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
 
+use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMGuardsAttributes;
 use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
@@ -18,6 +19,7 @@ abstract class FMModel extends Model
 {
 
     use FMHasRelationships;
+    use FMGuardsAttributes;
 
     /**
      * Indicates if the model should be timestamped.
@@ -61,6 +63,13 @@ abstract class FMModel extends Model
      * @var
      */
     protected $modId;
+
+    /**
+     * The "type" of the primary key ID. FileMaker uses UUID strings by default.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
 
 
     public function __construct(array $attributes = [])

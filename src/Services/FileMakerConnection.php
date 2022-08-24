@@ -7,6 +7,7 @@ namespace BlueFeather\EloquentFileMaker\Services;
 use BlueFeather\EloquentFileMaker\Database\Eloquent\FMEloquentBuilder;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use BlueFeather\EloquentFileMaker\Database\Query\Grammars\FMGrammar;
+use BlueFeather\EloquentFileMaker\Database\Schema\FMBuilder;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
@@ -100,8 +101,12 @@ class FileMakerConnection extends Connection
         return $this->getLayoutUrl() . '/records/';
     }
 
-    protected function getLayoutUrl()
+    protected function getLayoutUrl($layout = null)
     {
+        // Set the connection layout as the layout parameter, otherwise get the layout from the connection
+        if($layout){
+            $this->setLayout($layout);
+        }
         return $this->getDatabaseUrl() . '/layouts/' . $this->getLayout();
     }
 
@@ -636,5 +641,17 @@ class FileMakerConnection extends Connection
     protected function getDefaultQueryGrammar()
     {
         return new FMGrammar();
+    }
+
+    public function getLayoutMetadata($layout = null){
+        $response = $this->makeRequest('get', $this->getLayoutUrl($layout));
+        return $response['response'];
+    }
+
+    public function getSchemaBuilder()
+    {
+        parent::getSchemaBuilder();
+
+        return new FMBuilder($this);
     }
 }
