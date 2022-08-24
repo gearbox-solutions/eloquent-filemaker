@@ -4,11 +4,13 @@
 namespace BlueFeather\EloquentFileMaker\Database\Query;
 
 
+use _PHPStan_59fb0a3b2\Symfony\Component\String\Exception\RuntimeException;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use DateTimeInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
@@ -124,6 +126,8 @@ class FMBaseBuilder extends Builder
     public $containerFieldName;
     public $containerFile;
 
+    protected $whereIns = [];
+
 
     /**
      * Add a basic where clause to the query.
@@ -160,7 +164,7 @@ class FMBaseBuilder extends Builder
         // Create a new find array if null
         $count = sizeof($this->wheres);
         if ($count == 0) {
-            $currentFind = collect([]);
+            $currentFind = [];
         } else {
             $currentFind = $this->wheres[sizeof($this->wheres) - 1];
         }
@@ -183,13 +187,13 @@ class FMBaseBuilder extends Builder
     public function delete($id = null): int
     {
         // If an ID is passed to the method we will delete the record with this internal FileMaker record ID
-        if (! is_null($id)) {
+        if (!is_null($id)) {
             $this->where($this->defaultKeyName(), '=', $id);
         }
         $this->applyBeforeQueryCallbacks();
 
         // Check if we have a record ID to delete or if this is a query for a bulk delete
-        if ($this->getRecordId() === null){
+        if ($this->getRecordId() === null) {
             // There's no individual record ID to delete, so do a bulk delete
             return $this->bulkDeleteFromQuery();
         }
@@ -403,6 +407,8 @@ class FMBaseBuilder extends Builder
      */
     public function get($columns = ['*'])
     {
+        $this->computeWhereIns();
+
         // Run the query and catch a 401 error if there are no records found - just return an empty collection
         try {
             $response = $this->connection->performFind($this);
@@ -490,6 +496,58 @@ class FMBaseBuilder extends Builder
         $this->wheres[$count - 1] = $currentFind;
 
         return $this;
+    }
+
+    public function whereIn($column, $values, $boolean = 'and', $not = false)
+    {
+        throw_if($boolean === 'or', new \RuntimeException('Eloquent FileMaker does not currently support or within a where in'));
+
+        $this->whereIns[] = [
+            'column' => $this->getMappedFieldName($column),
+            'values' => $values,
+            'boolean' => $boolean,
+            'not' => $not
+        ];
+
+        return $this;
+    }
+
+    protected function computeWhereIns()
+    {
+        // If no where in clauses return
+        if (empty($this->whereIns)) {
+            return;
+        }
+
+        $whereIns = array_map(function ($whereIn) {
+            $finds = [];
+
+            foreach ($whereIn['values'] as $value) {
+                $find = [
+                    $whereIn['column'] => $value,
+                ];
+
+                if ($whereIn['not']) {
+                    $find['omit'] = true;
+                }
+
+                $finds[] = $find;
+            }
+
+            return $finds;
+        }, $this->whereIns);
+
+        if (empty($this->wheres)) {
+            $this->wheres = Arr::flatten($whereIns, 1);
+            return;
+        }
+
+        $arr = Arr::crossJoin($this->wheres, ...$whereIns);
+        $function = function ($conditions) {
+            return array_merge(...array_values($conditions));
+        };
+
+        $this->wheres = array_map($function, $arr);
     }
 
     /**
@@ -620,6 +678,8 @@ class FMBaseBuilder extends Builder
         $this->applyBeforeQueryCallbacks();
 
         $this->fieldData($values);
+
+        $this->computeWhereIns();
 
         return $this->connection->update($this);
     }
@@ -788,9 +848,13 @@ class FMBaseBuilder extends Builder
 
     public function whereDate($column, $operator, $value = null, $boolean = 'and')
     {
+        if (is_null($value)) {
+            $value = $operator;
+            $operator = '=';
+        }
 
-        if ($operator instanceof DateTimeInterface) {
-            $operator = $operator->format('n/j/Y');
+        if ($value instanceof DateTimeInterface) {
+            $value = $value->format('n/j/Y');
         }
 
         return $this->where($column, $operator, $value, $boolean);
