@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -471,55 +472,22 @@ abstract class FMModel extends Model
      */
     public function setAttribute($key, $value)
     {
-        // First we will check for the presence of a mutator for the set operation
-        // which simply lets the developers tweak the attribute as it is set on
-        // the model, such as "json_encoding" an listing of data for storage.
-        if ($this->hasSetMutator($key)) {
-            return $this->setMutatedAttributeValue($key, $value);
-        }
+        parent::setAttribute($key, $value);
 
-        // If an attribute is listed as a "date", we'll convert it from a DateTime
-        // instance into a form proper for storage on the database tables using
-        // the connection grammar's date format. We will auto set the values.
-        elseif ($value && $this->isDateAttribute($key)) {
-            $value = $this->fromDateTime($value);
+        $value = $this->attributes[$key];
 
-            // When writing dates the regular datetime format won't work, so we have to get JUST the date value
-
-            if ($this->casts[$key] === 'date') {
-                $exploded = explode(' ', $value);
-                $value = $exploded[0];
-            }
-        }
-
-        if ($this->isClassCastable($key)) {
-            $this->setClassCastableAttribute($key, $value);
-
-            return $this;
-        }
-
-        if (!is_null($value) && $this->isJsonCastable($key)) {
-            $value = $this->castAttributeAsJson($key, $value);
-        }
-
-        // If this attribute contains a JSON ->, we'll set the proper value in the
-        // attribute's underlying array. This takes care of properly nesting an
-        // attribute in the array's value in the case of deeply nested items.
-        if (Str::contains($key, '->')) {
-            return $this->fillJsonAttribute($key, $value);
-        }
-
-        if (!is_null($value) && $this->isEncryptedCastable($key)) {
-            $value = $this->castAttributeAsEncryptedString($key, $value);
+        // When writing dates the regular datetime format won't work, so we have to get JUST the date value
+        if ($this->isDateAttribute($key) && $this->hasCast($key, ['date'])) {
+            $value = Arr::first(explode(' ', $value));
         }
 
         // FileMaker can't handle true and false, so we need to change to 1 and 0
-        if (is_bool($value)){
+        if (is_bool($value)) {
             $value = $value ? 1 : 0;
         }
 
         // FileMaker can't handle null, so change it to ''
-        if (is_null($value)){
+        if (is_null($value)) {
             $value = '';
         }
 
