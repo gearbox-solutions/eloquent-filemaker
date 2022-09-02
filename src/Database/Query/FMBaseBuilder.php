@@ -10,6 +10,7 @@ use DateTimeInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
@@ -409,25 +410,43 @@ class FMBaseBuilder extends Builder
      */
     public function get($columns = ['*'])
     {
-        $this->computeWhereIns();
-
-        // Run the query and catch a 401 error if there are no records found - just return an empty collection
-        try {
-            $response = $this->connection->performFind($this);
-        } catch (FileMakerDataApiException $e) {
-            if ($e->getCode() == 401) {
-                return collect([]);
-            } else {
-                throw $e;
-            }
-        }
-        $records = collect($response['response']['data']);
+        $records = Arr::get($this->getData(), 'response.data', []);
 
         // filter to only requested columns
         if ($columns !== ['*']) {
             $records = $records->intersectByKeys(array_flip($columns));
         }
+
         return $records;
+    }
+
+    protected function getData()
+    {
+        $this->computeWhereIns();
+
+        // Run the query and catch a 401 error if there are no records found - just return an empty collection
+        try {
+            return $this->connection->performFind($this);
+        } catch (FileMakerDataApiException $e) {
+            throw_if($e->getCode() !== 401, $e);
+
+            return [];
+        }
+    }
+
+    public function paginate($perPage = 15, $columns = ['*'], $pageName = 'page', $page = null)
+    {
+        $page = $page ?: Paginator::resolveCurrentPage($pageName);
+
+        $response = $this->forPage($page, $perPage)->getData();
+
+        $total = Arr::get($response, 'response.dataInfo.foundCount', 0);
+        $results = collect(Arr::get($response, 'response.data'));
+
+        return $this->paginator($results, $total, $perPage, $page, [
+            'path' => Paginator::resolveCurrentPath(),
+            'pageName' => $pageName,
+        ]);
     }
 
 

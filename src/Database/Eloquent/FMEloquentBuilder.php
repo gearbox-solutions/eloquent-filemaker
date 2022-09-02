@@ -9,6 +9,7 @@ use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 
 class FMEloquentBuilder extends Builder
@@ -194,7 +195,6 @@ class FMEloquentBuilder extends Builder
             $this->model->setModId($this->getModIdFromFmResponse($response));
         }
 
-
         // also update any container fields which have changed
         // Only attempt to write modified container fields
         $modifiedContainerFields = $this->model->getContainersToWrite();
@@ -258,35 +258,12 @@ class FMEloquentBuilder extends Builder
 
         $perPage = $perPage ?: $this->model->getPerPage();
 
-        /** @var FMBaseBuilder $query */
-        $query = $this->toBase()->forPage($page, $perPage);
+        $response = $this->forPage($page, $perPage)->getData();
 
-        // prep items and total as null so we can handle 401 errors
-        $total = null;
-        $results = null;
-
-        // do the query and check for a 401. The query will 401 error if there are no rows which match the request
-        try {
-            $response = $this->getQuery()->getConnection()->performFind($query);
-        } catch (FileMakerDataApiException $e) {
-            if ($e->getCode() == 401) {
-                $results = $this->model->newCollection();
-                $total = 0;
-            } else {
-                throw $e;
-            }
-        }
-
-        // We didn't get a 401 and have received a real response, so parse it for the paginator
-        if ($total === null && $results === null) {
-
-            $total = $response['response']['dataInfo']['foundCount'];
-
-            $records = collect($response['response']['data']);
-
-            // start items as an empty array, but fill if the records
-            $results = $this->model->createModelsFromRecordSet($records);
-        }
+        $total = Arr::get($response, 'response.dataInfo.foundCount', 0);
+        $results = $this->model->createModelsFromRecordSet(
+            collect(Arr::get($response, 'response.data'))
+        );
 
         return $this->paginator($results, $total, $perPage, $page, [
             'path' => Paginator::resolveCurrentPath(),
