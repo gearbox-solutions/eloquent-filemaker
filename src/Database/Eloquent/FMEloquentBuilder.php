@@ -272,31 +272,6 @@ class FMEloquentBuilder extends Builder
     }
 
     /**
-     *
-     * Retrieve the "count" result of the query.
-     *
-     * @param string $columns
-     * @return int
-     * @throws FileMakerDataApiException
-     */
-    public function count($columns = '*'): int
-    {
-        /** @var FMBaseBuilder $query */
-        $query = $this->query->limit(1);
-        try {
-            $response = $this->getQuery()->getConnection()->performFind($query);
-            $count = $response['response']['dataInfo']['foundCount'];
-        } catch (FileMakerDataApiException $e) {
-            if ($e->getCode() == 401) {
-                $count = 0;
-            } else {
-                throw $e;
-            }
-        }
-        return $count;
-    }
-
-    /**
      * Compares a model's modified portal data and original portal data and returns portal data with only modified fields and recordIds
      *
      * @param $array1 array The modified portal data

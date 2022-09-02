@@ -849,22 +849,9 @@ class FMBaseBuilder extends Builder
      */
     public function count($columns = '*')
     {
-        $this->limit(1);
-        try {
-            $result = $this->connection->performFind($this);
-        } catch (FileMakerDataApiException $e) {
-            if ($e->getCode() === 401) {
-                // no records found - this is ok
-                // return 0
-                return 0;
-            }
+        $response = $this->limit(1)->getData();
 
-            // not a 401, so throw it
-            throw $e;
-        }
-
-        $count = $result['response']['dataInfo']['foundCount'];
-        return (int)$count;
+        return (int)(Arr::get($response, 'response.dataInfo.foundCount', 0));
     }
 
     public function whereDate($column, $operator, $value = null, $boolean = 'and')
