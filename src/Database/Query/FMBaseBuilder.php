@@ -392,12 +392,14 @@ class FMBaseBuilder extends Builder
     public function scriptPrerequestParam($param): FMBaseBuilder
     {
         $this->scriptPrerequestParam = $param;
+
         return $this;
     }
 
     public function layoutResponse($name): FMBaseBuilder
     {
         $this->layoutResponse = $name;
+
         return $this;
     }
 

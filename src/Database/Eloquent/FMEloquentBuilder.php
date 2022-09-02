@@ -36,7 +36,6 @@ class FMEloquentBuilder extends Builder
         return $this->getModel()->newCollection($models);
     }
 
-
     /**
      * Set the affected Eloquent model and instance ids.
      *
@@ -72,7 +71,6 @@ class FMEloquentBuilder extends Builder
         return $this->get();
     }
 
-
     /**
      * Determine if any rows exist for the current query.
      * This actually runs the full query, so it doesn't save you any data, just an error capture
@@ -106,7 +104,6 @@ class FMEloquentBuilder extends Builder
         return !$this->exists();
     }
 
-
     /**
      * Add a where clause on the primary key to the query.
      *
@@ -115,7 +112,6 @@ class FMEloquentBuilder extends Builder
      */
     public function whereKeyNot($id)
     {
-
         if (is_array($id) || $id instanceof Arrayable) {
             $this->query->whereNotIn($this->model->getQualifiedKeyName(), $id);
 
@@ -127,15 +123,13 @@ class FMEloquentBuilder extends Builder
         }
 
         // If this is our first where clause we can add the omit directly
-        if (sizeof($this->wheres) === 0){
+        if (count($this->wheres) === 0){
             return $this->where($this->model->getKeyName(), '==', $id)->omit();
         }
 
         // otherwise we need to add a find and omit
         return $this->orWhere($this->model->getKeyName(), '==', $id)->omit();
     }
-
-
 
     public function findByRecordId($recordId)
     {
@@ -144,7 +138,6 @@ class FMEloquentBuilder extends Builder
         $newModel = $this->model::createFromRecord($newRecord);
         return $newModel;
     }
-
 
     /**
      * Get a single column's value from the first result of a query.
@@ -180,16 +173,13 @@ class FMEloquentBuilder extends Builder
         /** @var FMModel $model */
         $model = $this->model;
 
-
         // Map the columns to FileMaker fields and strip out read-only fields/containers
         $fieldsToWrite = $this->model->getAttributesForFileMakerWrite();
-
 
         $modifiedPortals = null;
         foreach($fieldsToWrite as $key => $value) {
             // Check if the field is a portal (it should be an array if it is)
             if (is_array($value)) {
-
                 $modifiedPortals[$key] = $this->getOnlyModifiedPortalFields($fieldsToWrite[$key], $this->model->getOriginal($key));
                 $fieldsToWrite->forget($key);
             }
@@ -219,12 +209,10 @@ class FMEloquentBuilder extends Builder
         /** @var FMModel $model */
         $model = $this->model;
 
-
         // Map the columns to FileMaker fields and strip out read-only fields/containers
         $fieldsToWrite = $this->model->getAttributesForFileMakerWrite();
 
         // we always need to create the record, even if there are no regular or portal fields which have been set
-
         // forward this request to a base query builder to execute the create record request
         $response = $this->query->fieldData($fieldsToWrite->toArray())->portalData($model->portalData)->createRecord();
 
@@ -250,8 +238,7 @@ class FMEloquentBuilder extends Builder
 
     public function duplicate()
     {
-        $response = $this->query->duplicate($this->model->getRecordId());
-        return $response;
+        return $this->query->duplicate($this->model->getRecordId());
     }
 
     /**
@@ -267,7 +254,6 @@ class FMEloquentBuilder extends Builder
      */
     public function paginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null)
     {
-
         $page = $page ?: Paginator::resolveCurrentPage($pageName);
 
         $perPage = $perPage ?: $this->model->getPerPage();
@@ -363,6 +349,4 @@ class FMEloquentBuilder extends Builder
 
         return $result;
     }
-
-
 }
