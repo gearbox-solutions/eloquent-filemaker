@@ -22,8 +22,8 @@ class FMEloquentBuilder extends Builder
      */
     public function get($columns = ['*'])
     {
-        $records = $this->tobase()->get();
-        $models = $this->model->createModelsFromRecordSet($records);
+        $records = $this->toBase()->get();
+        $models = $this->model->createModelsFromRecordSet(collect($records));
 
         // If we actually found models we will also eager load any relationships that
         // have been specified as needing to be eager loaded, which will solve the
@@ -258,7 +258,7 @@ class FMEloquentBuilder extends Builder
 
         $perPage = $perPage ?: $this->model->getPerPage();
 
-        $response = $this->forPage($page, $perPage)->getData();
+        $response = $this->forPage($page, $perPage)->toBase()->getData();
 
         $total = Arr::get($response, 'response.dataInfo.foundCount', 0);
         $results = $this->model->createModelsFromRecordSet(

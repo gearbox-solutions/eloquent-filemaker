@@ -420,7 +420,7 @@ class FMBaseBuilder extends Builder
         return $records;
     }
 
-    protected function getData()
+    public function getData()
     {
         $this->computeWhereIns();
 
