@@ -410,7 +410,7 @@ class FMBaseBuilder extends Builder
      */
     public function get($columns = ['*'])
     {
-        $records = Arr::get($this->getData(), 'response.data', []);
+        $records = collect(Arr::get($this->getData(), 'response.data', []));
 
         // filter to only requested columns
         if ($columns !== ['*']) {
@@ -583,6 +583,7 @@ class FMBaseBuilder extends Builder
         $this->orderBy($column, $direction);
         $result = $this->first();
         $min = $result['fieldData'][$this->getMappedFieldName($column)];
+
         return $min;
     }
 
