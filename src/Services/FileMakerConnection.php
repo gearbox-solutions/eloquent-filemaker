@@ -165,7 +165,7 @@ class FileMakerConnection extends Connection
         }
 
         // create a stream resource
-        $stream = fopen($file->getPathname(), 'r');
+        $stream = fopen($file->getPath().'/'.$file->getFilename(), 'r');
 
         $request = Http::attach('upload', $stream, $filename);
         $response = $this->makeRequest('post', $url, [], $request);
