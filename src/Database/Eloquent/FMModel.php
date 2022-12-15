@@ -83,6 +83,13 @@ abstract class FMModel extends Model
         parent::__construct($attributes);
     }
 
+    public static function all($columns = ['*'])
+    {
+        return static::query()->limit(1000000000000000000)->get(
+            is_array($columns) ? $columns : func_get_args()
+        );
+    }
+
     /**
      * Create a model object from the returned FileMaker data
      *

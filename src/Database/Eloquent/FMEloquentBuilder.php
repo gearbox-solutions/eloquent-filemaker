@@ -55,22 +55,6 @@ class FMEloquentBuilder extends Builder
         return $this;
     }
 
-    /**
-     * @return Collection
-     * @throws FileMakerDataApiException
-     */
-    public function all()
-    {
-        // Set the limit if the user hasn't already set one
-        // We're setting a high limit since the data API limits to 100 records by default
-        // It seems to break if we add any more 0s than 1000000000000000000
-        // Hopefully nobody is really going to hit this limit.... hopefully....
-        if ($this->query->limit == null or $this->query->limit == 0) {
-            $this->query->limit(1000000000000000000);
-        }
-
-        return $this->get();
-    }
 
     /**
      * Determine if any rows exist for the current query.

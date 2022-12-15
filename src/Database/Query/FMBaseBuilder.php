@@ -756,7 +756,13 @@ class FMBaseBuilder extends Builder
     }
 
 
-    public function modId(int $modId)
+    /**
+     * Set the FileMaker record modId for editing an existing record.
+     * FileMaker modIds look like numbers, but must always be strings.
+     * @param string $modId
+     * @return $this
+     */
+    public function modId(string $modId)
     {
         $this->modId = $modId;
         return $this;

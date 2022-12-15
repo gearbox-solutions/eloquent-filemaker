@@ -15,7 +15,9 @@ use GuzzleHttp\Middleware;
 use Illuminate\Database\Connection;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Symfony\Component\HttpFoundation\File\File;
 use Illuminate\Support\Facades\Http;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -104,7 +106,7 @@ class FileMakerConnection extends Connection
     protected function getLayoutUrl($layout = null)
     {
         // Set the connection layout as the layout parameter, otherwise get the layout from the connection
-        if($layout){
+        if ($layout) {
             $this->setLayout($layout);
         }
         return $this->getDatabaseUrl() . '/layouts/' . $this->getLayout();
@@ -155,17 +157,17 @@ class FileMakerConnection extends Connection
          * The array should be in the format:
          * [ $file, 'myFile.pdf' ]
          */
-        if (is_array($query->containerFile)){
+        if (is_array($query->containerFile)) {
             // we have a file and file name
             $file = $query->containerFile[0];
             $filename = $query->containerFile[1];
-        } else{
+        } else {
             $file = $query->containerFile;
             $filename = $file->getFilename();
         }
 
         // create a stream resource
-        $stream = fopen($file->getPathname(), 'r');
+        $stream = fopen($file->getPath() . '/' . $file->getFilename(), 'r');
 
         $request = Http::attach('upload', $stream, $filename);
         $response = $this->makeRequest('post', $url, [], $request);
@@ -313,6 +315,7 @@ class FileMakerConnection extends Connection
         return $response;
     }
 
+
     /**
      * Attempt to emulate a sql update in FileMaker
      *
@@ -331,7 +334,26 @@ class FileMakerConnection extends Connection
         // This is just a single record to edit
         try {
             // Do the update
-            $this->editRecord($query);
+
+            // Insert container data before updating text fields since scripts can be attached to the regular record edit
+
+            // Only attempt to write modified container fields
+            // Figure out which fields are containers vs non-containers
+            $textDataFields = $this->getNonContainerFieldsForRecordWrite($query->fieldData) ?? [];
+            $modifiedContainerFields = collect($query->fieldData)->diffKeys($textDataFields);
+            foreach ($modifiedContainerFields as $containerField => $fileData) {
+                $eachResponse = $query->recordId($query->getRecordId())->setContainer($containerField, $fileData);
+                $query->modId($this->getModIdFromFmResponse($eachResponse));
+            }
+
+            // only do an edit record if there are non-container fields to edit
+            // It's technically valid in the FileMaker Data API to call edit with no fields to modify to create a
+            // record, but that doesn't really match Laravel's behavior. Users who want to do this should
+            // call edit() directly.
+            if ($textDataFields->count() > 0) {
+                $this->editRecord($query);
+            }
+
         } catch (FileMakerDataApiException $e) {
             // Record is missing is ok for laravel functions
             // Throw if it isn't error code 101, which is missing record
@@ -344,6 +366,11 @@ class FileMakerConnection extends Connection
         }
         // one record has been edited
         return 1;
+    }
+
+    protected function getModIdFromFmResponse($response)
+    {
+        return $response['response']['modId'];
     }
 
     /**
@@ -377,7 +404,7 @@ class FileMakerConnection extends Connection
             $builder->layout($query->from);
             try {
                 // Do the update
-                $this->editRecord($builder);
+                $this->update($builder);
                 // Update if we don't get a record missing exception
                 $updatedCount++;
             } catch (FileMakerDataApiException $e) {
@@ -422,7 +449,7 @@ class FileMakerConnection extends Connection
         // only set field data if it exists
         if ($query->fieldData) {
             // fieldData needs to have a value if it's there, but an empty object is ok instead of null
-            $postData['fieldData'] = $query->fieldData ?? json_decode("{}");
+            $postData['fieldData'] = $this->getNonContainerFieldsForRecordWrite($query->fieldData) ?? json_decode("{}");
         }
 
         // attribute => parameter
@@ -474,6 +501,47 @@ class FileMakerConnection extends Connection
 
         return $postData;
     }
+
+    /**
+     * Strip out containers and read-only fields to prepare for a write query
+     * OR - do the opposite and get ONLY containers
+     *
+     * @return Collection
+     */
+    protected function getNonContainerFieldsForRecordWrite($fieldArray)
+    {
+
+        $fieldData = collect($fieldArray);
+
+        // Remove any fields which have been set to write a file, as they should be handled as containers
+        foreach ($fieldData as $key => $field) {
+            // remove any containers to be written.
+            // users can set the field to be a File, UploadFile, or array [$file, 'MyFile.pdf']
+            if ($this->isContainer($field)) {
+                $fieldData->forget($key);
+            }
+        }
+        return $fieldData;
+    }
+
+    protected function isContainer($field)
+    {
+
+        // if this is a file then we know it's a container
+        if (is_a($field, File::class)) {
+            return true;
+        }
+
+        // if it's an array, it could be a file => filename key-value pair.
+        // it's a conainer if the first object in the array is a file
+        if (is_array($field) && sizeof($field) === 2 && $this->isFile($field[0])) {
+            return true;
+        }
+
+        return false;
+    }
+
+
 
     public function executeScript(FMBaseBuilder $query)
     {
@@ -643,7 +711,8 @@ class FileMakerConnection extends Connection
         return new FMGrammar();
     }
 
-    public function getLayoutMetadata($layout = null){
+    public function getLayoutMetadata($layout = null)
+    {
         $response = $this->makeRequest('get', $this->getLayoutUrl($layout));
         return $response['response'];
     }
