@@ -3,6 +3,7 @@
 namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
 
 use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMGuardsAttributes;
+use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasAttributes;
 use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
 use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
@@ -19,6 +20,7 @@ use Illuminate\Support\Str;
 abstract class FMModel extends Model
 {
 
+    use FMHasAttributes;
     use FMHasRelationships;
     use FMGuardsAttributes;
 
