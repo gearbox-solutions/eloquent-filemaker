@@ -17,7 +17,7 @@ trait FMHasAttributes
     protected function isDateCastable($key)
     {
         // We need to also cast timestamps as
-        return $this->hasCast($key, ['date', 'datetime', 'immutable_date', 'immutable_datetime', 'timestamp']);
+        return $this->hasCast($key, ['date', 'datetime', 'immutable_date', 'immutable_datetime', 'timestamp', 'custom_datetime']);
     }
 
 }
