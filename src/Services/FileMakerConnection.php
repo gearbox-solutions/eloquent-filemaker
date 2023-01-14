@@ -216,6 +216,12 @@ class FileMakerConnection extends Connection
      */
     public function performFind(FMBaseBuilder $query)
     {
+        // If limit hasn't been specified we should set it to be very high to bypass FM's default 100-record limit
+        // This more closely matches Laravel's default behavior
+        if (!isset($query->limit)) {
+            $query->limit = 1000000000000000000;
+        }
+
         // if there are no query parameters we need to do a get all records instead of a find
         if (empty($query->wheres)) {
             return $this->getRecords($query);
