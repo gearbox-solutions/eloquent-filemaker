@@ -10,7 +10,7 @@ use BlueFeather\EloquentFileMaker\Database\Query\Grammars\FMGrammar;
 use BlueFeather\EloquentFileMaker\Database\Schema\FMBuilder;
 use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Middleware;
 use Illuminate\Database\Connection;
 use Illuminate\Http\Client\PendingRequest;
@@ -664,7 +664,7 @@ class FileMakerConnection extends Connection
             $retries,
             RequestInterface $request,
             ResponseInterface $response = null,
-            RequestException $exception = null
+            TransferException $exception = null
         ) {
             // Limit the number of retries to 5
             if ($retries >= $this->retries) {
