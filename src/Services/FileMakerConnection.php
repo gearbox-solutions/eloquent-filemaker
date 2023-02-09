@@ -676,7 +676,7 @@ class FileMakerConnection extends Connection
             $log_message = null;
 
             // Retry connection exceptions
-            if ($exception instanceof ConnectException) {
+            if ($exception instanceof TransferException) {
                 $should_retry = true;
                 $log_message = 'Connection Error: ' . $exception->getMessage();
             }
