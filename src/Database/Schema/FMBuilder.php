@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFeather\EloquentFileMaker\Database\Schema;
+namespace GearboxSolutions\EloquentFileMaker\Database\Schema;
 
 class FMBuilder extends \Illuminate\Database\Schema\Builder
 {

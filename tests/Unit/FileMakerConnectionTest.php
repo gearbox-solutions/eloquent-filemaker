@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 
-use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
+use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;

@@ -1,12 +1,12 @@
 <?php
 
-namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
+namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent;
 
-use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMGuardsAttributes;
-use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasAttributes;
-use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
-use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\FMGuardsAttributes;
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\FMHasAttributes;
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
+use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;

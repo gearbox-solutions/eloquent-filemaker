@@ -2,8 +2,8 @@
 
 namespace Tests;
 
-use BlueFeather\EloquentFileMaker\Support\Facades\FM;
-use BlueFeather\EloquentFileMaker\Providers\FileMakerConnectionServiceProvider;
+use GearboxSolutions\EloquentFileMaker\Support\Facades\FM;
+use GearboxSolutions\EloquentFileMaker\Providers\FileMakerConnectionServiceProvider;
 use Orchestra\Testbench\TestCase as OchestraTestCase;
 
 class TestCase extends OchestraTestCase

@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFeather\EloquentFileMaker\Database\Query\Grammars;
+namespace GearboxSolutions\EloquentFileMaker\Database\Query\Grammars;
 
 use Illuminate\Database\Query\Grammars\Grammar;
 

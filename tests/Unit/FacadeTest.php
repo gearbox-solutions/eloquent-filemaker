@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 
-use BlueFeather\EloquentFileMaker\Support\Facades\FM;
+use GearboxSolutions\EloquentFileMaker\Support\Facades\FM;
 use Tests\TestCase;
 
 class FacadeTest extends TestCase

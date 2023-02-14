@@ -1,11 +1,11 @@
 <?php
 
 
-namespace BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns;
+namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns;
 
-use BlueFeather\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo;
-use BlueFeather\EloquentFileMaker\Database\Eloquent\Relations\HasMany;
-use BlueFeather\EloquentFileMaker\Database\Eloquent\Relations\HasOne;
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo;
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\HasMany;
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 

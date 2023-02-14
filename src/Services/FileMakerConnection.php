@@ -1,14 +1,14 @@
 <?php
 
 
-namespace BlueFeather\EloquentFileMaker\Services;
+namespace GearboxSolutions\EloquentFileMaker\Services;
 
 
-use BlueFeather\EloquentFileMaker\Database\Eloquent\FMEloquentBuilder;
-use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use BlueFeather\EloquentFileMaker\Database\Query\Grammars\FMGrammar;
-use BlueFeather\EloquentFileMaker\Database\Schema\FMBuilder;
-use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\FMEloquentBuilder;
+use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use GearboxSolutions\EloquentFileMaker\Database\Query\Grammars\FMGrammar;
+use GearboxSolutions\EloquentFileMaker\Database\Schema\FMBuilder;
+use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Middleware;

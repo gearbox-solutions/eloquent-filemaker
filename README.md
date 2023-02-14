@@ -5,7 +5,7 @@ This package lets you easily connect to your FileMaker database through the Data
 
 ## Support
 
-This package is built and maintained by [Blue Feather](https://www.bluefeathergroup.com/). We build fantastic web apps with technologies like Laravel, Vue, React, and Node. If you would like assistance building your own web app, either using this package or other technologies, please [contact us](https://www.bluefeathergroup.com/contact/) for a free introductory consultation to discuss your project.
+This package is built and maintained by [Gearbox Solutions](https://gearboxgo.com/). We build fantastic web apps with technologies like Laravel, Vue, React, and Node. If you would like assistance building your own web app, either using this package or other technologies, please [contact us](https://gearboxgo.com/) for a free introductory consultation to discuss your project.
 
 ## Features
 * Uses the FileMaker Data API for accessing your FileMaker data
@@ -28,10 +28,10 @@ This package is built and maintained by [Blue Feather](https://www.bluefeathergr
 Laravel 7.3 or later.
 
 # Installation
-Install `bluefeather/eloquent-filemaker` in your project using Composer.
+Install `gearbox-solutions/eloquent-filemaker` in your project using Composer.
 
 ```
-composer require bluefeather/eloquent-filemaker
+composer require gearbox-solutions/eloquent-filemaker
 ```
 # Usage
 With the package installed you can now have access to all the features of this package. There are a few different areas to configure.
@@ -336,7 +336,7 @@ User.php
 ```
     public function company()
     {
-        return new \BlueFeather\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo(Company::query(), $this, 'company_id', 'id', '');
+        return new \GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo(Company::query(), $this, 'company_id', 'id', '');
     }
 
 ```

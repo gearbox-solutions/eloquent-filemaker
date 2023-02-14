@@ -1,11 +1,11 @@
 <?php
 
 
-namespace BlueFeather\EloquentFileMaker\Support\Facades;
+namespace GearboxSolutions\EloquentFileMaker\Support\Facades;
 
 
-use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use BlueFeather\EloquentFileMaker\Services\FileMakerConnection;
+use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Support\Facades\Facade;
 
 

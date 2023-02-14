@@ -1,7 +1,7 @@
 <?php
 
 
-namespace BlueFeather\EloquentFileMaker\Database\Eloquent\Relations;
+namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations;
 
 
 class BelongsTo extends \Illuminate\Database\Eloquent\Relations\BelongsTo

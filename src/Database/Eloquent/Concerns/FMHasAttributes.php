@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns;
+namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns;
 
 use Illuminate\Database\Eloquent\Concerns\HasAttributes;
 

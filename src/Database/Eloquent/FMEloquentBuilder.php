@@ -1,11 +1,11 @@
 <?php
 
 
-namespace BlueFeather\EloquentFileMaker\Database\Eloquent;
+namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent;
 
-use BlueFeather\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
-use BlueFeather\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
+use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
+use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;

@@ -1,11 +1,11 @@
 <?php
 
 
-namespace BlueFeather\EloquentFileMaker\Database\Query;
+namespace GearboxSolutions\EloquentFileMaker\Database\Query;
 
 
 use _PHPStan_59fb0a3b2\Symfony\Component\String\Exception\RuntimeException;
-use BlueFeather\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use DateTimeInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
