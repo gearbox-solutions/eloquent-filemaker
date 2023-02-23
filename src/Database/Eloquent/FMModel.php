@@ -486,7 +486,7 @@ abstract class FMModel extends Model
         $value = $this->attributes[$key];
 
         // When writing dates the regular datetime format won't work, so we have to get JUST the date value
-        if ($this->isDateAttribute($key)) {
+        if ($this->isDateAttribute($key) && ($this->hasCast($key, ['date'] || $this->hasCast($key, ['custom_date']) || $this->hasCast($key, ['immutable_date'])))) {
             $value = Arr::first(explode(' ', $value));
         }
 
