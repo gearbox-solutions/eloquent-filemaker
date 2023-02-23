@@ -6,6 +6,7 @@ namespace Tests\Unit;
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Mockery;
 use Tests\TestCase;
@@ -34,7 +35,7 @@ class FileMakerConnectionTest extends TestCase
         $this->assertEquals('filemaker', $connection->getConfig('name'));
         $this->assertEquals('tester', $connection->getConfig('database'));
 
-        $connection->setConnection('filemaker2');
+        $connection = DB::connection('filemaker2');
 
         $this->assertEquals('filemaker2', $connection->getConfig('name'));
         $this->assertEquals('tester2', $connection->getConfig('database'));
@@ -52,7 +53,7 @@ class FileMakerConnectionTest extends TestCase
 
     public function testDatabasePrefixIsAddedToLayoutNames()
     {
-        $connection = app(FileMakerConnection::class)->setConnection('prefix');
+        $connection = DB::connection('prefix');
 
         $this->assertEquals('dapi-', $connection->getLayout());
 
@@ -67,9 +68,9 @@ class FileMakerConnectionTest extends TestCase
     {
         $this->overrideDBHost();
         Http::fake([
-            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200)
+            'https://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200)
         ]);
-        $connection = app(FileMakerConnection::class)->setConnection('filemaker');
+        $connection = DB::connection('filemaker');
 
         $connection->login();
 
@@ -82,9 +83,9 @@ class FileMakerConnectionTest extends TestCase
     {
         $this->overrideDBHost();
         Http::fake([
-            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200)
+            'https://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200)
         ]);
-        $connection = app(FileMakerConnection::class)->setConnection('filemaker');
+        $connection = DB::connection('filemaker');
 
         $connection->login();
 
