@@ -20,7 +20,11 @@
     ],
     "autoload": {
         "psr-4": {
-            "GearboxSolutions\\EloquentFileMaker\\": "src/",
+            "GearboxSolutions\\EloquentFileMaker\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
             "Tests\\": "tests/"
         }
     },
