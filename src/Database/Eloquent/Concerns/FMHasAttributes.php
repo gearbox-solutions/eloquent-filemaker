@@ -2,22 +2,58 @@
 
 namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns;
 
+use DateTime;
 use Illuminate\Database\Eloquent\Concerns\HasAttributes;
+use Illuminate\Support\Arr;
 
 trait FMHasAttributes
 {
-    use HasAttributes;
 
     /**
-     * Determine whether a value is Date / DateTime castable for inbound manipulation.
+     * Set a given attribute on the model.
      *
-     * @param  string  $key
-     * @return bool
+     * @param string $key
+     * @param mixed $value
+     * @return mixed
      */
-    protected function isDateCastable($key)
+    public function setAttribute($key, $value)
     {
-        // We need to also cast timestamps as
-        return $this->hasCast($key, ['date', 'datetime', 'immutable_date', 'immutable_datetime', 'timestamp', 'custom_datetime']);
+        parent::setAttribute($key, $value);
+
+        $value = $this->attributes[$key];
+
+        // Check if we still have a DateTime object due to custom formatting and convert it to a string to write to FM.
+        // Normally the SQL grammar would handle converting DateTime objects and SQL doesn't care about extra time data,
+        // but FileMaker does, so we have to convert at this point and strip out times.
+        //
+        // We could convert the DateTime to a string at the time when we're preparing the API call, but at that point
+        // we won't be in the model and won't have access to the cast type to determine if we should strip out the
+        // time data.
+
+        if ($value instanceof DateTime) {
+            $value = $value->format($this->dateFormat);
+        }
+        // When writing dates the regular datetime format won't work, so we have to get JUST the date value
+        // check the key's cast to see if it is cast to a date or custom date:format
+        $castType = $this->getCasts()[$key] ?? null;
+        $isDate = $castType == "date" || str_starts_with($castType, 'date:');
+        if ($isDate) {
+            $value = Arr::first(explode(' ', $value));
+        }
+
+        // FileMaker can't handle true and false, so we need to change to 1 and 0
+        if (is_bool($value)) {
+            $value = $value ? 1 : 0;
+        }
+
+        // FileMaker can't handle null, so change it to ''
+        if (is_null($value)) {
+            $value = '';
+        }
+
+        $this->attributes[$key] = $value;
+
+        return $this;
     }
 
 }

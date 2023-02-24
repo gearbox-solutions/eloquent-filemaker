@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -73,6 +72,13 @@ abstract class FMModel extends Model
      * @var string
      */
     protected $keyType = 'string';
+
+    /**
+     * The date format to use when writing to the database.
+     *
+     * @var string
+     */
+    protected $dateFormat = 'm/j/Y H:i:s';
 
 
     public function __construct(array $attributes = [])
@@ -470,39 +476,6 @@ abstract class FMModel extends Model
     public function getTable()
     {
         return $this->table ?? $this->layout ?? Str::snake(Str::pluralStudly(class_basename($this)));
-    }
-
-    /**
-     * Set a given attribute on the model.
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return mixed
-     */
-    public function setAttribute($key, $value)
-    {
-        parent::setAttribute($key, $value);
-
-        $value = $this->attributes[$key];
-
-        // When writing dates the regular datetime format won't work, so we have to get JUST the date value
-        if ($this->isDateAttribute($key) && ($this->hasCast($key, ['date'] || $this->hasCast($key, ['custom_date']) || $this->hasCast($key, ['immutable_date'])))) {
-            $value = Arr::first(explode(' ', $value));
-        }
-
-        // FileMaker can't handle true and false, so we need to change to 1 and 0
-        if (is_bool($value)) {
-            $value = $value ? 1 : 0;
-        }
-
-        // FileMaker can't handle null, so change it to ''
-        if (is_null($value)) {
-            $value = '';
-        }
-
-        $this->attributes[$key] = $value;
-
-        return $this;
     }
 
 
