@@ -265,6 +265,7 @@ performScript
 setContainer
 duplicate
 createRecord
+getLayoutMetadata
 ```
 
 #### Examples:
@@ -276,6 +277,16 @@ $person = FM::table('person')->where('nameFirst', 'Jaina')->first();
 Find the 10 most recent invoices for a customer
 ```
 $invoices = FM::layout('invoice')->where('customer_id', $customer->id)->orderByDesc('date')->limit(10)->get();
+```
+
+Get layout metadata, which includes field, portal, and value list information
+```
+$layoutMetadata = FM::layout('MyLayoutName')->getLayoutMetadata('MyLayoutName');
+```
+
+Get layout metadata for a specific record
+```
+$layoutMetadata = FM::layout('MyLayoutName')->recordId(879)->getLayoutMetadata();
 ```
 
 Run a script

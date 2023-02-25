@@ -248,11 +248,11 @@ class FMBaseBuilder extends Builder
     /**
      * Delete a record using the internal FileMaker record ID
      *
-     * @param $recordId
+     * @param Int $recordId
      * @return int
      * @throws FileMakerDataApiException
      */
-    public function deleteByRecordId($recordId): int
+    public function deleteByRecordId(Int $recordId): int
     {
 
         $this->recordId = $recordId;
@@ -819,6 +819,14 @@ class FMBaseBuilder extends Builder
         $result = $this->connection->executeScript($this);
 
         return $result;
+    }
+
+    public function getLayoutMetadata($layoutName = null)
+    {
+        if ($layoutName) {
+            $this->layout($layoutName);
+        }
+        return $this->connection->getLayoutMetadata($this);
     }
 
     /**

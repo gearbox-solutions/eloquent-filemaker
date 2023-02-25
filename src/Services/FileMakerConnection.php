@@ -9,7 +9,6 @@ use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Database\Query\Grammars\FMGrammar;
 use GearboxSolutions\EloquentFileMaker\Database\Schema\FMBuilder;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
-use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Middleware;
 use Illuminate\Database\Connection;
@@ -576,6 +575,7 @@ class FileMakerConnection extends Connection
         return $this->executeScript($query);
     }
 
+
     protected function getSessionTokenCacheKey()
     {
         return 'filemaker-session-' . $this->getName();
@@ -717,10 +717,36 @@ class FileMakerConnection extends Connection
         return new FMGrammar();
     }
 
-    public function getLayoutMetadata($layout = null)
+//    public function getLayoutMetadata($layout = null)
+//    {
+//        $response = $this->makeRequest('get', $this->getLayoutUrl($layout));
+//        return $response['response'];
+//    }
+
+    /**
+     * @param String | FMBaseBuilder $query
+     * @return mixed
+     * @throws FileMakerDataApiException
+     */
+    public function getLayoutMetadata(FMBaseBuilder|string $query = null)
     {
-        $response = $this->makeRequest('get', $this->getLayoutUrl($layout));
-        return $response['response'];
+        // if the query is just a string, it means that it's a layout name
+        if (is_string($query)) {
+            $query = $this->table($query);
+        }
+
+        $this->setLayout($query->from);
+        $url = $this->getLayoutUrl();
+
+        $queryParams = [];
+        $param = $query->getRecordId();
+        if ($param !== null) {
+            $queryParams['recordId'] = $param;
+        }
+
+        $response = $this->makeRequest('get', $url, $queryParams);
+
+        return $response;
     }
 
     public function getSchemaBuilder()
