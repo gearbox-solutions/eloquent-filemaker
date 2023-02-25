@@ -281,7 +281,7 @@ $invoices = FM::layout('invoice')->where('customer_id', $customer->id)->orderByD
 
 Get layout metadata, which includes field, portal, and value list information
 ```
-$layoutMetadata = FM::layout('MyLayoutName')->getLayoutMetadata('MyLayoutName');
+$layoutMetadata = FM::getLayoutMetadata('MyLayoutName');
 ```
 
 Get layout metadata for a specific record
