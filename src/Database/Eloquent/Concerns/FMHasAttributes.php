@@ -35,7 +35,7 @@ trait FMHasAttributes
         }
         // When writing dates the regular datetime format won't work, so we have to get JUST the date value
         // check the key's cast to see if it is cast to a date or custom date:format
-        $castType = $this->getCasts()[$key] ?? null;
+        $castType = $this->getCasts()[$key] ?? '';
         $isDate = $castType == "date" || str_starts_with($castType, 'date:');
         if ($isDate) {
             $value = Arr::first(explode(' ', $value));
