@@ -19,4 +19,11 @@ class HasMany extends \Illuminate\Database\Eloquent\Relations\HasMany
         }
     }
 
+    protected function getKeys(array $models, $key = null)
+    {
+        return collect($models)->map(function ($value) use ($key) {
+            return $key ? $value->getAttribute($key) : $value->getKey();
+        })->values()->filter()->unique(null, true)->sort()->all();
+    }
+
 }
