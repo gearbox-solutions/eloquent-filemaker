@@ -17,4 +17,11 @@ class HasOne extends \Illuminate\Database\Eloquent\Relations\HasOne
             $this->query->where($this->foreignKey, '==', $this->getParentKey());
         }
     }
+
+    protected function getKeys(array $models, $key = null)
+    {
+        return collect($models)->map(function ($value) use ($key) {
+            return $key ? $value->getAttribute($key) : $value->getKey();
+        })->values()->filter()->unique(null, true)->sort()->all();
+    }
 }
