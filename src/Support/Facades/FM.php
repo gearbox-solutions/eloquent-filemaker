@@ -1,16 +1,12 @@
 <?php
 
-
 namespace GearboxSolutions\EloquentFileMaker\Support\Facades;
-
 
 use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Support\Facades\Facade;
 
-
 /**
- *
  * Executes against DatabaseManager. If DatabaseManager doesn't have the functionality, it uses __call to call against
  * the connection, which would be a FileMakerConnection.
  *
@@ -26,12 +22,10 @@ use Illuminate\Support\Facades\Facade;
  * @method static FileMakerConnection getLayoutMetadata($layoutName = null)
 
  *
- *
  * @see \Illuminate\Database\DatabaseManager
  * @see FileMakerConnection
  *
  * */
-
 class FM extends Facade
 {
     /**

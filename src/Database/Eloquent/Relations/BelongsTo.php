@@ -1,8 +1,6 @@
 <?php
 
-
 namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations;
-
 
 class BelongsTo extends \Illuminate\Database\Eloquent\Relations\BelongsTo
 {
@@ -24,7 +22,6 @@ class BelongsTo extends \Illuminate\Database\Eloquent\Relations\BelongsTo
     /**
      * Set the constraints for an eager load of the relation.
      *
-     * @param  array  $models
      * @return void
      */
     public function addEagerConstraints(array $models)
@@ -42,7 +39,6 @@ class BelongsTo extends \Illuminate\Database\Eloquent\Relations\BelongsTo
     /**
      * Gather the keys from an array of related models.
      *
-     * @param  array  $models
      * @return array
      */
     protected function getEagerModelKeys(array $models)

@@ -6,11 +6,10 @@ use Illuminate\Support\Facades\Cache;
 
 trait FMGuardsAttributes
 {
-
     /**
      * Determine if the given key is guarded.
      *
-     * @param string $key
+     * @param  string  $key
      * @return bool
      */
     public function isGuarded($key)
@@ -20,21 +19,21 @@ trait FMGuardsAttributes
         }
 
         return $this->getGuarded() == ['*'] ||
-            !empty(preg_grep('/^' . preg_quote($key) . '$/i', $this->getGuarded())) ||
-            !$this->isGuardableColumn($key);
+            ! empty(preg_grep('/^' . preg_quote($key) . '$/i', $this->getGuarded())) ||
+            ! $this->isGuardableColumn($key);
     }
 
     /**
      * Determine if the given column is a valid, guardable column.
      *
-     * @param string $key
+     * @param  string  $key
      * @return bool
      */
     protected function isGuardableColumn($key)
     {
         $this->primeGuardableColumns();
 
-        if(in_array($key, static::$guardableColumns[get_class($this)])) {
+        if (in_array($key, static::$guardableColumns[get_class($this)])) {
             return true;
         }
 
@@ -45,7 +44,7 @@ trait FMGuardsAttributes
 
     protected function primeGuardableColumns($forceRefresh = false)
     {
-        if (!isset(static::$guardableColumns[get_class($this)])) {
+        if (! isset(static::$guardableColumns[get_class($this)])) {
             $columns = $this->getColumns($forceRefresh);
 
             if (empty($columns)) {
@@ -55,17 +54,16 @@ trait FMGuardsAttributes
         }
     }
 
-
     protected function getColumns($forceRefresh = false): array
     {
         $cacheKey = "eloquent-filemaker-{$this->table}-columns";
-        $refreshCallback = function() {
+        $refreshCallback = function () {
             $layoutMetaData = $this->getConnection()->getLayoutMetadata($this->table);
 
             return array_column($layoutMetaData['fieldMetaData'], 'name');
         };
 
-        if($forceRefresh) {
+        if ($forceRefresh) {
             Cache::forever($cacheKey, $columns = $refreshCallback());
 
             return $columns;
@@ -73,5 +71,4 @@ trait FMGuardsAttributes
 
         return Cache::rememberForever($cacheKey, $refreshCallback);
     }
-
 }

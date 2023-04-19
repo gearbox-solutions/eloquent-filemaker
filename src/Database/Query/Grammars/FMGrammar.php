@@ -6,7 +6,6 @@ use Illuminate\Database\Query\Grammars\Grammar;
 
 class FMGrammar extends Grammar
 {
-
     /**
      * Get the format for database stored dates.
      *
@@ -16,5 +15,4 @@ class FMGrammar extends Grammar
     {
         return 'n/j/Y g:i:s A';
     }
-
 }

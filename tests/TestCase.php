@@ -2,8 +2,8 @@
 
 namespace Tests;
 
-use GearboxSolutions\EloquentFileMaker\Support\Facades\FM;
 use GearboxSolutions\EloquentFileMaker\Providers\FileMakerConnectionServiceProvider;
+use GearboxSolutions\EloquentFileMaker\Support\Facades\FM;
 use Orchestra\Testbench\TestCase as OchestraTestCase;
 
 class TestCase extends OchestraTestCase
@@ -14,7 +14,6 @@ class TestCase extends OchestraTestCase
      * Get package providers.
      *
      * @param  \Illuminate\Foundation\Application  $app
-     *
      * @return array
      */
     protected function getPackageProviders($app)
@@ -40,7 +39,7 @@ class TestCase extends OchestraTestCase
     /**
      * Define environment setup.
      *
-     * @param Illuminate\Foundation\Application $app
+     * @param  Illuminate\Foundation\Application  $app
      * @return void
      */
     protected function getEnvironmentSetUp($app)

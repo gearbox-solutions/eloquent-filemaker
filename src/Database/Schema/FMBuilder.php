@@ -18,5 +18,4 @@ class FMBuilder extends \Illuminate\Database\Schema\Builder
 
         return $columns;
     }
-
 }

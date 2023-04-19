@@ -1,12 +1,9 @@
 <?php
 
-
 namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations;
-
 
 class HasMany extends \Illuminate\Database\Eloquent\Relations\HasMany
 {
-
     /**
      * Set the base constraints on the relation query.
      *
@@ -25,5 +22,4 @@ class HasMany extends \Illuminate\Database\Eloquent\Relations\HasMany
             return $key ? $value->getAttribute($key) : $value->getKey();
         })->values()->filter()->unique(null, true)->sort()->all();
     }
-
 }
