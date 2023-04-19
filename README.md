@@ -25,7 +25,11 @@ This package is built and maintained by [Gearbox Solutions](https://gearboxgo.co
 * And more!
 
 ## Requirements
-Laravel 7.3 or later.
+Laravel 9.0+
+
+PHP 8.0+
+
+For Laravel versions greater than 7.3 and less than 9.0, use version [0.2.10](https://github.com/gearbox-solutions/eloquent-filemaker/blob/0.2.10)
 
 # Installation
 Install `gearbox-solutions/eloquent-filemaker` in your project using Composer.
