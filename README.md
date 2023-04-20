@@ -41,21 +41,21 @@ composer require gearbox-solutions/eloquent-filemaker
 With the package installed you can now have access to all the features of this package. There are a few different areas to configure.
 
 ## Database configuration
-The first thing to do is to add a new data connection in your ```database.php``` config file. The connections you specify here will be used in your FMModel classes to configure which databases each model will connect to.
+The first thing to do is to add a new data connection in your `database.php` config file. The connections you specify here will be used in your FMModel classes to configure which databases each model will connect to.
 
 You may use the following code block below as a template.
-
-        'filemaker' => [
-            'driver' => 'filemaker',
-            'host' => env('DB_HOST', 'fms.mycompany.com'),
-            'database' => env('DB_DATABASE', 'MyFileName'),
-            'username' => env('DB_USERNAME', 'myusername'),
-            'password' => env('DB_PASSWORD', ''),
-            'prefix' => env('DB_PREFIX', ''),
-            'version' => env('DB_VERSION', 'vLatest'),
-            'protocol' => env('DB_PROTOCOL', 'https'),
-        ]
-
+```php
+'filemaker' => [
+    'driver' => 'filemaker',
+    'host' => env('DB_HOST', 'fms.mycompany.com'),
+    'database' => env('DB_DATABASE', 'MyFileName'),
+    'username' => env('DB_USERNAME', 'myusername'),
+    'password' => env('DB_PASSWORD', ''),
+    'prefix' => env('DB_PREFIX', ''),
+    'version' => env('DB_VERSION', 'vLatest'),
+    'protocol' => env('DB_PROTOCOL', 'https'),
+]
+```
 You should add one database connection configuration for each FileMaker database you will be connecting to. Each file can have completely different configurations, and can even be on different servers.
 
 Sessions will be maintained on a per-connection basis and tokens will automatically be cached using whatever cache configuration you have set up for your Laravel app.
@@ -100,17 +100,17 @@ This package supports both reading and writing container field data. Container f
 #### Writing to container fields
 When setting a container field you should set the value to be an `Illuminate/HTTP/File` or `Illuminate/HTTP/UploadedFile` object. These attributes will be written back to your container fields along with any other model updates when the `save()` method is called on your model object.
 ```php
-  $file = new File(storage_path('app/public/gator.jpg'));
-  $newPet->photo = $file;
-  $newPet->save();
+$file = new File(storage_path('app/public/gator.jpg'));
+$newPet->photo = $file;
+$newPet->save();
 ```
 
 #### Custom filenames when inserting files into containers
 By default, files are inserted into containers using the filename of the file you are inserting. If you wish to set a new filename when the file is inserted into the container you can do so by passing the file and filename together in an array when setting your container.
 ```php
-  $file = new File(storage_path('app/public/gator.jpg'));
-  $newPet->photo = [$file, 'fluffy.jpg'];
-  $newPet->save();
+$file = new File(storage_path('app/public/gator.jpg'));
+$newPet->photo = [$file, 'fluffy.jpg'];
+$newPet->save();
 ```
 
 ### Renaming and Mapping FileMaker Fields
@@ -125,7 +125,7 @@ protected $fieldMapping = [
 and then you can get/set the attributes via....
 
 ```php
- $myModel->a_much_better_name = 'my new value';
+$myModel->a_much_better_name = 'my new value';
 ```
 
 ### Fields from related records
@@ -169,23 +169,25 @@ $person->person_pet_portal[1]['person_PET::type'] = 'cat';
 This package has special handling for casting FileMaker Timestamp and Date fields to Carbon instances for you. To take advantage of this, you must map the fields as you would with a native Laravel Model class. You can use the `$casts` property as you normally would for these attributes.
 
 ```php
-    protected $casts = [
-        'nextAppointment' => 'datetime',
-        'birthday' => 'date',
-    ];
+protected $casts = [
+    'nextAppointment' => 'datetime',
+    'birthday' => 'date',
+];
 ```
 
 The format Date and Timestamp fields written to FileMaker can be changed via the `$dateFormat` property of your model. This value must be compatible with the format output from the FileMaker Data API for Timestamp values and will be the format written back into your database. One important requirement is that this must be a full timestamp format, not just a date format.
 
 Here are some example formats:
 ```php
-    protected $dateFormat = 'n/j/Y g:i:s A'; // 7/1/1920 4:01:01 PM
-    protected $dateFormat = 'n/j/Y G:i:s'; // 7/1/1920 16:01:01
+protected $dateFormat = 'n/j/Y g:i:s A'; // 7/1/1920 4:01:01 PM
+protected $dateFormat = 'n/j/Y G:i:s'; // 7/1/1920 16:01:01
 ```
 
 
 ## Example FMModel Class
 ```php
+// Person.php
+
 class Person extends FMModel
 {
 
@@ -206,7 +208,6 @@ class Person extends FMModel
     }
 
 }
-
 ```
 
 # The Base Query Builder and the FM Facade
@@ -301,9 +302,9 @@ $result = FM::layout('MyLayoutName')->performScript('MyScriptName');
 Run a script with JSON data as a parameter
 ```php
 $json = json_encode ([
-      'name' => 'Joe Smith',
-      'birthday' => '1/1/1970'
-      'favorite_color' => 'blue'
+    'name' => 'Joe Smith',
+    'birthday' => '1/1/1970'
+    'favorite_color' => 'blue'
 ]);
 
 $result = FM::layout('globals')->performScript('New Contact Request'; $json);
@@ -317,7 +318,6 @@ $result = FM::connection('MyOtherDatabaseConnectionName')->layout('MyLayoutName'
 Create a record with an array of field data and then perform a script after record creation, within the same request
 ```php
 FM::layout('MyLayoutName')->script('ScriptName')->fieldData($data)->createRecord();
-
 ```
 
 ## Logging out, disconnecting, and ending your Data API session
@@ -347,6 +347,8 @@ Once they're set correctly, you can create relationships, such as a belongsTo, b
 Here is an example of setting a native Laravel User Model to belong to a FileMaker-based Company FMModel class.
 
 ```php
+// User.php
+
 class User extends Model
 {
     public function company()
