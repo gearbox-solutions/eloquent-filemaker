@@ -1,8 +1,6 @@
 <?php
 
-
 namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations;
-
 
 class HasOne extends \Illuminate\Database\Eloquent\Relations\HasOne
 {

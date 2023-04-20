@@ -1,8 +1,6 @@
 <?php
 
-
 namespace GearboxSolutions\EloquentFileMaker\Services;
-
 
 use GearboxSolutions\EloquentFileMaker\Database\Eloquent\FMEloquentBuilder;
 use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
@@ -16,25 +14,29 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Symfony\Component\HttpFoundation\File\File;
 use Illuminate\Support\Facades\Http;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Symfony\Component\HttpFoundation\File\File;
 
 class FileMakerConnection extends Connection
 {
     protected $protocol = 'https';
+
     protected $host;
+
     protected $layout;
 
     protected $username;
+
     protected $password;
+
     protected $sessionToken;
+
     protected $retries = 1;
 
-
     /**
-     * @param String $layout
+     * @param  string  $layout
      * @return $this
      */
     public function setLayout($layout)
@@ -67,6 +69,7 @@ class FileMakerConnection extends Connection
 
     /**
      * Log in and get a session token to use with subsequent DataAPI requests which require authentication
+     *
      * @return mixed
      */
     protected function fetchNewSessionToken()
@@ -75,8 +78,8 @@ class FileMakerConnection extends Connection
 
         // prepare the post body
         $postBody = [
-            'fmDataSource' => [Arr::only($this->config, ['database', 'username', 'password'])
-            ]
+            'fmDataSource' => [Arr::only($this->config, ['database', 'username', 'password']),
+            ],
         ];
 
         // perform the login
@@ -94,7 +97,7 @@ class FileMakerConnection extends Connection
 
     protected function getDatabaseUrl()
     {
-        return ($this->config['protocol'] ?? 'https') . "://" . $this->config['host'] . '/fmi/data/' . ($this->config['version'] ?? 'vLatest') . '/databases/' . $this->config['database'];
+        return ($this->config['protocol'] ?? 'https') . '://' . $this->config['host'] . '/fmi/data/' . ($this->config['version'] ?? 'vLatest') . '/databases/' . $this->config['database'];
     }
 
     protected function getRecordUrl()
@@ -108,11 +111,11 @@ class FileMakerConnection extends Connection
         if ($layout) {
             $this->setLayout($layout);
         }
+
         return $this->getDatabaseUrl() . '/layouts/' . $this->getLayout();
     }
 
     /**
-     * @param $response
      * @throws FileMakerDataApiException
      */
     protected function checkResponseForErrors($response)
@@ -121,7 +124,7 @@ class FileMakerConnection extends Connection
 
         if ($messages) {
             foreach ($messages as $message) {
-                $code = (int)$message['code'];
+                $code = (int) $message['code'];
 
                 if ($code !== 0) {
                     switch ($code) {
@@ -132,7 +135,7 @@ class FileMakerConnection extends Connection
                         case 105:
                             // Layout is missing error
                             // Add the layout name to the message for clarity
-                            $message = $message['message'] . ": " . $this->getLayout();
+                            $message = $message['message'] . ': ' . $this->getLayout();
                             throw new FileMakerDataApiException($message, $code);
                         default:
                             throw new FileMakerDataApiException($message['message'], $code);
@@ -142,9 +145,7 @@ class FileMakerConnection extends Connection
         } else {
             $response->throw();
         }
-
     }
-
 
     public function uploadToContainerField(FMBaseBuilder $query)
     {
@@ -174,7 +175,6 @@ class FileMakerConnection extends Connection
         return $response;
     }
 
-
     public function getSingleRecordById(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
@@ -183,7 +183,6 @@ class FileMakerConnection extends Connection
         $response = $this->makeRequest('get', $url);
 
         return $response;
-
     }
 
     public function deleteRecord(FMBaseBuilder $query)
@@ -209,15 +208,16 @@ class FileMakerConnection extends Connection
     }
 
     /**
-     * @param FMEloquentBuilder $query
+     * @param  FMEloquentBuilder  $query
      * @return mixed
+     *
      * @throws FileMakerDataApiException
      */
     public function performFind(FMBaseBuilder $query)
     {
         // If limit hasn't been specified we should set it to be very high to bypass FM's default 100-record limit
         // This more closely matches Laravel's default behavior
-        if (!isset($query->limit)) {
+        if (! isset($query->limit)) {
             $query->limit = 1000000000000000000;
         }
 
@@ -280,7 +280,7 @@ class FileMakerConnection extends Connection
         if ($query->limit > 0) {
             $queryParams['_limit'] = $query->limit;
         }
-        if ($query->orders !== null && sizeof($query->orders) > 0) {
+        if ($query->orders !== null && count($query->orders) > 0) {
             // sort can have many values, so it needs to get json_encoded and passed as a single string
             $queryParams['_sort'] = json_encode($query->orders);
         }
@@ -292,7 +292,6 @@ class FileMakerConnection extends Connection
 
     /**
      * Get a new query builder instance.
-     *
      */
     public function query()
     {
@@ -304,7 +303,7 @@ class FileMakerConnection extends Connection
     /**
      * Edit a record in FileMaker
      *
-     * @param FMBaseBuilder $query
+     *
      * @throws FileMakerDataApiException
      */
     public function editRecord(FMBaseBuilder $query)
@@ -320,18 +319,17 @@ class FileMakerConnection extends Connection
         return $response;
     }
 
-
     /**
      * Attempt to emulate a sql update in FileMaker
      *
-     * @param FMBaseBuilder $query
-     * @param array $bindings
+     * @param  FMBaseBuilder  $query
+     * @param  array  $bindings
      * @return int
      */
     public function update($query, $bindings = [])
     {
         // If there's no FM Record ID it means we need to find a set of records and then update the results
-        if (!$query->getRecordId()) {
+        if (! $query->getRecordId()) {
             // There's no FileMaker Record ID
             return $this->performFindAndUpdateResults($query);
         }
@@ -379,8 +377,8 @@ class FileMakerConnection extends Connection
     }
 
     /**
-     * @param FMBaseBuilder $query
      * @return int
+     *
      * @throws FileMakerDataApiException
      */
     protected function performFindAndUpdateResults(FMBaseBuilder $query)
@@ -425,8 +423,8 @@ class FileMakerConnection extends Connection
     }
 
     /**
-     * @param FMBaseBuilder $query
      * @return bool
+     *
      * @throws FileMakerDataApiException
      */
     public function createRecord(FMBaseBuilder $query)
@@ -438,8 +436,8 @@ class FileMakerConnection extends Connection
         $postData = $this->buildPostDataFromQuery($query);
 
         // fieldData is required for create, so fill a blank value if none exists
-        if (!isset($postData['fieldData'])) {
-            $postData['fieldData'] = json_decode("{}");
+        if (! isset($postData['fieldData'])) {
+            $postData['fieldData'] = json_decode('{}');
         }
 
         $response = $this->makeRequest('post', $url, $postData);
@@ -454,7 +452,7 @@ class FileMakerConnection extends Connection
         // only set field data if it exists
         if ($query->fieldData) {
             // fieldData needs to have a value if it's there, but an empty object is ok instead of null
-            $postData['fieldData'] = $this->getNonContainerFieldsForRecordWrite($query->fieldData) ?? json_decode("{}");
+            $postData['fieldData'] = $this->getNonContainerFieldsForRecordWrite($query->fieldData) ?? json_decode('{}');
         }
 
         // attribute => parameter
@@ -472,7 +470,7 @@ class FileMakerConnection extends Connection
             'layoutResponse' => 'layout.response',
             'portal' => 'portal',
             'modId' => 'modId',
-            'portalData' => 'portalData'
+            'portalData' => 'portalData',
         ];
 
         foreach ($params as $attribute => $request) {
@@ -483,7 +481,7 @@ class FileMakerConnection extends Connection
                 continue;
             }
 
-            if (is_array($value) && sizeof($value) == 0) {
+            if (is_array($value) && count($value) == 0) {
                 continue;
             }
 
@@ -498,7 +496,7 @@ class FileMakerConnection extends Connection
             if ($postData['offset'] > 0) {
                 // increment offset if it's set, since offset is 1-indexed
                 $postData['offset']++;
-            } else if ($postData['offset'] == 0) {
+            } elseif ($postData['offset'] == 0) {
                 // We shouldn't have  an offset of 0 for an API call, so remove the key if something set the offset to 0
                 unset($postData['offset']);
             }
@@ -526,6 +524,7 @@ class FileMakerConnection extends Connection
                 $fieldData->forget($key);
             }
         }
+
         return $fieldData;
     }
 
@@ -539,19 +538,17 @@ class FileMakerConnection extends Connection
 
         // if it's an array, it could be a file => filename key-value pair.
         // it's a conainer if the first object in the array is a file
-        if (is_array($field) && sizeof($field) === 2 && $this->isFile($field[0])) {
+        if (is_array($field) && count($field) === 2 && $this->isFile($field[0])) {
             return true;
         }
 
         return false;
     }
 
-
-
     public function executeScript(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
-        $url = $this->getLayoutUrl() . "/script/" . $query->script;
+        $url = $this->getLayoutUrl() . '/script/' . $query->script;
 
         $queryParams = [];
         $param = $query->scriptParam;
@@ -567,7 +564,6 @@ class FileMakerConnection extends Connection
     /**
      * Alias for executeScript()
      *
-     * @param FMBaseBuilder $query
      * @return array|mixed
      */
     public function performScript(FMBaseBuilder $query)
@@ -575,22 +571,21 @@ class FileMakerConnection extends Connection
         return $this->executeScript($query);
     }
 
-
     protected function getSessionTokenCacheKey()
     {
         return 'filemaker-session-' . $this->getName();
     }
 
-
     /**
      * Log out of the database, invalidating our session token
      *
      * @return array|mixed|void
+     *
      * @throws FileMakerDataApiException
      */
     public function disconnect()
     {
-        $url = $this->getDatabaseUrl() . "/sessions/" . $this->sessionToken;
+        $url = $this->getDatabaseUrl() . '/sessions/' . $this->sessionToken;
 
         $response = $this->makeRequest('delete', $url);
 
@@ -601,7 +596,6 @@ class FileMakerConnection extends Connection
 
     /**
      * Remove the session token from the cache
-     *
      */
     public function forgetSessionToken()
     {
@@ -615,11 +609,11 @@ class FileMakerConnection extends Connection
 
     public function setGlobalFields(array $globalFields)
     {
-        $url = $this->getDatabaseUrl() . "/globals/";
+        $url = $this->getDatabaseUrl() . '/globals/';
 
         // Prepare the data to send
         $data = [
-            'globalFields' => $globalFields
+            'globalFields' => $globalFields,
         ];
 
         $response = $this->makeRequest('patch', $url, $data);
@@ -648,6 +642,7 @@ class FileMakerConnection extends Connection
 
         // Return the JSON response
         $json = $response->json();
+
         return $json;
     }
 
@@ -684,7 +679,7 @@ class FileMakerConnection extends Connection
             $contents = $response->getBody()->getContents();
             $contents = json_decode($contents, true);
             if ($response && $response->getStatusCode() !== 200 && $contents !== null) {
-                $code = (int)Arr::first(Arr::pluck(Arr::get($contents, 'messages'), 'code'));;
+                $code = (int) Arr::first(Arr::pluck(Arr::get($contents, 'messages'), 'code'));
                 if ($code === 952 && $retries <= 1) {
                     $refresh = true;
                     $should_retry = true;
@@ -696,7 +691,7 @@ class FileMakerConnection extends Connection
             }
 
             if ($refresh) {
-                error_log("Refreshing Access Token…");
+                error_log('Refreshing Access Token…');
                 $this->login();
             }
 
@@ -724,8 +719,9 @@ class FileMakerConnection extends Connection
 //    }
 
     /**
-     * @param String | FMBaseBuilder $query
+     * @param  string|FMBaseBuilder  $query
      * @return mixed
+     *
      * @throws FileMakerDataApiException
      */
     public function getLayoutMetadata(FMBaseBuilder|string $query = null)

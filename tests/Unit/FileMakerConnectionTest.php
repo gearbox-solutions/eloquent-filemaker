@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
@@ -67,7 +66,7 @@ class FileMakerConnectionTest extends TestCase
     {
         $this->overrideDBHost();
         Http::fake([
-            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200)
+            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200),
         ]);
         $connection = app(FileMakerConnection::class)->setConnection('filemaker');
 
@@ -82,7 +81,7 @@ class FileMakerConnectionTest extends TestCase
     {
         $this->overrideDBHost();
         Http::fake([
-            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200)
+            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200),
         ]);
         $connection = app(FileMakerConnection::class)->setConnection('filemaker');
 

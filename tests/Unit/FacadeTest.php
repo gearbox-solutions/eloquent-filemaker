@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-
 use GearboxSolutions\EloquentFileMaker\Support\Facades\FM;
 use Tests\TestCase;
 
