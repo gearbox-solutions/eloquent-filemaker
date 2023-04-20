@@ -87,7 +87,7 @@ Because this class extends Model, all of the regular eloquent methods may show a
 ### Setting a layout
 Your queries against your FileMaker database require you to get data from a particular layout. Eloquent-FileMaker supports Laravel's name guessing for tables, but in case your layout names don't match you can specify a layout name to use with your models by setting the `$layout` property on your model class.
 
-```
+```php
 protected $layout = 'MyLayout';
 ```
 
@@ -99,7 +99,7 @@ This package supports both reading and writing container field data. Container f
 
 #### Writing to container fields
 When setting a container field you should set the value to be an `Illuminate/HTTP/File` or `Illuminate/HTTP/UploadedFile` object. These attributes will be written back to your container fields along with any other model updates when the `save()` method is called on your model object.
-```
+```php
   $file = new File(storage_path('app/public/gator.jpg'));
   $newPet->photo = $file;
   $newPet->save();
@@ -107,7 +107,7 @@ When setting a container field you should set the value to be an `Illuminate/HTT
 
 #### Custom filenames when inserting files into containers
 By default, files are inserted into containers using the filename of the file you are inserting. If you wish to set a new filename when the file is inserted into the container you can do so by passing the file and filename together in an array when setting your container.
-```
+```php
   $file = new File(storage_path('app/public/gator.jpg'));
   $newPet->photo = [$file, 'fluffy.jpg'];
   $newPet->save();
@@ -116,7 +116,7 @@ By default, files are inserted into containers using the filename of the file yo
 ### Renaming and Mapping FileMaker Fields
 Sometimes you might be working with a FileMaker database with inconvenient field names. These fields can be remapped to model attributes by setting the `$fieldMapping` attribute. This should be an array of strings, mapping FileMaker Field Name => New Attribute Name. You can then use these names as regular Eloquent attributes and they will work with the correct fields in FileMaker
 
-```
+```php
 protected $fieldMapping = [
   'My Inconveniently Named Field' => 'a_much_better_name'
 ];
@@ -124,7 +124,7 @@ protected $fieldMapping = [
 
 and then you can get/set the attributes via....
 
-```
+```php
  $myModel->a_much_better_name = 'my new value';
 ```
 
@@ -133,7 +133,7 @@ If you have included fields from related records through relationships on your D
 
 For example, if you have a Person table with a one-to-one relationship to a record of the first car they owned:
 
-```
+```php
 protected $fieldMapping = [
   'person_CARfirst::color' => 'first_car_color',
   'person_CARfirst::make' => 'first_car_make',
@@ -143,7 +143,7 @@ protected $fieldMapping = [
 
 The related data can be get/set just like any other attribute of the model. The data will be read from and written back to the first related record.
 
-```
+```php
 $personFirstCarColor = $person->first_car_color;
 ```
 
@@ -153,22 +153,22 @@ Portal data can be accessed as an attribute based on the portal's object name on
 
 For example, if you have a portal on a layout whose object name is "person_pet_portal" based on the "person_PET" relationship you can access your portal data via an array of that attribute:
 
-```
+```php
 // Get the name of the first related Pet
 $firstPetName = $person->person_pet_portal[0]['person_PET::name'];
 ```
 
 You can write back data to the portal the same way:
-```
+```php
 // Set the 'type' of the second related pet in the portal
-// $person->person_pet_portal[1]['person_PET::type'] = 'cat';
+$person->person_pet_portal[1]['person_PET::type'] = 'cat';
 ```
 
 
 ### Casting FileMaker Timestamp and Date fields
 This package has special handling for casting FileMaker Timestamp and Date fields to Carbon instances for you. To take advantage of this, you must map the fields as you would with a native Laravel Model class. You can use the `$casts` property as you normally would for these attributes.
 
-```
+```php
     protected $casts = [
         'nextAppointment' => 'datetime',
         'birthday' => 'date',
@@ -178,14 +178,14 @@ This package has special handling for casting FileMaker Timestamp and Date field
 The format Date and Timestamp fields written to FileMaker can be changed via the `$dateFormat` property of your model. This value must be compatible with the format output from the FileMaker Data API for Timestamp values and will be the format written back into your database. One important requirement is that this must be a full timestamp format, not just a date format.
 
 Here are some example formats:
-```
+```php
     protected $dateFormat = 'n/j/Y g:i:s A'; // 7/1/1920 4:01:01 PM
     protected $dateFormat = 'n/j/Y G:i:s'; // 7/1/1920 16:01:01
 ```
 
 
 ## Example FMModel Class
-```
+```php
 class Person extends FMModel
 {
 
@@ -195,7 +195,7 @@ class Person extends FMModel
         'first name' => 'nameFirst',
         'last name' => 'nameLast'
     ];
-    
+
     protected $casts = [
         'birthday' => 'date',
     ];
@@ -236,70 +236,70 @@ where `host` is the IP address or host name of the master machine running FileMa
 Here are a list of methods which will allow you to set the  parameters for the Data API features. Note that most of these can be chain-called, like with the standard query builder.
 
 #### Start with
-```
-table
-connection
-layout (alias for table)
+```php
+FM::table()
+FM::connection()
+FM::layout() // alias for table()
 ```
 
 #### Chainable
-```
-(standard query-builder stuff, like where, orderBy, etc)
-limit
-offset
-script
-scriptParam
-scriptPresort
-scriptPresortParam
-scriptPrerequest
-scriptPrerequestParam
-layoutResponse
-portal
-sort (alias for the native orderBy)
-omit
-fieldData
-portalData
+```php
+// standard query-builder stuff like where, orderBy, etc.
+->limit()
+->offset()
+->script()
+->scriptParam()
+->scriptPresort()
+->scriptPresortParam()
+->scriptPrerequest()
+->scriptPrerequestParam()
+->layoutResponse()
+->portal()
+->sort() // alias for the native orderBy()
+->omit()
+->fieldData()
+->portalData()
 ```
 
 #### Final-chain-link methods
-```
-(standard query-builder stuff, like get, first, etc.)
-findByRecordId
-performScript
-setContainer
-duplicate
-createRecord
-getLayoutMetadata
+```php
+// standard query-builder stuff like get, first, etc.
+->findByRecordId()
+->performScript()
+->setContainer()
+->duplicate()
+->createRecord()
+->getLayoutMetadata()
 ```
 
 #### Examples:
 Perform a find for a person named Jaina
-```
+```php
 $person = FM::table('person')->where('nameFirst', 'Jaina')->first();
 ```
 
 Find the 10 most recent invoices for a customer
-```
+```php
 $invoices = FM::layout('invoice')->where('customer_id', $customer->id)->orderByDesc('date')->limit(10)->get();
 ```
 
 Get layout metadata, which includes field, portal, and value list information
-```
+```php
 $layoutMetadata = FM::getLayoutMetadata('MyLayoutName');
 ```
 
 Get layout metadata for a specific record
-```
+```php
 $layoutMetadata = FM::layout('MyLayoutName')->recordId(879)->getLayoutMetadata();
 ```
 
 Run a script
-```
+```php
 $result = FM::layout('MyLayoutName')->performScript('MyScriptName');
 ```
 
 Run a script with JSON data as a parameter
-```
+```php
 $json = json_encode ([
       'name' => 'Joe Smith',
       'birthday' => '1/1/1970'
@@ -310,12 +310,12 @@ $result = FM::layout('globals')->performScript('New Contact Request'; $json);
 ```
 
 Perform a script on a database other than the default database connection
-```
+```php
 $result = FM::connection('MyOtherDatabaseConnectionName')->layout('MyLayoutName')->performScript('MyScriptName');
 ```
 
 Create a record with an array of field data and then perform a script after record creation, within the same request
-```
+```php
 FM::layout('MyLayoutName')->script('ScriptName')->fieldData($data)->createRecord();
 
 ```
@@ -326,11 +326,11 @@ Eloquent-FileMaker attempts to automatically re-use session tokens by caching th
 
 If you would like to manually log out and end your session you can do so either through the FM facade or through a model.
 
-```
+```php
 FM::connection()->disconnect();
 ```
  or
-```
+```php
 MyModel::getConnectionResolver()->connection()->disconnect();
 ```
 
@@ -338,7 +338,7 @@ MyModel::getConnectionResolver()->connection()->disconnect();
 
 ## Relating Native Laravel models to FMModels
 It is possible to have relationships between native Laravel Model objects from your MySQL database and FMModels created from your FileMaker database. To do this, you will need to set up both connections in your `database.config` file and then make sure your models are pointing to the right connection by setting the `$connection` propety in your Model and FMModel classes.
-```
+```php
 protected $connection = 'theConnectionName';
 ```
 
@@ -346,20 +346,20 @@ Once they're set correctly, you can create relationships, such as a belongsTo, b
 
 Here is an example of setting a native Laravel User Model to belong to a FileMaker-based Company FMModel class.
 
-User.php
-
-```
+```php
+class User extends Model
+{
     public function company()
     {
         return new \GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo(Company::query(), $this, 'company_id', 'id', '');
     }
-
+}
 ```
 
 With this relationship created we can now get an FMModel of the Company the User belongs to like a normal relationship in a single database.
 
-```
-// set $company to a FMModel of the User's Company 
+```php
+// set $company to a FMModel of the User's Company
 $company = $user->company;
 ```
 
