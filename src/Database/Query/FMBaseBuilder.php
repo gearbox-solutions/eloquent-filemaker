@@ -4,6 +4,7 @@ namespace GearboxSolutions\EloquentFileMaker\Database\Query;
 
 use DateTimeInterface;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
@@ -511,6 +512,10 @@ class FMBaseBuilder extends Builder
     {
         throw_if($boolean === 'or', new \RuntimeException('Eloquent FileMaker does not currently support or within a where in'));
 
+        if ($values instanceof Arrayable) {
+            $values = $values->toArray();
+        }
+
         $this->whereIns[] = [
             'column' => $this->getMappedFieldName($column),
             'values' => $values,
@@ -556,6 +561,10 @@ class FMBaseBuilder extends Builder
         $function = function ($conditions) {
             return array_merge(...array_values($conditions));
         };
+
+        if (empty($arr)) {
+            return;
+        }
 
         $this->wheres = array_map($function, $arr);
     }
