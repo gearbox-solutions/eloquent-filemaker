@@ -61,11 +61,11 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
             __DIR__ . '/../config/eloquent-filemaker.php' => config_path('eloquent-filemaker.php'),
         ], 'eloquent-filemaker-config');
         $this->publishes([
-            __DIR__.'/../Commands/stubs/fm.model.stub' => base_path('stubs/model.stub')
+            __DIR__ . '/../Commands/stubs/fm.model.stub' => base_path('stubs/model.stub'),
         ], 'eloquent-filemaker-override-model');
 
         $this->publishes([
-            __DIR__.'/../Commands/stubs/fm.model.stub' => base_path('stubs/fm.model.stub')
+            __DIR__ . '/../Commands/stubs/fm.model.stub' => base_path('stubs/fm.model.stub'),
         ], 'eloquent-filemaker-stubs');
     }
 }

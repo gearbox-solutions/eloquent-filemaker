@@ -6,8 +6,8 @@ use Illuminate\Foundation\Console\ModelMakeCommand as LaravelModelMakeCommand;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputOption;
 
-class FMModelMakeCommand extends LaravelModelMakeCommand {
-
+class FMModelMakeCommand extends LaravelModelMakeCommand
+{
     protected $name = 'make:fm-model';
 
     /**
@@ -28,10 +28,10 @@ class FMModelMakeCommand extends LaravelModelMakeCommand {
     {
         $stub = parent::getStub();
 
-        if($this->option('filemaker')) {
+        if ($this->option('filemaker')) {
             $stub = Str::replace('/model.', '/fm.model.', $stub);
 
-            throw_if(!file_exists($stub), new \RuntimeException("This model type is not yet supported by Eloquent FileMaker."));
+            throw_if(! file_exists($stub), new \RuntimeException('This model type is not yet supported by Eloquent FileMaker.'));
         }
 
         return $stub;
