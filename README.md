@@ -59,6 +59,28 @@ Install `gearbox-solutions/eloquent-filemaker` in your project using Composer.
 ```
 composer require gearbox-solutions/eloquent-filemaker
 ```
+
+## Vendor Publish
+This package adds 2 optional vendor publishes that will create a model stub for you that you can customize.
+```shell
+php artisan vendor:publish --tag=eloquent-filemaker-stubs 
+// or 
+php artisan vendor:publish --provider="GearboxSolutions\EloquentFileMaker\Providers\FileMakerConnectionServiceProvider"
+```
+This publish is best if you are looking to have a mix of FileMaker backed models and another DB backed model.
+
+```shell
+php artisan vendor:publish --tag=eloquent-filemaker-override-model
+```
+This publish will create a `model.stub` that will be used by `php artisan make:model` to set up new models. You should use this on projects that will only have models backed by FileMaker.
+
+## Alternatively, use new make command
+Alternatively, you can use the new `make:fm-model` command. All options available to Laravel's native `make:model` command are also available to `make:fm-model` command. 
+
+```shell
+php artisan make:fm-model Model
+```
+
 # Usage
 With the package installed you can now have access to all the features of this package. There are a few different areas to configure.
 
