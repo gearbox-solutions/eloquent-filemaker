@@ -11,6 +11,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class FMBaseBuilder extends Builder
@@ -145,10 +146,22 @@ class FMBaseBuilder extends Builder
      */
     public function where($column, $operator = null, $value = null, $boolean = 'and'): FMBaseBuilder
     {
+        $shouldBeOmit = false;
+
+        if (Str::contains($boolean, 'not')) {
+            $shouldBeOmit = true;
+            $boolean = trim(str_replace('not', '', $boolean));
+        }
+
         // This is an "orWhere" type query, so add a find request and then work from there
         if ($boolean === 'or') {
             $this->addFindRequest();
         }
+
+        if ($shouldBeOmit) {
+            $this->omit();
+        }
+
         // If the column is an array, we will assume it is an array of key-value pairs
         // and can add them each as a where clause. We will maintain the boolean we
         // received when the method was called and pass it into the nested where.
