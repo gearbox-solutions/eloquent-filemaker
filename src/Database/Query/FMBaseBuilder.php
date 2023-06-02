@@ -159,9 +159,9 @@ class FMBaseBuilder extends Builder
         if ($boolean === 'or' || $shouldBeOmit) {
             $this->addFindRequest();
 
-        if ($shouldBeOmit) {
-            $this->omit();
-        }
+            if ($shouldBeOmit) {
+                $this->omit();
+            }
         }
 
         // If the column is an array, we will assume it is an array of key-value pairs
