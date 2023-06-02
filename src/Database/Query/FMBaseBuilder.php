@@ -103,6 +103,8 @@ class FMBaseBuilder extends Builder
      */
     public array $offsetPortals = [];
 
+    protected $currentFindRequestIndex;
+
     public const ASCEND = 'ascend';
 
     public const DESCEND = 'descend';
@@ -154,12 +156,12 @@ class FMBaseBuilder extends Builder
         }
 
         // This is an "orWhere" type query, so add a find request and then work from there
-        if ($boolean === 'or') {
+        if ($boolean === 'or' || $shouldBeOmit) {
             $this->addFindRequest();
-        }
 
         if ($shouldBeOmit) {
             $this->omit();
+        }
         }
 
         // If the column is an array, we will assume it is an array of key-value pairs
@@ -182,20 +184,12 @@ class FMBaseBuilder extends Builder
             $value, $operator, func_num_args() === 2
         );
 
-        // we should add this where clause as an AND to the current find request
-        // This allows us to chain wheres
-        // Create a new find array if null
-        $count = count($this->wheres);
-        if ($count == 0) {
-            $currentFind = [];
-        } else {
-            $currentFind = $this->wheres[count($this->wheres) - 1];
-        }
+        $currentFind = $this->getCurrentFind();
 
         $currentFind[$this->getMappedFieldName($column)] = $operator . $value;
 
         // add the where clause KvP to the last item in the array of wheres
-        $this->wheres[$count > 1 ? $count - 1 : 0] = $currentFind;
+        $this->updateCurrentFind($currentFind);
 
         return $this;
     }
@@ -535,19 +529,34 @@ class FMBaseBuilder extends Builder
      */
     public function omit($boolean = true): FMBaseBuilder
     {
-        $count = count($this->wheres);
-        if ($count == 0) {
-            $currentFind = [];
-            $count = 1;
-        } else {
-            $currentFind = $this->wheres[count($this->wheres) - 1];
-        }
+        $currentFind = $this->getCurrentFind();
 
         $currentFind['omit'] = $boolean ? 'true' : 'false';
 
-        $this->wheres[$count - 1] = $currentFind;
+        $this->updateCurrentFind($currentFind);
 
         return $this;
+    }
+
+    /**
+     * we should add this where clause as an AND to the current find request
+     * This allows us to chain wheres
+     * Create a new find array if null
+     */
+    protected function getCurrentFind()
+    {
+        $count = count($this->wheres);
+
+        if ($count === 0) {
+            $this->addFindRequest();
+        }
+
+        return $this->wheres[$this->currentFindRequestIndex ?? count($this->wheres) - 1];
+    }
+
+    protected function updateCurrentFind($find)
+    {
+        $this->wheres[$this->currentFindRequestIndex ?? count($this->wheres) - 1] = $find;
     }
 
     public function whereIn($column, $values, $boolean = 'and', $not = false)
@@ -788,6 +797,8 @@ class FMBaseBuilder extends Builder
     protected function addFindRequest()
     {
         array_push($this->wheres, []);
+
+        $this->unsetFindRequestIndex();
     }
 
     /**
@@ -927,5 +938,15 @@ class FMBaseBuilder extends Builder
         }
 
         return $this->where($column, $operator, $value, $boolean);
+    }
+
+    public function setFindRequestIndex($index)
+    {
+        $this->currentFindRequestIndex = $index;
+    }
+
+    public function unsetFindRequestIndex()
+    {
+        unset($this->currentFindRequestIndex);
     }
 }
