@@ -290,6 +290,23 @@ class FMEloquentBuilder extends Builder
         return $result;
     }
 
+    public function applyScopes()
+    {
+        $builder = parent::applyScopes();
+
+        $query = $builder->getQuery();
+
+        foreach ($query->wheres as $index => $find) {
+            if (! empty($find)) {
+                continue;
+            }
+
+            unset($query->wheres[$index]);
+        }
+
+        return $builder;
+    }
+
     /**
      * Apply the given scope on the current builder instance.
      *
