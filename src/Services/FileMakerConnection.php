@@ -462,7 +462,7 @@ class FileMakerConnection extends Connection
             'script' => 'script',
             'scriptParam' => 'script.param',
             'scriptPrerequest' => 'script.prerequest',
-            'scriptPrerequestParam' => 'script.prerequets.param',
+            'scriptPrerequestParam' => 'script.prerequest.param',
             'scriptPresort' => 'script.presort',
             'scriptPresortParam' => 'script.presort.param',
             'offset' => 'offset',
