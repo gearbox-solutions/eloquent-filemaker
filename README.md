@@ -241,6 +241,7 @@ Here are a list of methods which will allow you to set the  parameters for the D
 FM::table()
 FM::connection()
 FM::layout() // alias for table()
+FM::setGlobalFields() // not chainable
 ```
 
 #### Chainable
@@ -318,6 +319,16 @@ $result = FM::connection('MyOtherDatabaseConnectionName')->layout('MyLayoutName'
 Create a record with an array of field data and then perform a script after record creation, within the same request
 ```php
 FM::layout('MyLayoutName')->script('ScriptName')->fieldData($data)->createRecord();
+```
+
+Set a global field. The full `table_name::field_name` syntax is required for global fields.
+```php
+        $globalFields = [
+            'GLOB::my_global_field' => 'New global value',
+            'GLOB::other_global_field' => 'New global value',
+
+        ];
+        FM::setGlobalFields($globalFields);
 ```
 
 ## Logging out, disconnecting, and ending your Data API session

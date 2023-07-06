@@ -133,7 +133,6 @@ class FMBaseBuilder extends Builder
      */
     public function where($column, $operator = null, $value = null, $boolean = 'and'): FMBaseBuilder
     {
-
         // This is an "orWhere" type query, so add a find request and then work from there
         if ($boolean === 'or') {
             $this->addFindRequest();
@@ -858,7 +857,7 @@ class FMBaseBuilder extends Builder
     {
         $this->globalFields = $globals;
 
-        return $this->connection->setGlobalFields($this);
+        return $this->connection->setGlobalFields($globals);
     }
 
     /**
