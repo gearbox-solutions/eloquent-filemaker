@@ -247,20 +247,22 @@ FM::setGlobalFields() // not chainable
 #### Chainable
 ```php
 // standard query-builder stuff like where, orderBy, etc.
-->limit()
-->offset()
-->script()
-->scriptParam()
-->scriptPresort()
-->scriptPresortParam()
-->scriptPrerequest()
-->scriptPrerequestParam()
-->layoutResponse()
-->portal()
+->limit( $value )
+->offset( $value )
+->script( $scriptName, $param)
+->scriptParam( $param )
+->scriptPresort( $scriptName, $param
+->scriptPresortParam( $param )
+->scriptPrerequest( $scriptName, $param )
+->scriptPrerequestParam( $param )
+->layoutResponse( $layoutName )
+->portal( $portalName )
+->portalLimit( $portalName, $limit )
+->portalOffset( $portalName, $startingRecord  )
 ->sort() // alias for the native orderBy()
 ->omit()
-->fieldData()
-->portalData()
+->fieldData( $array )
+->portalData( $array )
 ```
 
 #### Final-chain-link methods

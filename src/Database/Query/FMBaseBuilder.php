@@ -96,6 +96,12 @@ class FMBaseBuilder extends Builder
      */
     public array $limitPortals = [];
 
+    /**
+     * An array of portals which should have the offset set it the response.
+     * This is actually the "starting record", and so the default value is 1.
+     */
+    public array $offsetPortals = [];
+
     public const ASCEND = 'ascend';
 
     public const DESCEND = 'descend';
@@ -112,7 +118,7 @@ class FMBaseBuilder extends Builder
      *
      * @var array
      */
-    public $portal;
+    public $portal = [];
 
     /**
      * @var int
@@ -334,9 +340,20 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    public function limitPortal($portalName, $limit): FMBaseBuilder
+    public function limitPortal(string $portalName, int $limit): FMBaseBuilder
     {
         $this->limitPortals[] = ['portalName' => $portalName, 'limit' => $limit];
+
+        return $this;
+    }
+
+    /**
+     * Set an offset for a given portal.
+     * This is actually the "starting record", and so the default value is 1.
+     */
+    public function offsetPortal(string $portalName, int $startingRecord): FMBaseBuilder
+    {
+        $this->offsetPortals[] = ['portalName' => $portalName, 'offset' => $startingRecord];
 
         return $this;
     }
@@ -348,9 +365,9 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    public function script($name, $param = null): FMBaseBuilder
+    public function script($scriptName, $param = null): FMBaseBuilder
     {
-        $this->script = $name;
+        $this->script = $scriptName;
 
         // set the script parameter if one was passed in
         if ($param) {
@@ -360,16 +377,16 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    public function scriptParam($param): FMBaseBuilder
+    public function scriptParam(string $param): FMBaseBuilder
     {
         $this->scriptParam = $param;
 
         return $this;
     }
 
-    public function scriptPresort($name, $param = null): FMBaseBuilder
+    public function scriptPresort(string $scriptName, $param = null): FMBaseBuilder
     {
-        $this->scriptPresort = $name;
+        $this->scriptPresort = $scriptName;
 
         // set the script parameter if one was passed in
         if ($param) {
@@ -379,16 +396,16 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    public function scriptPresortParam($param): FMBaseBuilder
+    public function scriptPresortParam(string $param): FMBaseBuilder
     {
         $this->scriptPresortParam = $param;
 
         return $this;
     }
 
-    public function scriptPrerequest($name, $param = null): FMBaseBuilder
+    public function scriptPrerequest(string $scriptName, string $param = null): FMBaseBuilder
     {
-        $this->scriptPrerequest = $name;
+        $this->scriptPrerequest = $scriptName;
 
         // set the script parameter if one was passed in
         if ($param) {
@@ -398,16 +415,16 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    public function scriptPrerequestParam($param): FMBaseBuilder
+    public function scriptPrerequestParam(string $param): FMBaseBuilder
     {
         $this->scriptPrerequestParam = $param;
 
         return $this;
     }
 
-    public function layoutResponse($name): FMBaseBuilder
+    public function layoutResponse(string $layoutName): FMBaseBuilder
     {
-        $this->layoutResponse = $name;
+        $this->layoutResponse = $layoutName;
 
         return $this;
     }
@@ -640,7 +657,7 @@ class FMBaseBuilder extends Builder
      * @param $array array
      * @return $this
      */
-    public function fieldData($array)
+    public function fieldData(array $array)
     {
         $this->fieldData = $this->mapFieldNamesForArray($array);
 
@@ -653,7 +670,7 @@ class FMBaseBuilder extends Builder
      * @param $array array
      * @return $this
      */
-    public function portalData($array)
+    public function portalData(array $array)
     {
         $this->portalData = $array;
 
@@ -797,7 +814,6 @@ class FMBaseBuilder extends Builder
             // It's a single value, so append it on the array
             array_push($this->portal, $portalName);
         }
-        $this->portal = $portalName;
 
         return $this;
     }

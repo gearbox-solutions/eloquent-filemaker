@@ -490,10 +490,17 @@ class FileMakerConnection extends Connection
             }
         }
 
-        // Special handling for _limit.portal
+        // Special handling for _limit.{portal}
         if (isset($query->limitPortals) && count($query->limitPortals) > 0) {
             foreach ($query->limitPortals as $portalArray) {
                 $postData['limit.' . urlencode($portalArray['portalName'])] = $portalArray['limit'];
+            }
+        }
+
+        // handle _offset.{portal}
+        if (isset($query->offsetPortals) && count($query->offsetPortals) > 0) {
+            foreach ($query->offsetPortals as $portalArray) {
+                $postData['offset.' . urlencode($portalArray['portalName'])] = $portalArray['offset'];
             }
         }
 
