@@ -356,7 +356,6 @@ class FileMakerConnection extends Connection
             if ($textDataFields->count() > 0) {
                 $this->editRecord($query);
             }
-
         } catch (FileMakerDataApiException $e) {
             // Record is missing is ok for laravel functions
             // Throw if it isn't error code 101, which is missing record
@@ -491,6 +490,13 @@ class FileMakerConnection extends Connection
             }
         }
 
+        // Special handling for _limit.portal
+        if (isset($query->limitPortals) && count($query->limitPortals) > 0) {
+            foreach ($query->limitPortals as $portalArray) {
+                $postData['limit.' . urlencode($portalArray['portalName'])] = $portalArray['limit'];
+            }
+        }
+
         // Special handling for offset
         if (isset($postData['offset'])) {
             if ($postData['offset'] > 0) {
@@ -513,7 +519,6 @@ class FileMakerConnection extends Connection
      */
     protected function getNonContainerFieldsForRecordWrite($fieldArray)
     {
-
         $fieldData = collect($fieldArray);
 
         // Remove any fields which have been set to write a file, as they should be handled as containers
@@ -530,7 +535,6 @@ class FileMakerConnection extends Connection
 
     protected function isContainer($field)
     {
-
         // if this is a file then we know it's a container
         if (is_a($field, File::class)) {
             return true;

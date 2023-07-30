@@ -90,6 +90,12 @@ class FMBaseBuilder extends Builder
      */
     public $globalFields = [];
 
+    /**
+     * An array of portals which should have limits set it the response.
+     * The default limit is 50 records if no value is specified.
+     */
+    public array $limitPortals = [];
+
     public const ASCEND = 'ascend';
 
     public const DESCEND = 'descend';
@@ -324,6 +330,13 @@ class FMBaseBuilder extends Builder
     public function limit($value): FMBaseBuilder
     {
         $this->limit = $value;
+
+        return $this;
+    }
+
+    public function limitPortal($portalName, $limit): FMBaseBuilder
+    {
+        $this->limitPortals[] = ['portalName' => $portalName, 'limit' => $limit];
 
         return $this;
     }
