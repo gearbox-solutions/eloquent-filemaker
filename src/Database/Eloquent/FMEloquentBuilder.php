@@ -63,7 +63,6 @@ class FMEloquentBuilder extends Builder
      */
     public function exists()
     {
-
         // do the query and check for a 401. The query will error if there are no rows which match the request
         try {
             $this->limit(1)->get();
@@ -198,7 +197,12 @@ class FMEloquentBuilder extends Builder
 
         // we always need to create the record, even if there are no regular or portal fields which have been set
         // forward this request to a base query builder to execute the create record request
-        $response = $this->query->fieldData($fieldsToWrite->toArray())->portalData($model->portalData)->createRecord();
+        $request = $this->query->fieldData($fieldsToWrite->toArray());
+        if ($model->portalData) {
+            $request->portalData($model->portalData);
+        }
+
+        $response = $request->createRecord();
 
         // Update the model's record ID from the response
         $recordId = $response['response']['recordId'];
