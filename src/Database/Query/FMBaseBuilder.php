@@ -579,7 +579,6 @@ class FMBaseBuilder extends Builder
 
     public function whereIn($column, $values, $boolean = 'and', $not = false)
     {
-        dump([$column, $values, $boolean, $not, $this->currentFindRequestIndex]);
         if ($boolean === 'or' || $not) {
             $this->addFindRequest();
 
@@ -587,8 +586,6 @@ class FMBaseBuilder extends Builder
                 $this->omit();
             }
         }
-
-        dump($this->currentFindRequestIndex);
 
         if ($values instanceof Arrayable) {
             $values = $values->toArray();
