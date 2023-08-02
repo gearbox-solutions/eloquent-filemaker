@@ -36,6 +36,12 @@ class FileMakerConnection extends Connection
     protected $retries = 1;
 
     /**
+     * Crazy high number of records to return.
+     * Used to get an empty set when using a whereIn with no values.
+     */
+    public const CRAZY_RECORDS_AMOUNT = 1000000000000000000;
+
+    /**
      * @param  string  $layout
      * @return $this
      */
@@ -214,13 +220,17 @@ class FileMakerConnection extends Connection
         // If limit hasn't been specified we should set it to be very high to bypass FM's default 100-record limit
         // This more closely matches Laravel's default behavior
         if (! isset($query->limit)) {
-            $query->limit = 1000000000000000000;
+            $query->limit = self::CRAZY_RECORDS_AMOUNT;
         }
 
         // if there are no query parameters we need to do a get all records instead of a find
-        if (empty($query->wheres)) {
+        if (empty($query->wheres) && ! $query->isForcingHighOffset()) {
             return $this->getRecords($query);
         }
+
+        // Update the offset to a crazy high offset when the query is forcing 0 records to be returned
+        // The records call requires that at least 1
+        $query->offset($query->isForcingHighOffset() ? self::CRAZY_RECORDS_AMOUNT : $query->offset);
 
         // There are actually query parameters, so prepare to do our find
         $this->setLayout($query->from);

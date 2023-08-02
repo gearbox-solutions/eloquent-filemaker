@@ -342,7 +342,7 @@ class FMEloquentBuilder extends Builder
             $result = $scope(...$parameters) ?? $this;
         }
 
-        $query->unsetFindRequestIndex();
+        $query->resetFindRequestIndex();
 
         return $result;
     }

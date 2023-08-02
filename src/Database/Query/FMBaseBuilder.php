@@ -103,7 +103,10 @@ class FMBaseBuilder extends Builder
      */
     public array $offsetPortals = [];
 
-    protected $currentFindRequestIndex;
+    /**
+     * @var int The index of the current request in the find request array
+     */
+    protected int $currentFindRequestIndex = -1;
 
     public const ASCEND = 'ascend';
 
@@ -141,7 +144,24 @@ class FMBaseBuilder extends Builder
 
     public $containerFile;
 
+    /**
+     * Array to track the whereIn clauses because FM processes WhereIns differently than other DB engines
+     *
+     * @var array
+     */
     protected $whereIns = [];
+
+    /**
+     * Flag to be used to enforce that FileMaker Data API gives us an empty set instead of erroring or returning unexpected records
+     *
+     * @var bool = false
+     */
+    protected $forceHighOffset = false;
+
+    public function isForcingHighOffset()
+    {
+        return $this->forceHighOffset;
+    }
 
     /**
      * Add a basic where clause to the query.
@@ -545,33 +565,45 @@ class FMBaseBuilder extends Builder
      */
     protected function getCurrentFind()
     {
-        $count = count($this->wheres);
-
-        if ($count === 0) {
+        if ($this->currentFindRequestIndex === -1) {
             $this->addFindRequest();
         }
 
-        return $this->wheres[$this->currentFindRequestIndex ?? count($this->wheres) - 1];
+        return $this->wheres[$this->currentFindRequestIndex];
     }
 
     protected function updateCurrentFind($find)
     {
-        $this->wheres[$this->currentFindRequestIndex ?? count($this->wheres) - 1] = $find;
+        $this->wheres[$this->currentFindRequestIndex] = $find;
     }
 
     public function whereIn($column, $values, $boolean = 'and', $not = false)
     {
-        throw_if($boolean === 'or', new \RuntimeException('Eloquent FileMaker does not currently support or within a where in'));
+        dump([$column, $values, $boolean, $not, $this->currentFindRequestIndex]);
+        if ($boolean === 'or' || $not) {
+            $this->addFindRequest();
+
+            if ($not) {
+                $this->omit();
+            }
+        }
+
+        dump($this->currentFindRequestIndex);
 
         if ($values instanceof Arrayable) {
             $values = $values->toArray();
         }
+
+        // We don't need the current find request but in the case that 0 finds are already performed,
+        // this will create the first one.
+        $this->getCurrentFind();
 
         $this->whereIns[] = [
             'column' => $this->getMappedFieldName($column),
             'values' => $values,
             'boolean' => $boolean,
             'not' => $not,
+            'findRequestIndex' => $this->currentFindRequestIndex,
         ];
 
         return $this;
@@ -584,40 +616,67 @@ class FMBaseBuilder extends Builder
             return;
         }
 
-        $whereIns = array_map(function ($whereIn) {
+        $whereInRequests = collect($this->whereIns)->mapToGroups(function ($whereIn) {
             $finds = [];
 
-            foreach ($whereIn['values'] as $value) {
-                $find = [
-                    $whereIn['column'] => $value,
-                ];
+            // If the list of values in a whereIn clause is empty we want the end query to return an empty set instead of other records.
+            if (empty($whereIn['values'])) {
+                $this->forceHighOffset = true;
 
-                if ($whereIn['not']) {
-                    $find['omit'] = true;
+                if ($this->isWheresEmpty()) {
+                    $finds[] = [
+                        $whereIn['column'] => '=',
+                    ];
                 }
+            } else {
+                foreach ($whereIn['values'] as $value) {
+                    $find = [
+                        $whereIn['column'] => $value,
+                    ];
 
-                $finds[] = $find;
+                    if ($whereIn['not']) {
+                        $find['omit'] = true;
+                    }
+
+                    $finds[] = $find;
+                }
             }
 
-            return $finds;
-        }, $this->whereIns);
+            return [$whereIn['findRequestIndex'] => $finds];
+        });
 
-        if (empty($this->wheres)) {
-            $this->wheres = Arr::flatten($whereIns, 1);
+        if ($this->isWheresEmpty()) {
+            $this->wheres = $whereInRequests->flatten(2)->toArray();
 
             return;
         }
 
-        $arr = Arr::crossJoin($this->wheres, ...$whereIns);
-        $function = function ($conditions) {
-            return array_merge(...array_values($conditions));
-        };
+        $newWheres = [];
 
-        if (empty($arr)) {
-            return;
+        // loop through each where
+        // If it is an omit, skip it
+        // If the where in is an omit, skip it
+        foreach ($this->wheres as $index => $where) {
+            $whereInValues = $whereInRequests->get($index)?->first() ?? [];
+
+            if (($where['omit'] ?? 'false') === 'true') {
+                if (count(array_keys($where)) > 1 || (count(array_keys($where)) === 1 && (collect($whereInValues)->value('omit') ?? 'false') === 'false')) {
+                    $newWheres[] = $where;
+
+                    continue;
+                }
+            }
+
+            if (empty($whereInValues)) {
+                $newWheres[] = $where;
+            } else {
+                foreach ($whereInValues as $whereInValue) {
+                    $newWheres[] = array_merge($where, $whereInValue);
+                }
+            }
         }
 
-        $this->wheres = array_map($function, $arr);
+        $this->wheres = $newWheres;
     }
 
     /**
@@ -798,7 +857,7 @@ class FMBaseBuilder extends Builder
     {
         array_push($this->wheres, []);
 
-        $this->unsetFindRequestIndex();
+        $this->setFindRequestIndex(count($this->wheres) - 1);
     }
 
     /**
@@ -940,13 +999,24 @@ class FMBaseBuilder extends Builder
         return $this->where($column, $operator, $value, $boolean);
     }
 
+    protected function isWheresEmpty()
+    {
+        $wheres = collect($this->wheres);
+
+        if ($wheres->isEmpty()) {
+            return true;
+        }
+
+        return collect($wheres->first())->keys()->except(['omit'])->isEmpty();
+    }
+
     public function setFindRequestIndex($index)
     {
         $this->currentFindRequestIndex = $index;
     }
 
-    public function unsetFindRequestIndex()
+    public function resetFindRequestIndex()
     {
-        unset($this->currentFindRequestIndex);
+        $this->currentFindRequestIndex = -1;
     }
 }
