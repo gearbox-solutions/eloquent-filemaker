@@ -53,4 +53,15 @@ trait FMHasAttributes
 
         return $this;
     }
+
+    protected function castAttribute($key, $value)
+    {
+        // FileMaker doesn't have `null` as a value, but we should consider an empty string as null for casting purposes
+        // since any of the cast types wouldn't normally handle an empty string as a valid value.
+        if ($value === '') {
+            $value = null;
+        }
+
+        return parent::castAttribute($key, $value);
+    }
 }
