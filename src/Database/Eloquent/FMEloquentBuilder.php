@@ -160,7 +160,7 @@ class FMEloquentBuilder extends Builder
         // Map the columns to FileMaker fields and strip out read-only fields/containers
         $fieldsToWrite = $this->model->getAttributesForFileMakerWrite();
 
-        $modifiedPortals = null;
+        $modifiedPortals = [];
         foreach ($fieldsToWrite as $key => $value) {
             // Check if the field is a portal (it should be an array if it is)
             if (is_array($value)) {
@@ -169,7 +169,7 @@ class FMEloquentBuilder extends Builder
             }
         }
 
-        if ($fieldsToWrite->count() > 0 || count($modifiedPortals ?? []) > 0) {
+        if ($fieldsToWrite->count() > 0 || count($modifiedPortals) > 0) {
             // we have some regular text fields to update
             // forward this request to a base query builder to execute the edit record request
             $response = $this->query->fieldData($fieldsToWrite->toArray())->portalData($modifiedPortals)->recordId($model->getRecordId())->editRecord();
