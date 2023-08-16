@@ -176,13 +176,13 @@ class FMBaseBuilder extends Builder
         }
 
         // This is an "orWhere" type query, so add a find request and then work from there
-        if ($boolean === 'or' || $shouldBeOmit) {
+        if ($boolean === 'or' || ($shouldBeOmit && ! $this->isCurrentFindAnOmit())) {
             $this->addFindRequest();
+        }
 
             if ($shouldBeOmit) {
                 $this->omit();
             }
-        }
 
         // If the column is an array, we will assume it is an array of key-value pairs
         // and can add them each as a where clause. We will maintain the boolean we
@@ -190,9 +190,7 @@ class FMBaseBuilder extends Builder
         //
         // If the first value is an array it means the second value is an omit for the whole request
         if (is_array($column)) {
-            foreach ($column as $eachColumn => $eachValue) {
-                $this->where($eachColumn, $eachValue);
-            }
+            $this->addArrayOfWheres($column, $boolean);
 
             return $this;
         }
@@ -210,6 +208,19 @@ class FMBaseBuilder extends Builder
 
         // add the where clause KvP to the last item in the array of wheres
         $this->updateCurrentFind($currentFind);
+
+        return $this;
+    }
+
+    protected function addArrayOfWheres($column, $boolean, $method = 'where')
+    {
+        foreach ($column as $key => $value) {
+            if (is_numeric($key) && is_array($value)) {
+                $this->{$method}(...array_values($value));
+            } else {
+                $this->{$method}($key, '', $value, 'and');
+            }
+        }
 
         return $this;
     }
@@ -572,6 +583,15 @@ class FMBaseBuilder extends Builder
         return $this->wheres[$this->currentFindRequestIndex];
     }
 
+    protected function isCurrentFindAnOmit()
+    {
+        if ($this->currentFindRequestIndex === -1) {
+            return false;
+        }
+
+        return Arr::get($this->wheres, "{$this->currentFindRequestIndex}.omit", 'false') === 'true';
+    }
+
     protected function updateCurrentFind($find)
     {
         $this->wheres[$this->currentFindRequestIndex] = $find;
@@ -606,11 +626,11 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    protected function computeWhereIns()
+    public function computeWhereIns()
     {
         // If no where in clauses return
         if (empty($this->whereIns)) {
-            return;
+            return $this;
         }
 
         $whereInRequests = collect($this->whereIns)->mapToGroups(function ($whereIn) {
@@ -643,37 +663,57 @@ class FMBaseBuilder extends Builder
         });
 
         if ($this->isWheresEmpty()) {
-            $this->wheres = $whereInRequests->flatten(2)->toArray();
+            $this->wheres = $whereInRequests->map(function ($whereInRequest) {
+                return Arr::crossJoin(...$whereInRequest->values());
+            })->map(function ($findRequest) {
+                return array_map(function ($clauses) {
+                    return array_merge(...$clauses);
+                }, $findRequest);
+            })->flatten(1)->toArray();
 
-            return;
+            return $this;
         }
 
-        $newWheres = [];
+        $newWheres = collect([]);
 
         // loop through each where
         // If it is an omit, skip it
         // If the where in is an omit, skip it
         foreach ($this->wheres as $index => $where) {
-            $whereInValues = $whereInRequests->get($index)?->first() ?? [];
+            $whereInRequest = $whereInRequests->get($index) ?? [];
 
             if (($where['omit'] ?? 'false') === 'true') {
-                if (count(array_keys($where)) > 1 || (count(array_keys($where)) === 1 && (collect($whereInValues)->value('omit') ?? 'false') === 'false')) {
-                    $newWheres[] = $where;
+                if (count(array_keys($where)) > 1 || (count(array_keys($where)) === 1 && (collect($whereInRequest)->value('omit') ?? 'false') === 'false')) {
+                    $newWheres->push($where);
 
                     continue;
                 }
             }
 
-            if (empty($whereInValues)) {
-                $newWheres[] = $where;
+            if (empty($whereInRequest)) {
+                $newWheres->push($where);
             } else {
-                foreach ($whereInValues as $whereInValue) {
-                    $newWheres[] = array_merge($where, $whereInValue);
-                }
+                $newWheres = $newWheres->push(...Arr::crossJoin([$where], ...$whereInRequest->values()));
             }
         }
 
-        $this->wheres = $newWheres;
+        $this->wheres = $newWheres
+            ->map(function ($findRequest) {
+                if (Arr::isAssoc($findRequest)) {
+                    return $findRequest;
+                }
+
+                return array_merge(...$findRequest);
+            })->toArray();
+
+        return $this;
+    }
+
+    public function getWheres()
+    {
+        $this->computeWhereIns();
+
+        return $this->wheres;
     }
 
     /**
