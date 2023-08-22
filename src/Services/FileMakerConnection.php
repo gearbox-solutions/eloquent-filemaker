@@ -687,13 +687,15 @@ class FileMakerConnection extends Connection
                 $log_message = 'Connection Error: ' . $exception->getMessage();
             }
 
-            $contents = $response?->getBody()->getContents();
-            $contents = json_decode($contents, true);
-            if ($response && $response->getStatusCode() !== 200 && $contents !== null) {
-                $code = (int) Arr::first(Arr::pluck(Arr::get($contents, 'messages'), 'code'));
-                if ($code === 952 && $retries <= 1) {
-                    $refresh = true;
-                    $should_retry = true;
+            if ($response) {
+                $contents = $response->getBody()->getContents();
+                $contents = json_decode($contents, true);
+                if ($response->getStatusCode() !== 200 && $contents !== null) {
+                    $code = (int) Arr::first(Arr::pluck(Arr::get($contents, 'messages'), 'code'));
+                    if ($code === 952 && $retries <= 1) {
+                        $refresh = true;
+                        $should_retry = true;
+                    }
                 }
             }
 
