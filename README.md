@@ -97,6 +97,11 @@ Many fields in your FileMaker database will be read-only, such as summaries and 
 ### Container Fields
 This package supports both reading and writing container field data. Container fields are retrieved from FileMaker as attributes on your model which will contain a URL which can be used to retrieve the file from the container.
 
+Please note: The FileMaker Data API does not allow you to write to container fields in related records:
+
+[FileMaker Data API Container Documentation](https://help.claris.com/en/data-api-guide/content/upload-container-data.html)
+> The container field must be a field in the table occurrence of the specified layout. It cannot be a container field in a related table.
+
 #### Writing to container fields
 When setting a container field you should set the value to be an `Illuminate/HTTP/File` or `Illuminate/HTTP/UploadedFile` object. These attributes will be written back to your container fields along with any other model updates when the `save()` method is called on your model object.
 ```php
