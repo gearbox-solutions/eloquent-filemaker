@@ -355,10 +355,12 @@ class FileMakerConnection extends Connection
             if ($e->getCode() !== 101) {
                 throw $e;
             }
+
             // Error 101 - Record Not Found
             // we didn't end up updating any records
             return 0;
         }
+
         // one record has been edited
         return 1;
     }
@@ -651,7 +653,7 @@ class FileMakerConnection extends Connection
         $response = $request->{$method}($url, $params);
         // Check for errors
         try {
-        $this->checkResponseForErrors($response);
+            $this->checkResponseForErrors($response);
         } catch (FileMakerDataApiException $e) {
             if ($e->getCode() === 952) {
                 // the session expired, so we should forget the token and re-login
@@ -684,8 +686,8 @@ class FileMakerConnection extends Connection
         return Middleware::retry(function (
             $retries,
             RequestInterface $request,
-            ResponseInterface $response = null,
-            TransferException $exception = null
+            ?ResponseInterface $response = null,
+            ?TransferException $exception = null
         ) {
             // Limit the number of retries to 5
             if ($retries >= $this->retries) {
@@ -722,19 +724,18 @@ class FileMakerConnection extends Connection
         return new FMGrammar();
     }
 
-//    public function getLayoutMetadata($layout = null)
-//    {
-//        $response = $this->makeRequest('get', $this->getLayoutUrl($layout));
-//        return $response['response'];
-//    }
+    //    public function getLayoutMetadata($layout = null)
+    //    {
+    //        $response = $this->makeRequest('get', $this->getLayoutUrl($layout));
+    //        return $response['response'];
+    //    }
 
     /**
-     * @param  string|FMBaseBuilder  $query
      * @return mixed
      *
      * @throws FileMakerDataApiException
      */
-    public function getLayoutMetadata(FMBaseBuilder|string $query = null)
+    public function getLayoutMetadata(FMBaseBuilder|string|null $query = null)
     {
         // if the query is just a string, it means that it's a layout name
         if (is_string($query)) {
