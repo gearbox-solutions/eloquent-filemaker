@@ -118,7 +118,7 @@ class FileMakerConnection extends Connection
     /**
      * @throws FileMakerDataApiException
      */
-    protected function checkResponseForErrors($response)
+    protected function checkResponseForErrors($response): void
     {
         $messages = Arr::get($response, 'messages', []);
 
@@ -128,10 +128,6 @@ class FileMakerConnection extends Connection
 
                 if ($code !== 0) {
                     switch ($code) {
-                        case 952:
-                            // API token is expired. We should expire it in the cache so it isn't used again.
-                            $this->forgetSessionToken();
-                            break;
                         case 105:
                             // Layout is missing error
                             // Add the layout name to the message for clarity
@@ -233,9 +229,6 @@ class FileMakerConnection extends Connection
         $postData = $this->buildPostDataFromQuery($query);
 
         $response = $this->makeRequest('post', $url, $postData);
-
-        // Check for errors
-        $this->checkResponseForErrors($response);
 
         return $response;
     }
@@ -632,6 +625,19 @@ class FileMakerConnection extends Connection
         return $response;
     }
 
+    protected function prepareRequestForSending($request)
+    {
+        if ($request instanceof PendingRequest) {
+            $request->withToken($this->sessionToken);
+        } else {
+            $request = Http::withToken($this->sessionToken);
+        }
+
+        $request->withMiddleware($this->retryMiddleware());
+
+        return $request;
+    }
+
     /**
      * @throws FileMakerDataApiException
      */
@@ -639,17 +645,26 @@ class FileMakerConnection extends Connection
     {
         $this->login();
 
-        if ($request instanceof PendingRequest) {
-            $request->withToken($this->sessionToken);
-        } else {
-            $request = Http::withToken($this->sessionToken);
-        }
+        $request = $this->prepareRequestForSending($request);
 
-        $response = $request->withMiddleware($this->retryMiddleware())
-            ->{$method}($url, $params);
-
+        // make the request
+        $response = $request->{$method}($url, $params);
         // Check for errors
+        try {
         $this->checkResponseForErrors($response);
+        } catch (FileMakerDataApiException $e) {
+            if ($e->getCode() === 952) {
+                // the session expired, so we should forget the token and re-login
+                $this->forgetSessionToken();
+                $this->login();
+
+                // try the request again with refreshed credentials
+                $request = $this->prepareRequestForSending($request);
+                $response = $request->{$method}($url, $params);
+            } else {
+                throw $e;
+            }
+        }
 
         // Return the JSON response
         $json = $response->json();
@@ -678,7 +693,6 @@ class FileMakerConnection extends Connection
             }
 
             $should_retry = false;
-            $refresh = false;
             $log_message = null;
 
             // Retry connection exceptions
@@ -687,25 +701,8 @@ class FileMakerConnection extends Connection
                 $log_message = 'Connection Error: ' . $exception->getMessage();
             }
 
-            if ($response) {
-                $contents = $response->getBody()->getContents();
-                $contents = json_decode($contents, true);
-                if ($response->getStatusCode() !== 200 && $contents !== null) {
-                    $code = (int) Arr::first(Arr::pluck(Arr::get($contents, 'messages'), 'code'));
-                    if ($code === 952 && $retries <= 1) {
-                        $refresh = true;
-                        $should_retry = true;
-                    }
-                }
-            }
-
             if ($log_message) {
                 error_log($log_message, 0);
-            }
-
-            if ($refresh) {
-                error_log('Refreshing Access Token…');
-                $this->login();
             }
 
             if ($should_retry) {
