@@ -73,6 +73,7 @@ class FMEloquentBuilder extends Builder
                 throw $e;
             }
         }
+
         // It didn't error, so we have something
         return true;
     }
@@ -232,15 +233,16 @@ class FMEloquentBuilder extends Builder
     /**
      * Paginate the given query.
      *
-     * @param  int|null  $perPage
-     * @param  array  $columns
+     * @param  int|null|\Closure  $perPage
+     * @param  array|string  $columns
      * @param  string  $pageName
      * @param  int|null  $page
+     * @param  \Closure|int|null  $total
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      *
      * @throws \InvalidArgumentException
      */
-    public function paginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null)
+    public function paginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null, $total = null)
     {
         $page = $page ?: Paginator::resolveCurrentPage($pageName);
 
@@ -262,8 +264,8 @@ class FMEloquentBuilder extends Builder
     /**
      * Compares a model's modified portal data and original portal data and returns portal data with only modified fields and recordIds
      *
-     * @param $array1 array The modified portal data
-     * @param $array2 array The model's original portal data
+     * @param  $array1  array The modified portal data
+     * @param  $array2  array The model's original portal data
      */
     protected function getOnlyModifiedPortalFields($array1, $array2): array
     {

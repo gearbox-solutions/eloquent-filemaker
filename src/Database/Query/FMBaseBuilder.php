@@ -218,6 +218,7 @@ class FMBaseBuilder extends Builder
                 throw $e;
             }
         }
+
         // we deleted the record, return modified count of 1
         return 1;
     }
@@ -247,6 +248,7 @@ class FMBaseBuilder extends Builder
                 }
             }
         }
+
         // Return the count of deleted records
         return $deleteCount;
     }
@@ -271,6 +273,7 @@ class FMBaseBuilder extends Builder
                 throw $e;
             }
         }
+
         // we deleted the record, return modified count of 1
         return 1;
     }
@@ -403,7 +406,7 @@ class FMBaseBuilder extends Builder
         return $this;
     }
 
-    public function scriptPrerequest(string $scriptName, string $param = null): FMBaseBuilder
+    public function scriptPrerequest(string $scriptName, ?string $param = null): FMBaseBuilder
     {
         $this->scriptPrerequest = $scriptName;
 
@@ -460,7 +463,7 @@ class FMBaseBuilder extends Builder
         }
     }
 
-    public function paginate($perPage = 15, $columns = ['*'], $pageName = 'page', $page = null)
+    public function paginate($perPage = 15, $columns = ['*'], $pageName = 'page', $page = null, $total = null)
     {
         $page = $page ?: Paginator::resolveCurrentPage($pageName);
 
@@ -489,7 +492,7 @@ class FMBaseBuilder extends Builder
     /**
      * A helper function to map an entire array of fields and data to their FileMaker field names
      *
-     * @param $array array An array of columns and their values
+     * @param  $array  array An array of columns and their values
      */
     protected function mapFieldNamesForArray(array $array): array
     {
@@ -654,7 +657,7 @@ class FMBaseBuilder extends Builder
     /**
      * Set the field data to be used when creating or editing a record
      *
-     * @param $array array
+     * @param  $array  array
      * @return $this
      */
     public function fieldData(array $array)
@@ -667,7 +670,7 @@ class FMBaseBuilder extends Builder
     /**
      * Set the portal data to be used when creating or updating a record
      *
-     * @param $array array
+     * @param  $array  array
      * @return $this
      */
     public function portalData(array $array)
@@ -678,8 +681,8 @@ class FMBaseBuilder extends Builder
     }
 
     /**
-     * @param  string  $column The name of the container field
-     * @param  File | UploadedFile | array  $file The file to be uploaded to the container or a file and filename array ex: [$file, 'MyFile.pdf']
+     * @param  string  $column  The name of the container field
+     * @param  File | UploadedFile | array  $file  The file to be uploaded to the container or a file and filename array ex: [$file, 'MyFile.pdf']
      * @return mixed
      */
     public function setContainer($column, $file)
