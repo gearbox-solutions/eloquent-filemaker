@@ -32,7 +32,7 @@ class FileMakerConnection extends Connection
 
     protected $password;
 
-    protected $sessionToken;
+    protected static $sessionToken;
 
     protected $retries = 1;
 
@@ -63,15 +63,8 @@ class FileMakerConnection extends Connection
 
     public function login()
     {
-        // Cache a session token so we can reuse the same thing for 14.75 minutes
-        // FileMaker data API sessions expire after 15 minutes
-        // 14.75 * 60 = 885 seconds
-        $token = Cache::remember($this->getSessionTokenCacheKey(), 885, function () {
-            return $this->fetchNewSessionToken();
-        });
-
         // Store the session token
-        $this->sessionToken = $token;
+        self::$sessionToken = $this->fetchNewSessionToken();
     }
 
     /**
@@ -594,11 +587,6 @@ class FileMakerConnection extends Connection
         return $this->executeScript($query);
     }
 
-    protected function getSessionTokenCacheKey()
-    {
-        return 'filemaker-session-' . $this->getName();
-    }
-
     /**
      * Log out of the database, invalidating our session token
      *
@@ -608,9 +596,15 @@ class FileMakerConnection extends Connection
      */
     public function disconnect()
     {
-        $url = $this->getDatabaseUrl() . '/sessions/' . $this->sessionToken;
+        if (! self::$sessionToken) {
+            return;
+        }
 
-        $response = $this->makeRequest('delete', $url);
+        $url = $this->getDatabaseUrl() . '/sessions/' . self::$sessionToken;
+
+        // make an http delete request to the data api to end the session
+        $response = Http::delete($url);
+        $this->checkResponseForErrors($response);
 
         $this->forgetSessionToken();
 
@@ -622,7 +616,7 @@ class FileMakerConnection extends Connection
      */
     public function forgetSessionToken()
     {
-        Cache::forget($this->getSessionTokenCacheKey());
+        self::$sessionToken = null;
     }
 
     public function layout($layoutName)
@@ -647,9 +641,9 @@ class FileMakerConnection extends Connection
     protected function prepareRequestForSending($request)
     {
         if ($request instanceof PendingRequest) {
-            $request->withToken($this->sessionToken);
+            $request->withToken(self::$sessionToken);
         } else {
-            $request = Http::withToken($this->sessionToken);
+            $request = Http::withToken(self::$sessionToken);
         }
 
         $request->withMiddleware($this->retryMiddleware());

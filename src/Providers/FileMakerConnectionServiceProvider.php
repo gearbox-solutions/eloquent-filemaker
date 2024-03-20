@@ -2,7 +2,9 @@
 
 namespace GearboxSolutions\EloquentFileMaker\Providers;
 
+use GearboxSolutions\EloquentFileMaker\Middleware\EndSession;
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\ServiceProvider;
 
 class FileMakerConnectionServiceProvider extends ServiceProvider
@@ -33,6 +35,9 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
         $this->app->bind(FileMakerConnection::class, function ($app) {
             return $app['fm.connection'];
         });
+
+        app('router')->aliasMiddleware('fm.end-session', EndSession::class);
+
     }
 
     /**
@@ -40,8 +45,9 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(Kernel $kernel)
     {
-        //
+        // add the middleware to the global middleware so that we always end the FileMaker session
+        $kernel->pushMiddleware(EndSession::class);
     }
 }
