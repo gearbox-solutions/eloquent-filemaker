@@ -7,6 +7,7 @@ use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -287,6 +288,63 @@ class FMEloquentBuilder extends Builder
                 // The values are equal
             }
         }
+
+        return $result;
+    }
+
+    public function applyScopes()
+    {
+        $builder = parent::applyScopes();
+
+        $query = $builder->getQuery();
+
+        foreach ($query->wheres as $index => $find) {
+            if (! empty($find)) {
+                continue;
+            }
+
+            unset($query->wheres[$index]);
+        }
+
+        return $builder;
+    }
+
+    /**
+     * Apply the given scope on the current builder instance.
+     *
+     * @return mixed
+     */
+    protected function callScope(callable $scope, array $parameters = [])
+    {
+        array_unshift($parameters, $this);
+
+        $query = $this->getQuery();
+
+        $result = $this;
+
+        $scopeApplied = false;
+
+        foreach ($query->wheres as $index => $find) {
+            if (($find['omit'] ?? 'false') === 'true') {
+                continue;
+            }
+
+            $query->setFindRequestIndex($index);
+
+            $result = $scope(...$parameters) ?? $this;
+
+            $scopeApplied = true;
+        }
+
+        if (! $scopeApplied) {
+            array_unshift($query->wheres, []);
+
+            $query->setFindRequestIndex(0);
+
+            $result = $scope(...$parameters) ?? $this;
+        }
+
+        $query->resetFindRequestIndex();
 
         return $result;
     }

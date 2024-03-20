@@ -18,9 +18,9 @@ use Illuminate\Support\Str;
 
 abstract class FMModel extends Model
 {
+    use FMGuardsAttributes;
     use FMHasAttributes;
     use FMHasRelationships;
-    use FMGuardsAttributes;
 
     /**
      * Indicates if the model should be timestamped.
