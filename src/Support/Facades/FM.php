@@ -14,13 +14,10 @@ use Illuminate\Support\Facades\Facade;
  * @method static FMBaseBuilder table($layoutName)
  * @method static FMBaseBuilder delete($recordId)
  * @method static FMBaseBuilder deleteByRecordId($recordId)
-
-
  * @method static array setGlobalFields(array $globalFields)
  * @method static FileMakerConnection connection(string $name = null)
  * @method static FileMakerConnection setRetries(int $retries)
  * @method static FileMakerConnection getLayoutMetadata($layoutName = null)
-
  *
  * @see \Illuminate\Database\DatabaseManager
  * @see FileMakerConnection
