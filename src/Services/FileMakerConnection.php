@@ -14,7 +14,6 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -63,7 +62,12 @@ class FileMakerConnection extends Connection
 
     public function login()
     {
-        // Store the session token
+        // return early if we're already logged in
+        if (self::$sessionToken) {
+            return;
+        }
+
+        // retrieve and store the session token
         self::$sessionToken = $this->fetchNewSessionToken();
     }
 
