@@ -5,7 +5,7 @@ This package lets you easily connect to your FileMaker database through the Data
 
 ## Support
 
-This package is built and maintained by [Gearbox Solutions](https://gearboxgo.com/). We build fantastic web apps with technologies like Laravel, Vue, React, and Node. If you would like assistance building your own web app, either using this package or other technologies, please [contact us](https://gearboxgo.com/) for a free introductory consultation to discuss your project.
+This package is built and maintained by [Gearbox Solutions](https://gearboxgo.com/). We build fantastic web apps with technologies like Laravel, Vue, React, and Node. If you would like assistance building your own web app, either using this package or other projects, please [contact us](https://gearboxgo.com/) for a free introductory consultation to discuss your project.
 
 ## Features
 * Uses the FileMaker Data API for accessing your FileMaker data
