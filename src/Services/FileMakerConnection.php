@@ -594,7 +594,7 @@ class FileMakerConnection extends Connection
     /**
      * Log out of the database, invalidating our session token
      *
-     * @return array|mixed|void
+     * @return \Illuminate\Http\Client\Response|void
      *
      * @throws FileMakerDataApiException
      */
