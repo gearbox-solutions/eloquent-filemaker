@@ -1,0 +1,11 @@
+<?php
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\FMModel;
+
+class {{ class }} extends FMModel
+{
+    use HasFactory;
+}

@@ -2,6 +2,7 @@
 
 namespace GearboxSolutions\EloquentFileMaker\Providers;
 
+use GearboxSolutions\EloquentFileMaker\Commands\FMModelMakeCommand;
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Support\ServiceProvider;
 
@@ -33,6 +34,12 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
         $this->app->bind(FileMakerConnection::class, function ($app) {
             return $app['fm.connection'];
         });
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                FMModelMakeCommand::class,
+            ]);
+        }
     }
 
     /**
@@ -42,6 +49,12 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        $this->publishes([
+            __DIR__ . '/../Commands/stubs/fm.model.stub' => base_path('stubs/model.stub'),
+        ], 'eloquent-filemaker-override-model');
+
+        $this->publishes([
+            __DIR__ . '/../Commands/stubs/fm.model.stub' => base_path('stubs/fm.model.stub'),
+        ], 'eloquent-filemaker-stubs');
     }
 }
