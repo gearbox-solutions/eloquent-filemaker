@@ -24,9 +24,11 @@ This package is built and maintained by [Gearbox Solutions](https://gearboxgo.co
 * Running scripts
 * And more!
 
+## Supported Laravel Versions
+We support the [currently supported versions of Laravel](https://laravel.com/docs/master/releases). Earlier versions of Laravel may be compatible, but could be dropped in the future if incompatible changes are required.
+
 ## What's new in 2.0
 * Added support for Laravel 11
-* Dropped support for Laravel 9
 * FileMaker Sessions only last for the duration of a single request to Laravel instead of being reused for 15 minutes - Cache is no longer required 
 * Improvements to whereNot logic and implementation to make it behave more closely to what it should be
 
@@ -35,7 +37,7 @@ Run `composer require gearbox-solutions/eloquent-filemaker:^2.0` to upgrade to t
 
 #### Potential changes to your code
 
-The upgrade to 2.0 should be pretty seamless for most use cases.
+The upgrade to 2.0 should be pretty seamless for most use cases, but there are two minor changes to be aware of which could affect uncommon use cases. These cases are described below.
 
 
 ##### Changes to session management
