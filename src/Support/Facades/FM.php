@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static FileMakerConnection connection(string $name = null)
  * @method static FileMakerConnection setRetries(int $retries)
  * @method static FileMakerConnection getLayoutMetadata($layoutName = null)
+ * @method static \Illuminate\Http\Client\Response|void disconnect()
  *
  * @see \Illuminate\Database\DatabaseManager
  * @see FileMakerConnection
