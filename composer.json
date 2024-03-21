@@ -25,8 +25,8 @@
         }
     },
     "require": {
-        "php": ">=8.2",
-        "illuminate/database": "^11.0",
+        "php": ">=8.0",
+        "illuminate/database": "^9.0|^10.0|^11.0",
         "guzzlehttp/guzzle": "^7.5",
         "ext-json": "*"
     },
