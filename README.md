@@ -29,6 +29,7 @@ We support the [currently supported versions of Laravel](https://laravel.com/doc
 
 ## What's new in 2.0
 * Added support for Laravel 11
+* Empty fields in FileMaker are returned as null instead of an empty string
 * FileMaker Sessions only last for the duration of a single request to Laravel instead of being reused for 15 minutes - Cache is no longer required 
 * Improvements to whereNot logic and implementation to make it behave more closely to what it should be
 
@@ -37,27 +38,22 @@ Run `composer require gearbox-solutions/eloquent-filemaker:^2.0` to upgrade to t
 
 #### Potential changes to your code
 
-The upgrade to 2.0 should be pretty seamless for most use cases, but there are two minor changes to be aware of which could affect uncommon use cases. These cases are described below.
+The usage of the package has generally remained the same. However, there are a few changes which may affect your code. Read the changes below to see what refactoring may be necessary when upgrading.
 
+##### Major - Changes to empty fields
+In version 1.0, empty fields in FileMaker were returned as an empty string. In version 2.0, empty fields are returned as null. This change makes working with FileMaker data a bit more like what a Laravel developer would expect from a database.
 
-##### Changes to session management
+If you'd like to continue with the old behavior your can change the `empty_strings_to_null` config value to false to keep with the empty strings. Otherwise, if you have any code which relies on empty fields being returned as an empty string, you may need to refactor your code to work with the new behavior.
+
+##### Minor - Changes to session management - Minor Change
 In version 1.0 the same FileMaker Data API session was used for all requests for about 15 minutes at a time, until the token expired. This token was stored in the Laravel Cache between requests. This behavior has been changed in version 2.0. 
 
 In this version 2.0, a Data API session lasts for only the duration of one request to your Laravel app. Login is performed the first time you use request data from the Data API. The session is ended and a logout is performed after the response has been sent to the browser through the use of [terminable middleware](https://laravel.com/docs/11.x/middleware#terminable-middleware).
 
 If you have any code which relies on the Data API session being reused between requests to your Laravel app, such as setting a global field once and then reading it across multiple page loads of your Laravel app, you will need to refactor your code to work with the new behavior.
 
-
-##### Improvements to whereNot logic
+##### Minor - Improvements to whereNot logic
 There were some cases where whereNot may return results that were probably not correct or expected. This has been fixed in version 2.0. If you have any code which relies on the old, incorrect behavior of whereNot, you may need to refactor your code to work with the new corrected behavior.
-
-
-
-## Requirements
-Laravel 10.0+
-
-For Laravel versions greater than 7.3 and less than 9.0, use version [0.2.10](https://github.com/gearbox-solutions/eloquent-filemaker/blob/0.2.10)
-For Laravel 9 use version [1.](https://github.com/gearbox-solutions/eloquent-filemaker/tree/1.x)
 
 # Installation
 Install `gearbox-solutions/eloquent-filemaker` in your project using Composer.
@@ -99,6 +95,7 @@ As an example, let's say you have three tables - Organizations, Contacts, and In
 Creating model classes is the easiest way to access your FileMaker data, and is the most Laravel-like way of doing things. Create a new model class and change the extension class from `Model` to `FMModel`. This class change enables you to use the features of this package with your models.
 
 
+
 #### Things that work
 
 The FMModel class extends the base Laravel Model class, and can be used very similarly. It supports many standard Eloquent query builder features for working with data, such as where(), find(), id(), orderBy(), delete(), save(), and many more!
@@ -118,6 +115,13 @@ Your queries against your FileMaker database require you to get data from a part
 ```php
 protected $layout = 'MyLayout';
 ```
+
+### Null values and empty strings
+Null is an important, expected possible value for developers when working with databases. FileMaker as a platform, unfortunately, does not have the concept of a null value. A field which has not had a value written to it instead contains an empty string. In order to make this behavior more web-developer-friendly, Eloquent FileMaker automatically converts the value of `''` in a FileMaker field to `null` when reading data from the Data API.
+
+If you would like to have empty FileMaker fields returned as empty strings you can set the `empty_strings_to_null` config value to false in your `config/eloquent-filemaker.php` file. The config file can be published to your config folder by running `artisan vendor:publish --tag=eloquent-filemaker-config`.
+
+Eloquent FileMaker will always automatically convert `null` values to `''` when writing data back to your FileMaker database to prevent errors.
 
 ### Read-only fields
 Many fields in your FileMaker database will be read-only, such as summaries and calculations, though you'll still want to get them when retrieving data from your database. FMModels will attempt to write all modified attributes back to your FileMaker database. If you write a read-only field, such as a calculation field, you will receive an error when attempting to write the field back to your FileMaker database.

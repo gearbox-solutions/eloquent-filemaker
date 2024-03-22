@@ -44,11 +44,6 @@ trait FMHasAttributes
             $value = $value ? 1 : 0;
         }
 
-        // FileMaker can't handle null, so change it to ''
-        if (is_null($value)) {
-            $value = '';
-        }
-
         $this->attributes[$key] = $value;
 
         return $this;

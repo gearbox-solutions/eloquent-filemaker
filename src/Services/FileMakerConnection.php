@@ -522,8 +522,7 @@ class FileMakerConnection extends Connection
     }
 
     /**
-     * Strip out containers and read-only fields to prepare for a write query
-     * OR - do the opposite and get ONLY containers
+     * Strip out containers and read-only fields, convert null values to empty strings to prepare for a write query
      *
      * @return Collection
      */
@@ -537,6 +536,11 @@ class FileMakerConnection extends Connection
             // users can set the field to be a File, UploadFile, or array [$file, 'MyFile.pdf']
             if ($this->isContainer($field)) {
                 $fieldData->forget($key);
+            }
+
+            // set any null value to an empty string - FileMaker doesn't use true null values
+            if ($field === null) {
+                $fieldData->put($key, '');
             }
         }
 

@@ -120,11 +120,19 @@ abstract class FMModel extends Model
             })->toArray();
         }
 
+        // check our config to see if we should map empty strings to null - users may decide they don't want this
+        if (config('eloquent-filemaker.empty_strings_to_null', true)) {
+            // map each value to null if it's an empty string
+            $fieldData = collect($fieldData)->map(function ($value) {
+                return $value === '' ? null : $value;
+            })->toArray();
+        }
+
         // fill in the field data we've mapped and retrieved
-        $instance = tap($instance)->forceFill($fieldData);
+        $instance->forceFill($fieldData);
 
         // fill in the portal data we've mapped and retrieved
-        $instance = tap($instance)->forceFill($portalData);
+        $instance->forceFill($portalData);
 
         $recordId = $record['recordId'];
         $modId = $record['modId'];
