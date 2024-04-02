@@ -75,11 +75,13 @@ php artisan vendor:publish --tag=eloquent-filemaker-override-model
 This publish will create a `model.stub` that will be used by `php artisan make:model` to set up new models. You should use this on projects that will only have models backed by FileMaker.
 
 ## Alternatively, use new make command
-Alternatively, you can use the new `make:fm-model` command. All options available to Laravel's native `make:model` command are also available to `make:fm-model` command. 
+Alternatively, you can use the default `make:model` command with a new `--filemaker` flag. All options available to Laravel's native `make:model` command are still available for use. 
 
 ```shell
-php artisan make:fm-model Model
+php artisan make:model Model --filemaker
 ```
+
+Note: If the `--filemaker` flag is not used, the model will be created as a standard Laravel model.
 
 # Usage
 With the package installed you can now have access to all the features of this package. There are a few different areas to configure.

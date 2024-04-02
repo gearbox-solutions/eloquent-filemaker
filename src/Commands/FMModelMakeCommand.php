@@ -7,7 +7,7 @@ use Symfony\Component\Console\Input\InputOption;
 
 class FMModelMakeCommand extends LaravelModelMakeCommand
 {
-    protected $name = 'make:fm-model';
+    protected $name = 'make:model';
 
     /**
      * The console command description.
@@ -32,7 +32,7 @@ class FMModelMakeCommand extends LaravelModelMakeCommand
                 throw new \RuntimeException('This model type is not yet supported by Eloquent FileMaker.');
             }
 
-            $stub = $this->resolveStubPath('/stubs/fm.model.stub');
+            $stub = $this->resolveFMStubPath('/stubs/fm.model.stub');
         }
 
         return $stub;
@@ -44,7 +44,7 @@ class FMModelMakeCommand extends LaravelModelMakeCommand
      * @param  string  $stub
      * @return string
      */
-    protected function resolveStubPath($stub)
+    protected function resolveFMStubPath($stub)
     {
         return file_exists($customPath = $this->laravel->basePath(trim($stub, '/')))
             ? $customPath
