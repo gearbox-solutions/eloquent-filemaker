@@ -148,7 +148,8 @@ abstract class FMModel extends Model
 
     public static function createModelsFromRecordSet(BaseCollection $records): Collection
     {
-        // return an empty collection if an empty collection was passed in.
+        // return an empty Eloquent/Collection (or a collection of the specific model type) if an empty collection was
+        // passed in.
         if ($records->count() === 0) {
             return (new static())->newCollection([]);
         }
@@ -158,6 +159,7 @@ abstract class FMModel extends Model
             return static::createFromRecord($record);
         });
 
+        // return the filled Eloquent/Collection (or a collection of the specific model type if possible)
         return (new static())->newCollection($mappedRecords->all());
     }
 
