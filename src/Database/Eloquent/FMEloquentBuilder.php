@@ -7,10 +7,10 @@ use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
 
 class FMEloquentBuilder extends Builder
 {
@@ -265,8 +265,8 @@ class FMEloquentBuilder extends Builder
     /**
      * Compares a model's modified portal data and original portal data and returns portal data with only modified fields and recordIds
      *
-     * @param  $array1  array The modified portal data
-     * @param  $array2  array The model's original portal data
+     * @param    $array1  array The modified portal data
+     * @param    $array2  array The model's original portal data
      */
     protected function getOnlyModifiedPortalFields($array1, $array2): array
     {

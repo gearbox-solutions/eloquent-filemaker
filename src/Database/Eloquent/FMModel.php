@@ -8,12 +8,13 @@ use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelations
 use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Str;
 
 abstract class FMModel extends Model
@@ -145,24 +146,19 @@ abstract class FMModel extends Model
         return $instance;
     }
 
-    public static function createModelsFromRecordSet(Collection $records): Collection
+    public static function createModelsFromRecordSet(BaseCollection $records): Collection
     {
-
-        // start with an empty collection
-        $collection = collect([]);
-
         // return an empty collection if an empty collection was passed in.
         if ($records->count() === 0) {
-            return $collection;
+            return (new static())->newCollection([]);
         }
 
         // Records passed in weren't empty, so process the records
-        foreach ($records as $record) {
-            $model = static::createFromRecord($record);
-            $collection->push($model);
-        }
+        $mappedRecords = $records->map(function ($record) {
+            return static::createFromRecord($record);
+        });
 
-        return $collection;
+        return (new static())->newCollection($mappedRecords->all());
     }
 
     /** Fill in data for this existing model with record data from FileMaker
@@ -396,7 +392,7 @@ abstract class FMModel extends Model
     /**
      * Strip out containers and read-only fields to prepare for a write query
      *
-     * @return Collection
+     * @return BaseCollection
      */
     public function getAttributesForFileMakerWrite()
     {
