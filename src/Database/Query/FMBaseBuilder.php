@@ -1059,4 +1059,10 @@ class FMBaseBuilder extends Builder
     {
         $this->currentFindRequestIndex = -1;
     }
+
+    protected function invalidOperatorAndValue($operator, $value)
+    {
+        return is_null($value) && in_array($operator, $this->operators) &&
+            ! in_array($operator, ['=', '==', '!=', '≠']);
+    }
 }
