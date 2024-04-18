@@ -29,8 +29,8 @@ We support the [currently supported versions of Laravel](https://laravel.com/doc
 
 ## What's new in 2.0
 * Added support for Laravel 11
-* Empty fields in FileMaker are returned as null instead of an empty string
-* FileMaker Sessions only last for the duration of a single request to Laravel instead of being reused for 15 minutes - Cache is no longer required 
+* Empty fields in FileMaker are returned as null instead of an empty string by default
+* FileMaker Sessions only last for the duration of a single request to Laravel instead of being reused for 15 minutes by default - this can be changed in the config 
 * Improvements to whereNot logic and implementation to make it behave more closely to what it should be
 
 ### Upgrading from 1.x to 2.x
@@ -46,11 +46,11 @@ In version 1.0, empty fields in FileMaker were returned as an empty string. In v
 If you'd like to continue with the old behavior your can change the `empty_strings_to_null` config value to false to keep with the empty strings. Otherwise, if you have any code which relies on empty fields being returned as an empty string, you may need to refactor your code to work with the new behavior.
 
 ##### Minor - Changes to session management - Minor Change
-In version 1.0 the same FileMaker Data API session was used for all requests for about 15 minutes at a time, until the token expired. This token was stored in the Laravel Cache between requests. This behavior has been changed in version 2.0. 
+In version 1.0 the same FileMaker Data API session was used for all requests for about 15 minutes at a time, until the token expired. This token was stored in the Laravel Cache between requests. This behavior has been changed in version 2.0 to work when cache is not configured. 
 
-In this version 2.0, a Data API session lasts for only the duration of one request to your Laravel app. Login is performed the first time you use request data from the Data API. The session is ended and a logout is performed after the response has been sent to the browser through the use of [terminable middleware](https://laravel.com/docs/11.x/middleware#terminable-middleware).
+By default, in version 2.0 a Data API session lasts for only the duration of one request to your Laravel app. Login is performed the first time you use request data from the Data API. The session is ended and a logout is performed after the response has been sent to the browser through the use of [terminable middleware](https://laravel.com/docs/11.x/middleware#terminable-middleware).
 
-If you have any code which relies on the Data API session being reused between requests to your Laravel app, such as setting a global field once and then reading it across multiple page loads of your Laravel app, you will need to refactor your code to work with the new behavior.
+If you have any code which relies on the Data API session being reused between requests to your Laravel app, such as setting a global field once and then reading it across multiple page loads of your Laravel app, you will need to either change this behavior by setting ` 'cache_session_token' => true` in your FileMaker connection config or refactor your code to work with the new behavior.
 
 ##### Minor - Improvements to whereNot logic
 There were some cases where whereNot may return results that were probably not correct or expected. This has been fixed in version 2.0. If you have any code which relies on the old, incorrect behavior of whereNot, you may need to refactor your code to work with the new corrected behavior.
@@ -67,7 +67,7 @@ With the package installed you can now have access to all the features of this p
 ## Database configuration
 The first thing to do is to add a new data connection in your `database.php` config file. The connections you specify here will be used in your FMModel classes to configure which databases each model will connect to.
 
-You may use the following code block below as a template.
+You may use the following code block below as a template, which has some good defaults.
 ```php
 'filemaker' => [
     'driver' => 'filemaker',
@@ -78,11 +78,13 @@ You may use the following code block below as a template.
     'prefix' => env('DB_PREFIX', ''),
     'version' => env('DB_VERSION', 'vLatest'),
     'protocol' => env('DB_PROTOCOL', 'https'),
+    'cache_session_token' => env('DB_CACHE_SESSION_TOKEN', true), // set to true to cache the session token between requests and prevent the need to re-login each time. This can be a significant performance improvement!
+    'empty_strings_to_null' => env('DB_EMPTY_STRINGS_TO_NULL', true), // set to false to return empty strings instead of null values when fields are empty in FileMaker
 ]
 ```
 You should add one database connection configuration for each FileMaker database you will be connecting to. Each file can have completely different configurations, and can even be on different servers.
 
-Sessions will be maintained on a per-connection basis and tokens will automatically be cached using whatever cache configuration you have set up for your Laravel app.
+If `cache_session_token` is true, login sessions will be maintained on a per-connection basis and tokens will automatically be cached using whatever cache configuration you have set up for your Laravel app. This prevents the need to re-login to the Data API for each request, which can be a significant performance improvement. If you have a cache configured for your Laravel app, you should generally this to true.
 
 #### Prefix
 The prefix configuration option adds a prefix to each of the layout/table names which you specify. You don't need to specify a prefix, but it can be very convenient to do so.
@@ -119,7 +121,7 @@ protected $layout = 'MyLayout';
 ### Null values and empty strings
 Null is an important, expected possible value for developers when working with databases. FileMaker as a platform, unfortunately, does not have the concept of a null value. A field which has not had a value written to it instead contains an empty string. In order to make this behavior more web-developer-friendly, Eloquent FileMaker automatically converts the value of `''` in a FileMaker field to `null` when reading data from the Data API.
 
-If you would like to have empty FileMaker fields returned as empty strings you can set the `empty_strings_to_null` config value to false in your `config/eloquent-filemaker.php` file. The config file can be published to your config folder by running `artisan vendor:publish --tag=eloquent-filemaker-config`.
+If you would like to have empty FileMaker fields returned as empty strings you can set the `empty_strings_to_null` config value to false in your connection configuration.
 
 Eloquent FileMaker will always automatically convert `null` values to `''` when writing data back to your FileMaker database to prevent errors.
 

@@ -14,6 +14,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -31,9 +32,27 @@ class FileMakerConnection extends Connection
 
     protected $password;
 
-    protected static $sessionToken;
+    protected $sessionToken;
 
     protected $retries = 1;
+
+    protected $sessionTokenCacheKey;
+
+    protected $emptyStringToNull = true;
+
+    public const CONFIG_KEY_CACHE_SESSION_TOKEN = 'eloquent-filemaker.cache_session_token';
+
+    public function __construct($pdo, $database = '', $tablePrefix = '', array $config = [])
+    {
+
+        $this->emptyStringToNull = $config['empty_strings_to_null'] ?? true;
+        $this->shouldCacheSessionToken = $config['cache_session_token'] ?? false;
+
+        // set the session cache key with the name of the connection to support multiple connections
+        $this->sessionTokenCacheKey = 'eloquent-filemaker-session-token-' . $config['name'];
+
+        parent::__construct($pdo, $database, $tablePrefix, $config);
+    }
 
     /**
      * Crazy high number of records to return.
@@ -63,12 +82,20 @@ class FileMakerConnection extends Connection
     public function login()
     {
         // return early if we're already logged in
-        if (self::$sessionToken) {
+        if ($this->sessionToken) {
             return;
         }
 
         // retrieve and store the session token
-        self::$sessionToken = $this->fetchNewSessionToken();
+        // Store it in the cache if the connection is configured to do so
+        if ($this->shouldCacheSessionToken) {
+            $this->sessionToken = Cache::remember($this->sessionTokenCacheKey, 890, function () {
+                return $this->fetchNewSessionToken();
+            });
+        } else {
+            // we're not going to reuse it, so just get a new one
+            $this->sessionToken = $this->fetchNewSessionToken();
+        }
     }
 
     /**
@@ -604,11 +631,11 @@ class FileMakerConnection extends Connection
      */
     public function disconnect()
     {
-        if (! self::$sessionToken) {
+        if (! $this->sessionToken) {
             return;
         }
 
-        $url = $this->getDatabaseUrl() . '/sessions/' . self::$sessionToken;
+        $url = $this->getDatabaseUrl() . '/sessions/' . $this->sessionToken;
 
         // make an http delete request to the data api to end the session
         $response = Http::delete($url);
@@ -624,7 +651,12 @@ class FileMakerConnection extends Connection
      */
     public function forgetSessionToken()
     {
-        self::$sessionToken = null;
+        $this->sessionToken = null;
+
+        // clear the token from the cache if we're configured to store it
+        if ($this->shouldCacheSessionToken) {
+            Cache::forget($this->sessionTokenCacheKey);
+        }
     }
 
     public function layout($layoutName)
@@ -649,9 +681,9 @@ class FileMakerConnection extends Connection
     protected function prepareRequestForSending($request)
     {
         if ($request instanceof PendingRequest) {
-            $request->withToken(self::$sessionToken);
+            $request->withToken($this->sessionToken);
         } else {
-            $request = Http::withToken(self::$sessionToken);
+            $request = Http::withToken($this->sessionToken);
         }
 
         $request->withMiddleware($this->retryMiddleware());

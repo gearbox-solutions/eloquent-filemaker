@@ -49,9 +49,5 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
     {
         // add the middleware to the global middleware so that we always end the FileMaker session
         $kernel->pushMiddleware(EndSession::class);
-
-        $this->publishes([
-            __DIR__ . '/../config/eloquent-filemaker.php' => config_path('eloquent-filemaker.php'),
-        ], 'eloquent-filemaker-config');
     }
 }
