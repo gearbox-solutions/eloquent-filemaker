@@ -265,8 +265,8 @@ class FMEloquentBuilder extends Builder
     /**
      * Compares a model's modified portal data and original portal data and returns portal data with only modified fields and recordIds
      *
-     * @param    $array1  array The modified portal data
-     * @param    $array2  array The model's original portal data
+     * @param  $array1  array The modified portal data
+     * @param  $array2  array The model's original portal data
      */
     protected function getOnlyModifiedPortalFields($array1, $array2): array
     {

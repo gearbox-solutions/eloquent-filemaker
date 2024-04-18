@@ -60,7 +60,7 @@ trait FMGuardsAttributes
         $refreshCallback = function () {
             $layoutMetaData = $this->getConnection()->getLayoutMetadata($this->table);
 
-            return array_column($layoutMetaData['fieldMetaData'], 'name');
+            return array_column($layoutMetaData['response']['fieldMetaData'], 'name');
         };
 
         if ($forceRefresh) {

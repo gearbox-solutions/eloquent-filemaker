@@ -40,8 +40,6 @@ class FileMakerConnection extends Connection
 
     protected $emptyStringToNull = true;
 
-    public const CONFIG_KEY_CACHE_SESSION_TOKEN = 'eloquent-filemaker.cache_session_token';
-
     public function __construct($pdo, $database = '', $tablePrefix = '', array $config = [])
     {
 
