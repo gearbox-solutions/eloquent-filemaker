@@ -340,9 +340,10 @@ class FMBaseBuilder extends Builder
 
     public function orderBy($column, $direction = self::ASCEND): FMBaseBuilder
     {
-        $direction = match($direction) {
-            self::ASCEND, 'asc' => self::ASCEND,
-            self::DESCEND, 'desc' => self::DESCEND,
+        // check for specific direction values sent by some Laravel functions and convert them to FileMaker's values
+        $direction = match ($direction) {
+            'asc' => self::ASCEND,
+            'desc' => self::DESCEND,
             default => $direction
         };
 
