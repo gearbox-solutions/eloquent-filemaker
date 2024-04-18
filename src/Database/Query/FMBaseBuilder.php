@@ -340,6 +340,12 @@ class FMBaseBuilder extends Builder
 
     public function orderBy($column, $direction = self::ASCEND): FMBaseBuilder
     {
+        $direction = match($direction) {
+            self::ASCEND, 'asc' => self::ASCEND,
+            self::DESCEND, 'desc' => self::DESCEND,
+            default => $direction
+        };
+
         $this->appendSortOrder($column, $direction);
 
         return $this;
@@ -1064,5 +1070,10 @@ class FMBaseBuilder extends Builder
     {
         return is_null($value) && in_array($operator, $this->operators) &&
             ! in_array($operator, ['=', '==', '!=', '≠']);
+    }
+
+    public function getCountForPagination($columns = ['*'])
+    {
+        return $this->count($columns);
     }
 }
