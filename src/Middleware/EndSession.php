@@ -27,7 +27,8 @@ class EndSession
      */
     public function terminate(Request $request, Response $response): void
     {
-        $shouldCacheSessionToken = FM::connection()->getConfig()['cache_session_token'] ?? false;
+        $shouldCacheSessionToken = FM::connection()->getConfig()['cache_session_token'] ?? true;
+        // don't close the connection if we're caching the session token
         if ($shouldCacheSessionToken) {
             return;
         }

@@ -44,7 +44,7 @@ class FileMakerConnection extends Connection
     {
 
         $this->emptyStringToNull = $config['empty_strings_to_null'] ?? true;
-        $this->shouldCacheSessionToken = $config['cache_session_token'] ?? false;
+        $this->shouldCacheSessionToken = $config['cache_session_token'] ?? true;
 
         // set the session cache key with the name of the connection to support multiple connections
         $this->sessionTokenCacheKey = 'eloquent-filemaker-session-token-' . $config['name'];

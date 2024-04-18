@@ -78,7 +78,7 @@ You may use the following code block below as a template, which has some good de
     'prefix' => env('DB_PREFIX', ''),
     'version' => env('DB_VERSION', 'vLatest'),
     'protocol' => env('DB_PROTOCOL', 'https'),
-    'cache_session_token' => env('DB_CACHE_SESSION_TOKEN', true), // set to true to cache the session token between requests and prevent the need to re-login each time. This can be a significant performance improvement!
+    'cache_session_token' => env('DB_CACHE_SESSION_TOKEN', true), // set to false to log out after each reqeust. This can be slower than re-using a session token, but allows for globals to be set for individual user values.
     'empty_strings_to_null' => env('DB_EMPTY_STRINGS_TO_NULL', true), // set to false to return empty strings instead of null values when fields are empty in FileMaker
 ]
 ```
