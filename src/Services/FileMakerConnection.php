@@ -87,7 +87,7 @@ class FileMakerConnection extends Connection
         // retrieve and store the session token
         // Store it in the cache if the connection is configured to do so
         if ($this->shouldCacheSessionToken) {
-            $this->sessionToken = Cache::remember($this->sessionTokenCacheKey, 890, function () {
+            $this->sessionToken = Cache::rememberForever($this->sessionTokenCacheKey, function () {
                 return $this->fetchNewSessionToken();
             });
         } else {
