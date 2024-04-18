@@ -340,6 +340,12 @@ class FMBaseBuilder extends Builder
 
     public function orderBy($column, $direction = self::ASCEND): FMBaseBuilder
     {
+        $direction = match($direction) {
+            self::ASCEND, 'asc' => self::ASCEND,
+            self::DESCEND, 'desc' => self::DESCEND,
+            default => $direction
+        };
+
         $this->appendSortOrder($column, $direction);
 
         return $this;
