@@ -1071,4 +1071,9 @@ class FMBaseBuilder extends Builder
         return is_null($value) && in_array($operator, $this->operators) &&
             ! in_array($operator, ['=', '==', '!=', '≠']);
     }
+
+    public function getCountForPagination($columns = ['*'])
+    {
+        return $this->count($columns);
+    }
 }
