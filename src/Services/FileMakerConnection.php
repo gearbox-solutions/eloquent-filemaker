@@ -36,6 +36,8 @@ class FileMakerConnection extends Connection
 
     protected $retries = 1;
 
+    protected $shouldCacheSessionToken = true;
+
     protected $sessionTokenCacheKey;
 
     protected $emptyStringToNull = true;
