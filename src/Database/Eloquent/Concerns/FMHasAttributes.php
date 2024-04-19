@@ -35,7 +35,7 @@ trait FMHasAttributes
         // check the key's cast to see if it is cast to a date or custom date:format
         $castType = $this->getCasts()[$key] ?? '';
         $isDate = $castType == 'date' || str_starts_with($castType, 'date:');
-        if ($isDate) {
+        if ($isDate && ($value !== null)) {
             $value = Arr::first(explode(' ', $value));
         }
 
