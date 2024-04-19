@@ -22,25 +22,25 @@ use Symfony\Component\HttpFoundation\File\File;
 
 class FileMakerConnection extends Connection
 {
-    protected $protocol = 'https';
+    protected string $protocol = 'https';
 
-    protected $host;
+    protected ?string $host;
 
-    protected $layout;
+    protected ?string $layout;
 
-    protected $username;
+    protected ?string $username;
 
-    protected $password;
+    protected ?string $password;
 
-    protected $sessionToken;
+    protected ?string $sessionToken = null;
 
-    protected $retries = 1;
+    protected int $retries = 1;
 
-    protected $shouldCacheSessionToken = true;
+    protected bool $shouldCacheSessionToken = true;
 
-    protected $sessionTokenCacheKey;
+    protected ?string $sessionTokenCacheKey = null;
 
-    protected $emptyStringToNull = true;
+    protected bool $emptyStringToNull = true;
 
     public function __construct($pdo, $database = '', $tablePrefix = '', array $config = [])
     {
