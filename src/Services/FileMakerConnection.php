@@ -7,8 +7,6 @@ use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Database\Query\Grammars\FMGrammar;
 use GearboxSolutions\EloquentFileMaker\Database\Schema\FMBuilder;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
-use GuzzleHttp\Exception\TransferException;
-use GuzzleHttp\Middleware;
 use Illuminate\Database\Connection;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\UploadedFile;
@@ -16,8 +14,6 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\HttpFoundation\File\File;
 
 class FileMakerConnection extends Connection
@@ -114,7 +110,7 @@ class FileMakerConnection extends Connection
         ];
 
         // perform the login
-        $response = Http::withBasicAuth($this->config['username'], $this->config['password'])
+        $response = Http::retry($this->retries, 100)->withBasicAuth($this->config['username'], $this->config['password'])
             ->post($url, $postBody);
 
         // Check for errors
@@ -683,10 +679,8 @@ class FileMakerConnection extends Connection
         if ($request instanceof PendingRequest) {
             $request->withToken($this->sessionToken);
         } else {
-            $request = Http::withToken($this->sessionToken);
+            $request = Http::retry($this->retries, 100)->withoutVerifying()->withToken($this->sessionToken);
         }
-
-        $request->withMiddleware($this->retryMiddleware());
 
         return $request;
     }
@@ -730,44 +724,6 @@ class FileMakerConnection extends Connection
         $this->retries = $retries;
 
         return $this;
-    }
-
-    protected function retryMiddleware()
-    {
-        return Middleware::retry(function (
-            $retries,
-            RequestInterface $request,
-            ?ResponseInterface $response = null,
-            ?TransferException $exception = null
-        ) {
-            // Limit the number of retries to 5
-            if ($retries >= $this->retries) {
-                return false;
-            }
-
-            $should_retry = false;
-            $log_message = null;
-
-            // Retry connection exceptions
-            if ($exception instanceof TransferException) {
-                $should_retry = true;
-                $log_message = 'Connection Error: ' . $exception->getMessage();
-            }
-
-            if ($log_message) {
-                error_log($log_message, 0);
-            }
-
-            if ($should_retry) {
-                if ($retries > 0) {
-                    error_log('Retry ' . $retries . '…', 0);
-                }
-            }
-
-            return $should_retry;
-        }, function () {
-            return 0;
-        });
     }
 
     protected function getDefaultQueryGrammar()
