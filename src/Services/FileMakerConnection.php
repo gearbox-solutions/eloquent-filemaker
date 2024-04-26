@@ -8,12 +8,14 @@ use GearboxSolutions\EloquentFileMaker\Database\Query\Grammars\FMGrammar;
 use GearboxSolutions\EloquentFileMaker\Database\Schema\FMBuilder;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\File\File;
 
 class FileMakerConnection extends Connection
@@ -690,6 +692,8 @@ class FileMakerConnection extends Connection
      */
     protected function makeRequest($method, $url, $params = [], ?PendingRequest $request = null)
     {
+        $start = microtime(true);
+
         $this->login();
 
         $request = $this->prepareRequestForSending($request);
@@ -713,10 +717,63 @@ class FileMakerConnection extends Connection
             }
         }
 
+        $this->logFMQuery($method, $url, $params, $start);
+
         // Return the JSON response
         $json = $response->json();
 
         return $json;
+    }
+
+    protected function logFMQuery($method, $url, $params, $start)
+    {
+        $commandType = $this->getSqlCommandType($method, $url);
+
+        // Clockwork specifically looks for the commandType as the first word in the "sql" string
+        $sql = <<<DOC
+                {$commandType}
+                Method: {$method}
+                URL: {$url}
+                DOC;
+
+        if (count($params) > 0) {
+            $sql .= "\nData: " . json_encode($params, JSON_PRETTY_PRINT);
+        }
+
+        $this->event(new QueryExecuted($sql, Arr::get($params, 'query', []), $this->getElapsedTime($start), $this));
+    }
+
+    protected function getSqlCommandType($method, $url)
+    {
+        if ($method === 'delete') {
+            return 'delete';
+        }
+
+        if ($method === 'patch') {
+            return 'update';
+        }
+
+        if ($method === 'get') {
+            if (Str::contains($url, 'script')) {
+                return 'exec';
+            }
+
+            return 'select';
+        }
+
+        if ($method === 'post') {
+            if (Str::contains($url, 'containers')) {
+                return 'update';
+            }
+
+            if (Str::contains($url, '_find')) {
+                return 'select';
+            }
+
+            return 'insert';
+        }
+
+        return 'other';
     }
 
     public function setRetries($retries)
