@@ -103,11 +103,14 @@ class FileMakerConnection extends Connection
      */
     protected function fetchNewSessionToken()
     {
+        $start = microtime(true);
+
         $url = $this->getDatabaseUrl() . '/sessions';
 
         // prepare the post body
         $postBody = [
-            'fmDataSource' => [Arr::only($this->config, ['database', 'username', 'password']),
+            'fmDataSource' => [
+                Arr::only($this->config, ['database', 'username', 'password']),
             ],
         ];
 
@@ -117,6 +120,11 @@ class FileMakerConnection extends Connection
 
         // Check for errors
         $this->checkResponseForErrors($response);
+
+        Arr::set($postBody, 'fmDataSource.0.username', str_repeat('*', strlen(Arr::get($postBody, 'fmDataSource.0.username'))));
+        Arr::set($postBody, 'fmDataSource.0.password', str_repeat('*', strlen(Arr::get($postBody, 'fmDataSource.0.password'))));
+
+        $this->logFMQuery('post', $url, $postBody, $start);
 
         // Get the session token from the response
         $token = Arr::get($response, 'response.token');
