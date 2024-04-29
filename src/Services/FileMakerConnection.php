@@ -684,13 +684,13 @@ class FileMakerConnection extends Connection
         return $response;
     }
 
-    protected function prepareRequestForSending($request)
+    protected function prepareRequestForSending($request = null)
     {
-        if ($request instanceof PendingRequest) {
-            $request->withToken($this->sessionToken);
-        } else {
-            $request = Http::retry($this->retries, 100)->withToken($this->sessionToken);
+        if (! $request) {
+            $request = new PendingRequest();
         }
+
+        $request->retry($this->retries, 100)->withToken($this->sessionToken);
 
         return $request;
     }
