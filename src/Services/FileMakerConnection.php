@@ -32,7 +32,7 @@ class FileMakerConnection extends Connection
 
     protected ?string $sessionToken = null;
 
-    protected int $retries = 1;
+    protected int $attempts = 2;
 
     protected bool $shouldCacheSessionToken = true;
 
@@ -115,7 +115,7 @@ class FileMakerConnection extends Connection
         ];
 
         // perform the login
-        $response = Http::retry($this->retries, 100)->withBasicAuth($this->config['username'], $this->config['password'])
+        $response = Http::retry($this->attempts, 100)->withBasicAuth($this->config['username'], $this->config['password'])
             ->post($url, $postBody);
 
         // Check for errors
@@ -690,7 +690,7 @@ class FileMakerConnection extends Connection
             $request = new PendingRequest();
         }
 
-        $request->retry($this->retries, 100)->withToken($this->sessionToken);
+        $request->retry($this->attempts, 100)->withToken($this->sessionToken);
 
         return $request;
     }
@@ -791,7 +791,7 @@ class FileMakerConnection extends Connection
 
     public function setRetries($retries)
     {
-        $this->retries = $retries;
+        $this->attempts = $retries + 1;
 
         return $this;
     }
