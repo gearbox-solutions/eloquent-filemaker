@@ -720,6 +720,11 @@ class FileMakerConnection extends Connection
                 // try the request again with refreshed credentials
                 $request = $this->prepareRequestForSending($request);
                 $response = $request->{$method}($url, $params);
+
+                // check for errors a second time, but this time we won't catch the error if there's still an auth
+                // problem
+                $this->checkResponseForErrors($response);
+
             } else {
                 throw $e;
             }
