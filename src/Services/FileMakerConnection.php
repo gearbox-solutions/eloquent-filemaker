@@ -689,7 +689,7 @@ class FileMakerConnection extends Connection
         if ($request instanceof PendingRequest) {
             $request->withToken($this->sessionToken);
         } else {
-            $request = Http::retry($this->retries, 100)->withoutVerifying()->withToken($this->sessionToken);
+            $request = Http::retry($this->retries, 100)->withToken($this->sessionToken);
         }
 
         return $request;
