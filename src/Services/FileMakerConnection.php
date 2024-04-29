@@ -690,7 +690,7 @@ class FileMakerConnection extends Connection
             $request = new PendingRequest();
         }
 
-        $request->retry($this->attempts, 100)->withToken($this->sessionToken);
+        $request->retry($this->attempts, 100, fn () => true, false)->withToken($this->sessionToken);
 
         return $request;
     }
