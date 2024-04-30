@@ -2,7 +2,6 @@
 
 namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent;
 
-use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
 use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Contracts\Support\Arrayable;
@@ -14,8 +13,6 @@ use Illuminate\Support\Arr;
 
 class FMEloquentBuilder extends Builder
 {
-    use FMHasRelationships;
-
     /**
      * @return Collection
      *
