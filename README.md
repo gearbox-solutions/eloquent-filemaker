@@ -394,7 +394,9 @@ It is possible to have relationships between native Laravel Model objects from y
 protected $connection = 'theConnectionName';
 ```
 
-Once they're set correctly, you can create relationships, such as a belongsTo, by manually creating a new eloquent-filemaker belongsTo object and setting the appropriate keys.
+Once they're set correctly, you can create relationships, such as a belongsTo, by manually creating a new eloquent-filemaker belongsTo object or importing a new trait and setting the appropriate keys.
+
+### Manually creating a relationship
 
 Here is an example of setting a native Laravel User Model to belong to a FileMaker-based Company FMModel class.
 
@@ -406,6 +408,26 @@ class User extends Model
     public function company()
     {
         return new \GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo(Company::query(), $this, 'company_id', 'id', '');
+    }
+}
+```
+
+### Using trait to create a relationship (2.3.0+)
+Here is an example of using the trait to create a native Laravel User Model to belong to a FileMaker-based Company FMModel class.
+
+```php
+// User.php
+
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\HasHybridRelationships;
+
+class User extends Model
+{
+    use HasHybridRelationships;
+    
+    public function company()
+    {
+        // This method looks at the related model and determines the correct relationship type
+        return $this->belongsTo(Company::class, 'company_id', 'id');
     }
 }
 ```
