@@ -254,6 +254,12 @@ class FileMakerConnection extends Connection
             $query->limit = self::CRAZY_RECORDS_AMOUNT;
         }
 
+        // remove any empty arrays from wheres
+        // an empty find is invalid
+        $query->wheres = collect($query->wheres)->filter(function ($item) {
+            return is_array($item) ? count($item) > 0 : true;
+        })->toArray();
+
         // if there are no query parameters we need to do a get all records instead of a find
         if (empty($query->wheres) && ! $query->isForcingHighOffset()) {
             return $this->getRecords($query);
@@ -511,7 +517,7 @@ class FileMakerConnection extends Connection
         foreach ($params as $attribute => $request) {
             $value = $query->$attribute;
 
-            // just skip  everything else if the value is null
+            // just skip everything else if the value is null
             if ($value === null) {
                 continue;
             }

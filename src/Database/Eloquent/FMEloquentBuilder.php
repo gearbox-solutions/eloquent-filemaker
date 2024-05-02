@@ -296,16 +296,6 @@ class FMEloquentBuilder extends Builder
     {
         $builder = parent::applyScopes();
 
-        $query = $builder->getQuery();
-
-        foreach ($query->wheres as $index => $find) {
-            if (! empty($find)) {
-                continue;
-            }
-
-            unset($query->wheres[$index]);
-        }
-
         return $builder;
     }
 
