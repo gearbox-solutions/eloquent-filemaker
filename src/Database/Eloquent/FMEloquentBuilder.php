@@ -332,9 +332,9 @@ class FMEloquentBuilder extends Builder
             $query->setFindRequestIndex(0);
 
             $result = $scope(...$parameters) ?? $this;
+        } else {
+            $query->setFindRequestIndex(count($query->wheres) - 1);
         }
-
-        $query->resetFindRequestIndex();
 
         return $result;
     }
