@@ -7,7 +7,6 @@ use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Arr;
 
