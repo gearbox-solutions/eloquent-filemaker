@@ -2,20 +2,16 @@
 
 namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent;
 
-use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
 use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Arr;
 
 class FMEloquentBuilder extends Builder
 {
-    use FMHasRelationships;
-
     /**
      * @return Collection
      *
