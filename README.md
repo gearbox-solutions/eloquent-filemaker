@@ -394,26 +394,12 @@ It is possible to have relationships between native Laravel Model objects from y
 protected $connection = 'theConnectionName';
 ```
 
-Once they're set correctly, you can create relationships, such as a belongsTo, by manually creating a new eloquent-filemaker belongsTo object or importing a new trait and setting the appropriate keys.
+Once the connections are set correctly, relationships from FMModel objects to sql-based Model objects should resolve correctly automatically. Relationships from regular `Model` objects to `FMModel` objects (version > 2.3.0 ) will require adding a new trait to your model class to enable the relationship to be created. For versions earlier than 2.3.0 or for more control over the relationship you can add a relationship connection manually using the examples below.
 
-### Manually creating a relationship
-
-Here is an example of setting a native Laravel User Model to belong to a FileMaker-based Company FMModel class.
-
-```php
-// User.php
-
-class User extends Model
-{
-    public function company()
-    {
-        return new \GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo(Company::query(), $this, 'company_id', 'id', '');
-    }
-}
-```
+you can create relationships, such as a belongsTo, by manually creating a new eloquent-filemaker belongsTo object or importing a new trait and setting the appropriate keys.
 
 ### Using trait to create a relationship (2.3.0+)
-Here is an example of using the trait to create a native Laravel User Model to belong to a FileMaker-based Company FMModel class.
+The `HasHybridRelationships` trait allows the model to automatically resolve relationships from a `Model` to an `FMModel`. Here is an example of using the trait to create a native Laravel User `Model` in a SQL database to belong to a FileMaker-based Company `FMModel` class.
 
 ```php
 // User.php
@@ -426,7 +412,8 @@ class User extends Model
     
     public function company()
     {
-        // This method looks at the related model and determines the correct relationship type
+        // The Company class is an FMModel and is stored in FileMaker
+        // The correct relationship will be resolved automatically thanks to the HasHybridRelationships trait
         return $this->belongsTo(Company::class, 'company_id', 'id');
     }
 }
@@ -437,6 +424,25 @@ With this relationship created we can now get an FMModel of the Company the User
 ```php
 // set $company to a FMModel of the User's Company
 $company = $user->company;
+```
+
+### Manually creating a relationship
+
+Using the `HasHybridRelationships` trait is the easiest way to create relationships between native Laravel models and FMModels. However, if you are using an older version of Eloquent FileMaker or want to manually manage the relationships you can establish the relationship by using the Eloquent FileMaker version of the relationship type. Each valid relationship type will be available under the `\GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\` namespace.
+
+Here is an example of setting a native Laravel User Model to belong to a FileMaker-based Company FMModel class.
+
+```php
+// User.php
+
+class User extends Model
+{
+    public function company()
+    {
+        // The Company class is an FMModel and is stored in FileMaker
+        return new \GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo(Company::query(), $this, 'company_id', 'id', '');
+    }
+}
 ```
 
 ## License
