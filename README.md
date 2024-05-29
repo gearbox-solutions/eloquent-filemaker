@@ -45,13 +45,6 @@ In version 1.0, empty fields in FileMaker were returned as an empty string. In v
 
 If you'd like to continue with the old behavior your can change the `empty_strings_to_null` config value to false to keep with the empty strings. Otherwise, if you have any code which relies on empty fields being returned as an empty string, you may need to refactor your code to work with the new behavior.
 
-##### Minor - Changes to session management - Minor Change
-In version 1.0 the same FileMaker Data API session was used for all requests for about 15 minutes at a time, until the token expired. This token was stored in the Laravel Cache between requests. This behavior has been changed in version 2.0 to work when cache is not configured. 
-
-By default, in version 2.0 a Data API session lasts for only the duration of one request to your Laravel app. Login is performed the first time you use request data from the Data API. The session is ended and a logout is performed after the response has been sent to the browser through the use of [terminable middleware](https://laravel.com/docs/11.x/middleware#terminable-middleware).
-
-If you have any code which relies on the Data API session being reused between requests to your Laravel app, such as setting a global field once and then reading it across multiple page loads of your Laravel app, you will need to either change this behavior by setting ` 'cache_session_token' => true` in your FileMaker connection config or refactor your code to work with the new behavior.
-
 ##### Minor - Improvements to whereNot logic
 There were some cases where whereNot may return results that were probably not correct or expected. This has been fixed in version 2.0. If you have any code which relies on the old, incorrect behavior of whereNot, you may need to refactor your code to work with the new corrected behavior.
 
@@ -92,6 +85,24 @@ The prefix configuration option adds a prefix to each of the layout/table names 
 It is good practice to create layouts specifically for the Data API to use, rather than using your regular GUI or developer layouts, which may be slow and have unnecessary fields on them. Creating layouts specifically for your web applications allows for you to optimize your Data API usage and maximize the performance of your web application. With this in mind, an easy way to manage these layout is to organize them together in a folder and give them all a prefix so that you can know what they are used for.
 
 As an example, let's say you have three tables - Organizations, Contacts, and Invoices. You may way to create layouts for your web application, such as "dapi-organizations", "dapi-contacts" and "dapi-invoices". If you prefix them all with the same text you can set the prefix value so that you can refer to them as just "organizations", "contacts" and "invoices" in Laravel. If you name your model classes correctly following Laravel's naming guidelines you'll even be able to have the layouts automatically resolve for you and you won't have to enter them manually!
+
+## Cache configuration
+
+Eloquent FileMaker uses Laravel's cache system to store session tokens for re-use between requests to your app. This allows for faster performance when making requests to the FileMaker Data API, as the Data API login process can be slow in certain solutions.
+
+The default in a new Laravel installation is to use the `database` driver, which won't work if FileMaker is also your database. You should set up a different cache driver in your `.env` file. The `file` driver is a good alternative for this purpose, but anything other than `database` should be fine.
+
+Update your cache configuration in your `.env` file:
+
+Laravel 11:
+```
+CACHE_STORE=file
+```
+Laravel 10 and earlier:
+```
+CACHE_DRIVER=file
+```
+
 
 ## Model Classes
 Creating model classes is the easiest way to access your FileMaker data, and is the most Laravel-like way of doing things. Create a new model class and change the extension class from `Model` to `FMModel`. This class change enables you to use the features of this package with your models.
