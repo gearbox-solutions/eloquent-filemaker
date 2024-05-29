@@ -693,7 +693,7 @@ class FileMakerConnection extends Connection
     protected function prepareRequestForSending($request = null)
     {
         if (! $request) {
-            $request = new PendingRequest();
+            $request = Http::createPendingRequest();
         }
 
         $request->retry($this->attempts, 100, fn () => true, false)->withToken($this->sessionToken);
