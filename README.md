@@ -88,7 +88,7 @@ As an example, let's say you have three tables - Organizations, Contacts, and In
 
 ## Cache configuration
 
-Eloquent FileMaker uses Laravel's cache system to store session tokens for re-use between requests to your app. This allows for faster performance when making requests to the FileMaker Data API, as the Data API login process can be slow in certain solutions.
+Eloquent FileMaker uses Laravel's cache system to store session tokens for re-use between requests to your app (unless you've disabled session re-use though the config). This allows for faster performance when making requests to the FileMaker Data API, as the Data API login process can be slow in certain solutions.
 
 The default in a new Laravel installation is to use the `database` driver, which won't work if FileMaker is also your database. You should set up a different cache driver in your `.env` file. The `file` driver is a good alternative for this purpose, but anything other than `database` should be fine.
 
