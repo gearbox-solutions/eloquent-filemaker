@@ -164,15 +164,15 @@ class FileMakerConnection extends Connection
                 $code = (int) $message['code'];
 
                 if ($code !== 0) {
-                    switch ($code) {
-                        case 105:
-                            // Layout is missing error
-                            // Add the layout name to the message for clarity
-                            $message = $message['message'] . ': ' . $this->getLayout();
-                            throw new FileMakerDataApiException($message, $code);
-                        default:
-                            throw new FileMakerDataApiException($message['message'], $code);
+
+                    // If the layout is not the same as the table prefix, a layout has been specified and we
+                    // should to add the layout name for clarity
+                    if ($this->layout) {
+                        $customMessage = 'Layout: ' . $this->getLayout() . ' - ' . $message['message'];
+                    } else {
+                        $customMessage = $message['message'];
                     }
+                    throw new FileMakerDataApiException($customMessage, $code);
                 }
             }
         } else {
