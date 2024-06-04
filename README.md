@@ -1,4 +1,9 @@
 # Eloquent-FileMaker
+[![Total Downloads](https://img.shields.io/packagist/dt/gearbox-solutions/eloquent-filemaker)](https://packagist.org/packages/gearbox-solutions/eloquent-filemaker)
+[![Latest Stable Version](https://img.shields.io/packagist/v/gearbox-solutions/eloquent-filemaker)](https://packagist.org/packages/gearbox-solutions/eloquent-filemaker)
+[![License](https://img.shields.io/packagist/l/gearbox-solutions/eloquent-filemaker)](https://github.com/gearbox-solutions/eloquent-filemaker/blob/2.x/LICENSE)
+
+
 Eloquent-FileMaker is a PHP package for Laravel to make working with FileMaker databases through the FileMaker Data API easier. The goal of this project is to provide as similar an interface for working with FileMaker records through the Data API as you would get with working with MySQL in native Laravel.
 
 This package lets you easily connect to your FileMaker database through the Data API and get record data as Laravel Models, with as many native features supported as possible.
