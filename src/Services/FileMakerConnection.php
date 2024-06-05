@@ -9,6 +9,7 @@ use GearboxSolutions\EloquentFileMaker\Database\Schema\FMBuilder;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
@@ -693,7 +694,11 @@ class FileMakerConnection extends Connection
     protected function prepareRequestForSending($request = null)
     {
         if (! $request) {
-            $request = Http::createPendingRequest();
+            if (method_exists(Factory::class, 'createPendingRequest')) {
+                $request = Http::createPendingRequest();
+            } else {
+                $request = new PendingRequest();
+            }
         }
 
         $request->retry($this->attempts, 100, fn () => true, false)->withToken($this->sessionToken);
