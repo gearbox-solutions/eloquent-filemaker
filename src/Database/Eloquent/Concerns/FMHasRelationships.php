@@ -6,6 +6,7 @@ use GearboxSolutions\EloquentFileMaker\Database\Eloquent\FMModel;
 use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\BelongsTo;
 use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\HasMany;
 use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\HasOne;
+use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasRelationships;
 use Illuminate\Database\Eloquent\Model;
@@ -131,6 +132,22 @@ trait FMHasRelationships
         $localKey = $localKey ?: $this->getKeyName();
 
         return $this->newMorphMany($instance->newQuery(), $this, $type, $id, $localKey);
+    }
+
+    /**
+     * Instantiate a new MorphTo relationship. Normally we would handle the resolution of the method here,
+     * but we don't know yet if the related Modal is an FMModel or Eloquent model. We will let the FM MorphTo
+     * class handle it.
+     *
+     * @param  string  $foreignKey
+     * @param  string  $ownerKey
+     * @param  string  $type
+     * @param  string  $relation
+     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
+     */
+    protected function newMorphTo(Builder $query, Model $parent, $foreignKey, $ownerKey, $type, $relation)
+    {
+        return new MorphTo($query, $parent, $foreignKey, $ownerKey, $type, $relation);
     }
 
     /**
