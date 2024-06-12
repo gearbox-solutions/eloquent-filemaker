@@ -130,11 +130,9 @@ abstract class FMModel extends Model
             })->toArray();
         }
 
-        // fill in the field data we've mapped and retrieved
-        $instance->forceFill($fieldData);
-
-        // fill in the portal data we've mapped and retrieved
-        $instance->forceFill($portalData);
+        // fill in the field data and portal data we've mapped and retrieved
+        $combinedAttributes = [...$fieldData, ...$portalData];
+        $instance->setRawAttributes($combinedAttributes, true);
 
         $recordId = $record['recordId'];
         $modId = $record['modId'];
