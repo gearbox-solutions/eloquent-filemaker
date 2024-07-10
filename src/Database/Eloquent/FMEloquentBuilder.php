@@ -336,9 +336,8 @@ class FMEloquentBuilder extends Builder
     /**
      * Set the limit of records returned for a portal on the current models' layout.
      *
-     * @param  string  $portalName Name of the portal
-     * @param  int  $limit Number of records to return
-     *
+     * @param  string  $portalName  Name of the portal
+     * @param  int  $limit  Number of records to return
      * @return $this
      */
     public function limitPortal(string $portalName, int $limit): static
