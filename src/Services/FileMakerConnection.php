@@ -697,7 +697,7 @@ class FileMakerConnection extends Connection
             if (method_exists(Factory::class, 'createPendingRequest')) {
                 $request = Http::createPendingRequest();
             } else {
-                $request = new PendingRequest();
+                $request = Http::acceptJson();
             }
         }
 
