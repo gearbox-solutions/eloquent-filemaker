@@ -50,13 +50,6 @@ In version 1.0, empty fields in FileMaker were returned as an empty string. In v
 
 If you'd like to continue with the old behavior your can change the `empty_strings_to_null` config value to false to keep with the empty strings. Otherwise, if you have any code which relies on empty fields being returned as an empty string, you may need to refactor your code to work with the new behavior.
 
-##### Minor - Changes to session management - Minor Change
-In version 1.0 the same FileMaker Data API session was used for all requests for about 15 minutes at a time, until the token expired. This token was stored in the Laravel Cache between requests. This behavior has been changed in version 2.0 to work when cache is not configured. 
-
-By default, in version 2.0 a Data API session lasts for only the duration of one request to your Laravel app. Login is performed the first time you use request data from the Data API. The session is ended and a logout is performed after the response has been sent to the browser through the use of [terminable middleware](https://laravel.com/docs/11.x/middleware#terminable-middleware).
-
-If you have any code which relies on the Data API session being reused between requests to your Laravel app, such as setting a global field once and then reading it across multiple page loads of your Laravel app, you will need to either change this behavior by setting ` 'cache_session_token' => true` in your FileMaker connection config or refactor your code to work with the new behavior.
-
 ##### Minor - Improvements to whereNot logic
 There were some cases where whereNot may return results that were probably not correct or expected. This has been fixed in version 2.0. If you have any code which relies on the old, incorrect behavior of whereNot, you may need to refactor your code to work with the new corrected behavior.
 
