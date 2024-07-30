@@ -116,16 +116,23 @@ class FileMakerConnection extends Connection
         ];
 
         // perform the login
-        $response = Http::retry($this->attempts, 100)->withBasicAuth($this->config['username'], $this->config['password'])
-            ->post($url, $postBody);
+        try {
+            $response = Http::retry($this->attempts, 100)->withBasicAuth($this->config['username'], $this->config['password'])
+                ->post($url, $postBody);
+        } catch (\Exception $e) {
+            // log the query even on an error
+            $this->logFMQuery('post', $url, $postBody, $start);
+            throw $e;
+        }
+
+        // log the query
+        $this->logFMQuery('post', $url, $postBody, $start);
 
         // Check for errors
         $this->checkResponseForErrors($response);
 
         Arr::set($postBody, 'fmDataSource.0.username', str_repeat('*', strlen(Arr::get($postBody, 'fmDataSource.0.username'))));
         Arr::set($postBody, 'fmDataSource.0.password', str_repeat('*', strlen(Arr::get($postBody, 'fmDataSource.0.password'))));
-
-        $this->logFMQuery('post', $url, $postBody, $start);
 
         // Get the session token from the response
         $token = Arr::get($response, 'response.token');
@@ -718,7 +725,17 @@ class FileMakerConnection extends Connection
         $request = $this->prepareRequestForSending($request);
 
         // make the request
-        $response = $request->{$method}($url, $params);
+
+        try {
+            $response = $request->{$method}($url, $params);
+        } catch (\Exception $e) {
+            // log the query before throwing the exception
+            $this->logFMQuery($method, $url, $params, $start);
+            throw $e;
+        }
+        // log the query after a successful request
+        $this->logFMQuery($method, $url, $params, $start);
+
         // Check for errors
         try {
             $this->checkResponseForErrors($response);
@@ -730,18 +747,26 @@ class FileMakerConnection extends Connection
 
                 // try the request again with refreshed credentials
                 $request = $this->prepareRequestForSending($request);
-                $response = $request->{$method}($url, $params);
+                try {
+                    // execute the request
+                    $response = $request->{$method}($url, $params);
+                } catch (\Exception $e) {
+                    // log the query before throwing the exception
+                    $this->logFMQuery($method, $url, $params, $start);
+                    throw $e;
+                }
 
-                // check for errors a second time, but this time we won't catch the error if there's still an auth
-                // problem
+                // log the query after a successful request
+                $this->logFMQuery($method, $url, $params, $start);
+
+                // check for errors a second time, but this time we won't catch the error if there's
+                // still an auth problem
                 $this->checkResponseForErrors($response);
 
             } else {
                 throw $e;
             }
         }
-
-        $this->logFMQuery($method, $url, $params, $start);
 
         // Return the JSON response
         $json = $response->json();
