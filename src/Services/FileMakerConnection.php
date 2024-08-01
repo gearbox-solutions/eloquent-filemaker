@@ -41,11 +41,14 @@ class FileMakerConnection extends Connection
 
     protected bool $emptyStringToNull = true;
 
+    protected bool $enableLogging = true;
+
     public function __construct($pdo, $database = '', $tablePrefix = '', array $config = [])
     {
 
         $this->emptyStringToNull = $config['empty_strings_to_null'] ?? true;
         $this->shouldCacheSessionToken = $config['cache_session_token'] ?? true;
+        $this->enableLogging = $config['enable_logging'] ?? true;
 
         // set the session cache key with the name of the connection to support multiple connections
         $this->sessionTokenCacheKey = 'eloquent-filemaker-session-token-' . $config['name'];
@@ -751,6 +754,10 @@ class FileMakerConnection extends Connection
 
     protected function logFMQuery($method, $url, $params, $start)
     {
+        if (! $this->enableLogging) {
+            return;
+        }
+
         $commandType = $this->getSqlCommandType($method, $url);
 
         // Clockwork specifically looks for the commandType as the first word in the "sql" string
