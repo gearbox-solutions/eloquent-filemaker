@@ -150,7 +150,7 @@ abstract class FMModel extends Model
         // return an empty Eloquent/Collection (or the custom collection specified in the model) if an empty collection was
         // passed in.
         if ($records->count() === 0) {
-            return (new static())->newCollection();
+            return (new static)->newCollection();
         }
 
         // Records passed in weren't empty, so process the records
@@ -159,7 +159,7 @@ abstract class FMModel extends Model
         });
 
         // return the filled Eloquent/Collection (or the custom collection specified in the model)
-        return (new static())->newCollection($mappedRecords->all());
+        return (new static)->newCollection($mappedRecords->all());
     }
 
     /** Fill in data for this existing model with record data from FileMaker
