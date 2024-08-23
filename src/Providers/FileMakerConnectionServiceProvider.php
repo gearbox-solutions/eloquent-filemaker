@@ -2,11 +2,10 @@
 
 namespace GearboxSolutions\EloquentFileMaker\Providers;
 
-use GearboxSolutions\EloquentFileMaker\Middleware\EndSession;
 use GearboxSolutions\EloquentFileMaker\Commands\FMModelMakeCommand;
+use GearboxSolutions\EloquentFileMaker\Middleware\EndSession;
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Contracts\Http\Kernel;
-use Illuminate\Foundation\Console\ModelMakeCommand as LaravelModelMakeCommand;
 use Illuminate\Support\ServiceProvider;
 
 class FileMakerConnectionServiceProvider extends ServiceProvider
