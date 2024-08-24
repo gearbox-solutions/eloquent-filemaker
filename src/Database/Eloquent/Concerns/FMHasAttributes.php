@@ -28,8 +28,6 @@ trait FMHasAttributes
             return $this;
         }
 
-        $value = $this->attributes[$key];
-
         // Check if we still have a DateTime object due to custom formatting and convert it to a string to write to FM.
         // Normally the SQL grammar would handle converting DateTime objects and SQL doesn't care about extra time data,
         // but FileMaker does, so we have to convert at this point and strip out times.
