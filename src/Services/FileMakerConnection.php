@@ -767,7 +767,9 @@ class FileMakerConnection extends Connection
         $this->event(new QueryExecuted(
             $sql,
             collect(data_get($params, 'query', []))->map(
-                fn (array $binding) => array_keys($binding)[0] . ': ' . array_values($binding)[0]
+                fn (array $binding) => collect($binding)
+                    ->map(fn ($value, $key) => $key . ': ' . $value)
+                    ->join(', ')
             )->all(),
             $this->getElapsedTime($start),
             $this,
@@ -816,7 +818,7 @@ class FileMakerConnection extends Connection
 
     protected function getDefaultQueryGrammar()
     {
-        return new FMGrammar();
+        return new FMGrammar;
     }
 
     //    public function getLayoutMetadata($layout = null)
