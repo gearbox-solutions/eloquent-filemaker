@@ -789,7 +789,16 @@ class FileMakerConnection extends Connection
             $sql .= "\nData: " . json_encode($params, JSON_PRETTY_PRINT);
         }
 
-        $this->event(new QueryExecuted($sql, Arr::get($params, 'query', []), $this->getElapsedTime($start), $this));
+        $bindings = collect(data_get($params, 'query', []))->flatMap(
+            fn (array $binding, $index) => collect($binding)->mapWithKeys(fn ($value, $key) => [$index . ': ' . $key => $value])
+        )->all();
+
+        $this->event(new QueryExecuted(
+            $sql,
+            $bindings,
+            $this->getElapsedTime($start),
+            $this,
+        ));
     }
 
     protected function getSqlCommandType($method, $url)
