@@ -18,7 +18,15 @@ trait FMHasAttributes
     {
         parent::setAttribute($key, $value);
 
-        $value = $this->attributes[$key];
+        /**
+         * If the key is set as a multiple attribute mutator and doesn't exist in the attributes array, then we can
+         * assume that the attribute is being set by the mutator and we should skip the rest of the processing.
+         */
+        if (array_key_exists($key, $this->attributes) === true) {
+            $value = $this->attributes[$key];
+        } else if (parent::hasAttributeSetMutator($key)) {
+            return $this;
+        }
 
         // Check if we still have a DateTime object due to custom formatting and convert it to a string to write to FM.
         // Normally the SQL grammar would handle converting DateTime objects and SQL doesn't care about extra time data,
