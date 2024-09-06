@@ -764,11 +764,13 @@ class FileMakerConnection extends Connection
             $sql .= "\nData: " . json_encode($params, JSON_PRETTY_PRINT);
         }
 
+        $bindings = collect(data_get($params, 'query', []))->flatMap(
+            fn (array $binding, $index) => collect($binding)->mapWithKeys(fn ($value, $key) => [$index . ': ' . $key => $value])
+        )->all();
+
         $this->event(new QueryExecuted(
             $sql,
-            collect(data_get($params, 'query', []))->flatMap(
-                fn (array $binding, $index) => collect($binding)->mapWithKeys(fn ($value, $key) => [$index.': '.$key => $value])
-            )->all(),
+            $bindings,
             $this->getElapsedTime($start),
             $this,
         ));
@@ -816,7 +818,7 @@ class FileMakerConnection extends Connection
 
     protected function getDefaultQueryGrammar()
     {
-        return new FMGrammar();
+        return new FMGrammar;
     }
 
     //    public function getLayoutMetadata($layout = null)
