@@ -766,9 +766,9 @@ class FileMakerConnection extends Connection
 
         $this->event(new QueryExecuted(
             $sql,
-            collect(data_get($params, 'query', []))->map(
-                fn (array $binding, $index) => collect($binding)->map(fn ($value, $key) => $index . ': ' . $key . ': ' . $value)
-            )->flatten()->all(),
+            collect(data_get($params, 'query', []))->flatMap(
+                fn (array $binding, $index) => collect($binding)->mapWithKeys(fn ($value, $key) => [$index.': '.$key => $value])
+            )->all(),
             $this->getElapsedTime($start),
             $this,
         ));
