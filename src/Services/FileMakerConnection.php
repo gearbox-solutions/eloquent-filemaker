@@ -818,7 +818,7 @@ class FileMakerConnection extends Connection
 
     protected function getDefaultQueryGrammar()
     {
-        return new FMGrammar;
+        return new FMGrammar();
     }
 
     //    public function getLayoutMetadata($layout = null)
