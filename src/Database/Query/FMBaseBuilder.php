@@ -1078,14 +1078,14 @@ class FMBaseBuilder extends Builder
         return $this->count($columns);
     }
 
-    public function toRawSql()
+    public function toRawSql(): string
     {
         $this->computeWhereIns();
 
-        return $this->wheres;
+        return json_encode($this->wheres);
     }
 
-    public function toSql()
+    public function toSql(): string
     {
 
         return $this->toRawSql();
