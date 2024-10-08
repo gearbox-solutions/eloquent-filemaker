@@ -1077,4 +1077,17 @@ class FMBaseBuilder extends Builder
     {
         return $this->count($columns);
     }
+
+    public function toRawSql()
+    {
+        $this->computeWhereIns();
+
+        return $this->wheres;
+    }
+
+    public function toSql()
+    {
+
+        return $this->toRawSql();
+    }
 }
