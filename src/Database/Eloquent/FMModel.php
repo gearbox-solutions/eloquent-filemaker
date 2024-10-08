@@ -65,6 +65,8 @@ abstract class FMModel extends Model
      */
     protected $modId;
 
+    protected $useModId = false;
+
     /**
      * The "type" of the primary key ID. FileMaker uses UUID strings by default.
      *
@@ -217,6 +219,17 @@ abstract class FMModel extends Model
     public function setModId($modId): void
     {
         $this->modId = $modId;
+    }
+
+    /**
+     * Include the modification Id when editing a record
+     */
+    public function withModId($include = true): self
+    {
+        // remove any set ModId if the user wishes to remove it
+        $this->useModId = $include;
+
+        return $this;
     }
 
     public function getReadOnlyFields()
