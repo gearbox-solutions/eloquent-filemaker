@@ -176,7 +176,7 @@ class FMBaseBuilder extends Builder
         }
 
         // This is an "orWhere" type query, so add a find request and then work from there
-        if ($boolean === 'or' || ($shouldBeOmit && ! $this->isCurrentFindAnOmit())) {
+        if ($boolean === 'or' || ($shouldBeOmit !== $this->isCurrentFindAnOmit())) {
             $this->addFindRequest();
         }
 
