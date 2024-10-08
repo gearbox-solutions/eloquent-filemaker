@@ -168,7 +168,7 @@ class FMEloquentBuilder extends Builder
         }
 
         // set the ModID if that option is set on the model
-        if ($model->withModId()) {
+        if ($model->usingModId()) {
             $this->query->modId($model->getModId());
         }
 

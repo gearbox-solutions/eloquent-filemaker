@@ -224,12 +224,17 @@ abstract class FMModel extends Model
     /**
      * Include the modification Id when editing a record
      */
-    public function withModId($include = true): self
+    public function withModId($include = true): static
     {
         // remove any set ModId if the user wishes to remove it
         $this->useModId = $include;
 
         return $this;
+    }
+
+    public function usingModId(): bool
+    {
+        return $this->useModId;
     }
 
     public function getReadOnlyFields()
