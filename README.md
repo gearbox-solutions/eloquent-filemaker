@@ -265,6 +265,28 @@ protected $dateFormat = 'n/j/Y g:i:s A'; // 7/1/1920 4:01:01 PM
 protected $dateFormat = 'n/j/Y G:i:s'; // 7/1/1920 16:01:01
 ```
 
+### Modification ID (modId)
+
+The Data API lets you set a [Modification ID](https://help.claris.com/en/data-api-guide/content/edit-record.html) when editing records.
+
+ > Specifying a modification ID ensures that you are editing the current version of a record. If the modification ID value does not match the current modification ID value in the database, the record is not changed.
+
+If you wish to include the modId when editing a record you can call `withModId()` before calling `save()` on the model object. This will send the ModID to FileMaker when updating the record, and will throw a `FileMakerDataApiException` if the ModId does not match.
+
+```php
+$person->withModId()->save();
+```
+
+The modId is automatically set on the model object when you retrieve a record from FileMaker, so you don't need to set it manually.
+
+
+If you always want the ModId to be included when saving a record, you can set the `$withModId` property to true on your model class.
+
+```php
+protected $useModId = true;
+```
+
+If you wish to always include a ModId on a model, you can set `protected $withModId = true;` on your model class.
 
 ## Example FMModel Class
 ```php
@@ -342,7 +364,8 @@ FM::setGlobalFields() // not chainable
 ->portalLimit( $portalName, $limit )
 ->portalOffset( $portalName, $startingRecord  )
 ->sort() // alias for the native orderBy()
-->omit()
+->omit() // change the request to an "omit" request
+->modId( string $modId ) // set the modId to submit when editing a record
 ->fieldData( $array )
 ->portalData( $array )
 ```
@@ -394,6 +417,7 @@ $json = json_encode ([
 
 $result = FM::layout('globals')->performScript('New Contact Request'; $json);
 ```
+
 
 Perform a script on a database other than the default database connection
 ```php
