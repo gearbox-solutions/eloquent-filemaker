@@ -167,6 +167,11 @@ class FMEloquentBuilder extends Builder
             }
         }
 
+        // set the ModID if that option is set on the model
+        if ($model->usingModId()) {
+            $this->query->modId($model->getModId());
+        }
+
         if ($fieldsToWrite->count() > 0 || count($modifiedPortals) > 0) {
             // we have some regular text fields to update
             // forward this request to a base query builder to execute the edit record request
