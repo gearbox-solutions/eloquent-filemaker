@@ -74,15 +74,6 @@ php artisan vendor:publish --tag=eloquent-filemaker-override-model
 ```
 This publish will create a `model.stub` that will be used by `php artisan make:model` to set up new models. You should use this on projects that will only have models backed by FileMaker.
 
-## Alternatively, use new make command
-Alternatively, you can use the default `make:model` command with a new `--filemaker` flag. All options available to Laravel's native `make:model` command are still available for use. 
-
-```shell
-php artisan make:model Model --filemaker
-```
-
-Note: If the `--filemaker` flag is not used, the model will be created as a standard Laravel model.
-
 # Usage
 With the package installed you can now have access to all the features of this package. There are a few different areas to configure.
 
@@ -135,7 +126,12 @@ cache_driver=file
 ## Model Classes
 Creating model classes is the easiest way to access your FileMaker data, and is the most Laravel-like way of doing things. Create a new model class and change the extension class from `Model` to `FMModel`. This class change enables you to use the features of this package with your models.
 
+### Artisan make:model command
+You can use the default `php artisan make:model` command with a new `--filemaker` flag to make a new `FMModel` instead of the default `Model`. All options available to Laravel's native `make:model` command are still available for use.
 
+```shell
+php artisan make:model MyNewModel --filemaker
+```
 
 #### Things that work
 
