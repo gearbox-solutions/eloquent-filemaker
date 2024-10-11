@@ -60,20 +60,6 @@ Install `gearbox-solutions/eloquent-filemaker` in your project using Composer.
 composer require gearbox-solutions/eloquent-filemaker
 ```
 
-## Vendor Publish
-This package adds 2 optional vendor publishes that will create a model stub for you that you can customize.
-```shell
-php artisan vendor:publish --tag=eloquent-filemaker-stubs 
-// or 
-php artisan vendor:publish --provider="GearboxSolutions\EloquentFileMaker\Providers\FileMakerConnectionServiceProvider"
-```
-This publish is best if you are looking to have a mix of FileMaker backed models and another DB backed model.
-
-```shell
-php artisan vendor:publish --tag=eloquent-filemaker-override-model
-```
-This publish will create a `model.stub` that will be used by `php artisan make:model` to set up new models. You should use this on projects that will only have models backed by FileMaker.
-
 # Usage
 With the package installed you can now have access to all the features of this package. There are a few different areas to configure.
 
@@ -133,7 +119,29 @@ You can use the default `php artisan make:model` command with a new `--filemaker
 php artisan make:model MyNewModel --filemaker
 ```
 
-#### Things that work
+### Set FMModel as default with a model stub
+
+If you would like all of your models to be published as FMModel by default so that you don't have to use `--filemaker` in your commands, you can use the following command to publish a model stub that will be used by `php artisan make:model` to set up new models.
+
+```shell
+php artisan vendor:publish --tag=eloquent-filemaker-override-model
+```
+This publish will create a `/stubs/model.stub` that will be used by `php artisan make:model` to set up new models. You should use this on projects that will only have models backed by FileMaker.
+
+If you want to customize the model stub ONLY for when the `---filemaker` flag is used, you can do so with the following command:
+
+```shell
+php artisan vendor:publish --tag=eloquent-filemaker-stubs 
+````
+ or
+```shell
+php artisan vendor:publish --provider="GearboxSolutions\EloquentFileMaker\Providers\FileMakerConnectionServiceProvider"
+```
+This stub publish option is best if you are looking to have a mix of FileMaker backed models and another DB backed model.
+
+
+
+### Things that work
 
 The FMModel class extends the base Laravel Model class, and can be used very similarly. It supports many standard Eloquent query builder features for working with data, such as where(), find(), id(), orderBy(), delete(), save(), and many more!
 
@@ -143,7 +151,7 @@ Our goal is to be able to use any of these Eloquent features which make sense, s
 
 Be sure to read [Laravel's Eloquent Documentation](https://laravel.com/docs/8.x/eloquent) to see all the things the Eloquent Model class can do.
 
-#### Things that don't work
+### Things that don't work
 Because this class extends Model, all of the regular eloquent methods may show as available in your IDE, but some don't make sense in the context of FileMaker's Data API and therefore don't do anything. Some examples of this would be mass updates or raw SQL queries.
 
 ### Setting a layout
