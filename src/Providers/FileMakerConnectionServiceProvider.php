@@ -2,6 +2,7 @@
 
 namespace GearboxSolutions\EloquentFileMaker\Providers;
 
+use GearboxSolutions\EloquentFileMaker\Commands\FMModelMakeCommand;
 use GearboxSolutions\EloquentFileMaker\Middleware\EndSession;
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Contracts\Http\Kernel;
@@ -38,6 +39,11 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
 
         app('router')->aliasMiddleware('fm.end-session', EndSession::class);
 
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                FMModelMakeCommand::class,
+            ]);
+        }
     }
 
     /**
@@ -49,5 +55,16 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
     {
         // add the middleware to the global middleware so that we always end the FileMaker session
         $kernel->pushMiddleware(EndSession::class);
+
+        $this->publishes([
+            __DIR__ . '/../config/eloquent-filemaker.php' => config_path('eloquent-filemaker.php'),
+        ], 'eloquent-filemaker-config');
+        $this->publishes([
+            __DIR__ . '/../Commands/stubs/fm.model.stub' => base_path('stubs/model.stub'),
+        ], 'eloquent-filemaker-override-model');
+
+        $this->publishes([
+            __DIR__ . '/../Commands/stubs/fm.model.stub' => base_path('stubs/fm.model.stub'),
+        ], 'eloquent-filemaker-stubs');
     }
 }
