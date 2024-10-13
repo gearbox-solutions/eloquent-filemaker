@@ -279,14 +279,12 @@ $person->withModId()->save();
 
 The modId is automatically set on the model object when you retrieve a record from FileMaker, so you don't need to set it manually.
 
-
 If you always want the ModId to be included when saving a record, you can set the `$withModId` property to true on your model class.
 
 ```php
-protected $useModId = true;
+protected $withModId = true;
 ```
 
-If you wish to always include a ModId on a model, you can set `protected $withModId = true;` on your model class.
 
 ## Example FMModel Class
 ```php

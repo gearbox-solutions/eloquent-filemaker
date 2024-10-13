@@ -65,7 +65,11 @@ abstract class FMModel extends Model
      */
     protected $modId;
 
-    protected $useModId = false;
+    /**
+     * A flag to determine if the last retrieved ModId for the record should be sent when editing a record. The Data
+     * API will return an error if the record has been modified and current ModId does not match the one being sent.
+     */
+    protected $withModId = false;
 
     /**
      * The "type" of the primary key ID. FileMaker uses UUID strings by default.
@@ -227,14 +231,14 @@ abstract class FMModel extends Model
     public function withModId($include = true): static
     {
         // remove any set ModId if the user wishes to remove it
-        $this->useModId = $include;
+        $this->withModId = $include;
 
         return $this;
     }
 
     public function usingModId(): bool
     {
-        return $this->useModId;
+        return $this->withModId;
     }
 
     public function getReadOnlyFields()
