@@ -227,11 +227,22 @@ abstract class FMModel extends Model
 
     /**
      * Include the modification Id when editing a record
+     *
+     * @param  int|string|bool  $includeModId  This can be an integer to set the ModId or a boolean to include it or not
      */
-    public function withModId($include = true): static
+    public function withModId(int|string|bool $includeModId = true): static
     {
+        // check if the parameter is an integer, if not, default to true
+        if (! is_bool($includeModId)) {
+            $modId = $includeModId;
+
+            // set the mod ID and include it
+            $this->setModId($modId);
+            $includeModId = true;
+        }
+
         // remove any set ModId if the user wishes to remove it
-        $this->withModId = $include;
+        $this->withModId = $includeModId;
 
         return $this;
     }

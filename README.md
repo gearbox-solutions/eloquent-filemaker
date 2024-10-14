@@ -271,13 +271,23 @@ The Data API lets you set a [Modification ID](https://help.claris.com/en/data-ap
 
  > Specifying a modification ID ensures that you are editing the current version of a record. If the modification ID value does not match the current modification ID value in the database, the record is not changed.
 
-If you wish to include the modId when editing a record you can call `withModId()` before calling `save()` on the model object. This will send the ModID to FileMaker when updating the record, and will throw a `FileMakerDataApiException` if the ModId does not match.
+If you wish to include the modId when editing a record you can call `withModId()` before calling `save()` on the model object. This will send the ModID to FileMaker when updating the record, and will throw a `FileMakerDataApiException` with code `306` if the ModId does not match.
 
 ```php
 $person->withModId()->save();
 ```
 
 The modId is automatically set on the model object when you retrieve a record from FileMaker, so you don't need to set it manually.
+
+If you want to set the ModId manually you can do so by either passing the modId into `withModId($myModId)` or calling `setModId($myModId)` on the model object.
+
+
+```php
+
+// set the ModId and flag it submit the modification ID when saving the record
+$person->withModId(12)->save();
+
+```
 
 If you always want the ModId to be included when saving a record, you can set the `$withModId` property to true on your model class.
 
