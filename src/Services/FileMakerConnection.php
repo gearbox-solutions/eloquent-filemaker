@@ -884,4 +884,9 @@ class FileMakerConnection extends Connection
 
         return new FMBuilder($this);
     }
+
+    public function getPdo()
+    {
+        return null;
+    }
 }

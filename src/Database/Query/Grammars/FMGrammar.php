@@ -15,4 +15,9 @@ class FMGrammar extends Grammar
     {
         return 'n/j/Y g:i:s A';
     }
+
+    public function substituteBindingsIntoRawSql($sql, $bindings)
+    {
+        return $sql;
+    }
 }
