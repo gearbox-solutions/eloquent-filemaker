@@ -296,6 +296,25 @@ class FileMakerConnection extends Connection
         // default to an empty array
         $queryParams = [];
 
+        // handle single record requests
+        if ($query->getRecordId() !== null) {
+            $url .= (Str::endsWith($url, '/') ? '' : '/') . $query->getRecordId();
+        } else {
+            // handle pagination and sorting
+            // these parameters are not used for single record requests
+            if ($query->offset > 0) {
+                // Offset is 1-indexed
+                $queryParams['_offset'] = $query->offset + 1;
+            }
+            if ($query->limit > 0) {
+                $queryParams['_limit'] = $query->limit;
+            }
+            if ($query->orders !== null && count($query->orders) > 0) {
+                // sort can have many values, so it needs to get json_encoded and passed as a single string
+                $queryParams['_sort'] = json_encode($query->orders);
+            }
+        }
+
         // handle scripts
         if ($query->script !== null) {
             $queryParams['script'] = $query->script;
@@ -315,22 +334,12 @@ class FileMakerConnection extends Connection
         if ($query->scriptPrerequestParam !== null) {
             $queryParams['script.prerequest.param'] = $query->scriptPrerequestParam;
         }
+
         if ($query->layoutResponse !== null) {
             $queryParams['layout.response'] = $query->layoutResponse;
         }
         if ($query->portal !== null) {
             $queryParams['portal'] = $query->portal;
-        }
-        if ($query->offset > 0) {
-            // Offset is 1-indexed
-            $queryParams['_offset'] = $query->offset + 1;
-        }
-        if ($query->limit > 0) {
-            $queryParams['_limit'] = $query->limit;
-        }
-        if ($query->orders !== null && count($query->orders) > 0) {
-            // sort can have many values, so it needs to get json_encoded and passed as a single string
-            $queryParams['_sort'] = json_encode($query->orders);
         }
 
         $response = $this->makeRequest('get', $url, $queryParams);
