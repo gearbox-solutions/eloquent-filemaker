@@ -298,7 +298,7 @@ class FileMakerConnection extends Connection
 
         // handle single record requests
         if ($query->getRecordId() !== null) {
-            $url .= (Str::endsWith($url, '/') ? '' : '/') . $query->getRecordId();
+            $url = Str::finish($url, '/') . $query->getRecordId();
         } else {
             // handle pagination and sorting
             // these parameters are not used for single record requests
