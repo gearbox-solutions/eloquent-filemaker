@@ -80,6 +80,7 @@ You may use the following code block below as a template, which has some good de
     'protocol' => env('DB_PROTOCOL', 'https'),
     'cache_session_token' => env('DB_CACHE_SESSION_TOKEN', true), // set to false to log out after each reqeust. This can be slower than re-using a session token, but allows for globals to be set for individual user values.
     'empty_strings_to_null' => env('DB_EMPTY_STRINGS_TO_NULL', true), // set to false to return empty strings instead of null values when fields are empty in FileMaker
+    'request_timeout' => env('DB_REQUEST_TIMEOUT', 30), // set the request timeout in seconds (default 30)
 ]
 ```
 You should add one database connection configuration for each FileMaker database you will be connecting to. Each file can have completely different configurations, and can even be on different servers.
@@ -387,6 +388,12 @@ FM::setGlobalFields() // not chainable
 ->duplicate()
 ->createRecord()
 ->getLayoutMetadata()
+```
+
+#### Request customization methods
+```php
+->setRetries($retries) // set the number of retries for a request (value of 2 will make 3 requests in total)
+->setTimeout($timeout) // set the timeout for a request in seconds 
 ```
 
 #### Examples:
