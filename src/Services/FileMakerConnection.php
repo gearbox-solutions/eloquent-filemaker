@@ -35,29 +35,32 @@ class FileMakerConnection extends Connection
 
     protected int $attempts = 2;
 
+    protected int $timeout = 30;
+
     protected bool $shouldCacheSessionToken = true;
 
     protected ?string $sessionTokenCacheKey = null;
 
     protected bool $emptyStringToNull = true;
 
+    /**
+     * Crazy high number of records to return.
+     * Used to get an empty set when using a whereIn with no values.
+     */
+    public const CRAZY_RECORDS_AMOUNT = 1000000000000000000;
+
     public function __construct($pdo, $database = '', $tablePrefix = '', array $config = [])
     {
-
         $this->emptyStringToNull = $config['empty_strings_to_null'] ?? true;
         $this->shouldCacheSessionToken = $config['cache_session_token'] ?? true;
 
         // set the session cache key with the name of the connection to support multiple connections
         $this->sessionTokenCacheKey = 'eloquent-filemaker-session-token-' . $config['name'];
 
+        $this->setTimeout($config['request_timeout'] ?? 30);
+
         parent::__construct($pdo, $database, $tablePrefix, $config);
     }
-
-    /**
-     * Crazy high number of records to return.
-     * Used to get an empty set when using a whereIn with no values.
-     */
-    public const CRAZY_RECORDS_AMOUNT = 1000000000000000000;
 
     /**
      * @param  string  $layout
@@ -717,7 +720,9 @@ class FileMakerConnection extends Connection
             }
         }
 
-        $request->retry($this->attempts, 100, fn () => true, false)->withToken($this->sessionToken);
+        $request->timeout($this->timeout)
+            ->retry($this->attempts, 100, fn () => true, false)
+            ->withToken($this->sessionToken);
 
         return $request;
     }
@@ -846,6 +851,13 @@ class FileMakerConnection extends Connection
     public function setRetries($retries)
     {
         $this->attempts = $retries + 1;
+
+        return $this;
+    }
+
+    public function setTimeout($timeout)
+    {
+        $this->timeout = $timeout;
 
         return $this;
     }
