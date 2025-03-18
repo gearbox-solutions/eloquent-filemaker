@@ -874,7 +874,20 @@ class FileMakerConnection extends Connection
 
     protected function getDefaultQueryGrammar()
     {
-        return new FMGrammar;
+        // check if this is laravel 11 or 12
+        // Laravel 11 constructs a grammar without any parameters
+        // Laravel 12 requires a connection as a constructor parameter
+        $version = app()->version();
+        // get the major version number
+        $majorVersion = (int) explode('.', $version)[0];
+        if ($majorVersion < 12) {
+            // Laravel 11 and earlier
+            return new FMGrammar;
+        }
+
+        // Laravel 12
+        return new FMGrammar($this);
+
     }
 
     //    public function getLayoutMetadata($layout = null)
