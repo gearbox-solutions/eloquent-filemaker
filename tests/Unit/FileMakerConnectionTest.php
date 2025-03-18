@@ -19,7 +19,7 @@ class FileMakerConnectionTest extends TestCase
         Mockery::close();
     }
 
-    public function testConnectionGetsTheDefaultDatabaseConfiguration()
+    public function test_connection_gets_the_default_database_configuration()
     {
         $connection = app(FileMakerConnection::class);
 
@@ -27,7 +27,7 @@ class FileMakerConnectionTest extends TestCase
         $this->assertEquals('tester', $connection->getConfig('database'));
     }
 
-    public function testSetConnectionChangesTheDatabaseConfiguration()
+    public function test_set_connection_changes_the_database_configuration()
     {
         $connection = app(FileMakerConnection::class);
         $this->assertEquals('filemaker', $connection->getConfig('name'));
@@ -39,7 +39,7 @@ class FileMakerConnectionTest extends TestCase
         $this->assertEquals('tester2', $connection->getConfig('database'));
     }
 
-    public function testSetLayoutChangesTheLayoutUsed()
+    public function test_set_layout_changes_the_layout_used()
     {
         $connection = app(FileMakerConnection::class);
         $this->assertEquals('', $connection->getLayout());
@@ -49,7 +49,7 @@ class FileMakerConnectionTest extends TestCase
         $this->assertEquals('dapi-pet', $connection->getLayout());
     }
 
-    public function testDatabasePrefixIsAddedToLayoutNames()
+    public function test_database_prefix_is_added_to_layout_names()
     {
         $connection = app(FileMakerConnection::class)->setConnection('prefix');
 
@@ -62,7 +62,7 @@ class FileMakerConnectionTest extends TestCase
         $this->assertEquals('dapi-car', $connection->getLayout());
     }
 
-    public function testLoginToFileMaker()
+    public function test_login_to_file_maker()
     {
         $this->overrideDBHost();
         Http::fake([
@@ -77,7 +77,7 @@ class FileMakerConnectionTest extends TestCase
         $this->assertEquals('new-token', $token);
     }
 
-    public function testFailedLoginToFileMakerThrow()
+    public function test_failed_login_to_file_maker_throw()
     {
         $this->overrideDBHost();
         Http::fake([

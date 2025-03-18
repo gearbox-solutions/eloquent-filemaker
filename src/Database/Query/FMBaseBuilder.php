@@ -832,8 +832,8 @@ class FMBaseBuilder extends Builder
 
         $this->fieldData = $this->mapFieldNamesForArray($values);
 
-        //TODO handle inserting multiple records at once, maybe?
-        //TODO handle setting portal data
+        // TODO handle inserting multiple records at once, maybe?
+        // TODO handle setting portal data
 
         // Finally, we will run this query against the database connection and return
         // the results. We will need to also flatten these bindings before running
