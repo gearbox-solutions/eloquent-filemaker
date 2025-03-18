@@ -527,5 +527,9 @@ class User extends Model
 }
 ```
 
+## Testing
+
+Automated testing is currently in another repository. It's on our list to get those tests cleaned up and moved over to this package so that they're easier to run directly in here.
+
 ## License
 Eloquent-FileMaker is open-sourced software licensed under the MIT license.
