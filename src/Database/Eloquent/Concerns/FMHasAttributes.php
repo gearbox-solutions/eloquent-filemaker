@@ -18,6 +18,11 @@ trait FMHasAttributes
     {
         parent::setAttribute($key, $value);
 
+        // don't deal with json casting, already done in the call above
+        if (str_contains($key, '->')) {
+            return;
+        }
+
         $value = $this->attributes[$key];
 
         // Check if we still have a DateTime object due to custom formatting and convert it to a string to write to FM.
@@ -27,10 +32,10 @@ trait FMHasAttributes
         // We could convert the DateTime to a string at the time when we're preparing the API call, but at that point
         // we won't be in the model and won't have access to the cast type to determine if we should strip out the
         // time data.
-
         if ($value instanceof DateTime) {
             $value = $value->format($this->dateFormat);
         }
+
         // When writing dates the regular datetime format won't work, so we have to get JUST the date value
         // check the key's cast to see if it is cast to a date or custom date:format
         $castType = $this->getCasts()[$key] ?? '';
