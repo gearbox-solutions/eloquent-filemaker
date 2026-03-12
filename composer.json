@@ -1,48 +1,48 @@
 {
-    "name": "gearbox-solutions/eloquent-filemaker",
-    "description": "A package for getting FileMaker records as Eloquent models in Laravel",
-    "type": "library",
-    "license": "MIT",
-    "keywords": [
-        "Gearbox Solutions",
-        "FileMaker",
-        "Database",
-        "Data API",
-        "Models",
-        "Eloquent",
-        "Laravel"
-    ],
-    "authors": [
-        {
-            "name": "David Nahodyl",
-            "email": "david@gearboxgo.com"
-        }
-    ],
-    "autoload": {
-        "psr-4": {
-            "GearboxSolutions\\EloquentFileMaker\\": "src/",
-            "Tests\\": "tests/"
-        }
-    },
-    "require": {
-        "php": ">=8.0",
-        "illuminate/database": "^9.0|^10.0|^11.0|^12.0|^13.0",
-        "guzzlehttp/guzzle": "^7.5",
-        "ext-json": "*"
-    },
-    "require-dev": {
-        "orchestra/testbench": "^9.0|^10.0|^11.0",
-        "mockery/mockery": "^1.5.1",
-        "laravel/pint": "^1.17"
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "GearboxSolutions\\EloquentFileMaker\\Providers\\FileMakerConnectionServiceProvider"
-            ],
-            "aliases": {
-                "FM": "GearboxSolutions\\EloquentFileMaker\\Support\\Facades\\FM"
-            }
-        }
+  "name": "gearbox-solutions/eloquent-filemaker",
+  "description": "A package for getting FileMaker records as Eloquent models in Laravel",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "Gearbox Solutions",
+    "FileMaker",
+    "Database",
+    "Data API",
+    "Models",
+    "Eloquent",
+    "Laravel"
+  ],
+  "authors": [
+    {
+      "name": "David Nahodyl",
+      "email": "david@gearboxgo.com"
     }
+  ],
+  "autoload": {
+    "psr-4": {
+      "GearboxSolutions\\EloquentFileMaker\\": "src/",
+      "Tests\\": "tests/"
+    }
+  },
+  "require": {
+    "php": ">=8.0",
+    "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
+    "guzzlehttp/guzzle": "^7.5",
+    "ext-json": "*"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^10.0|^11.0",
+    "mockery/mockery": "^1.5.1",
+    "laravel/pint": "^1.17"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "GearboxSolutions\\EloquentFileMaker\\Providers\\FileMakerConnectionServiceProvider"
+      ],
+      "aliases": {
+        "FM": "GearboxSolutions\\EloquentFileMaker\\Support\\Facades\\FM"
+      }
+    }
+  }
 }
