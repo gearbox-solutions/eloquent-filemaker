@@ -717,8 +717,13 @@ class FileMakerConnection extends Connection
 
         $url = $this->getDatabaseUrl() . '/sessions/' . $this->sessionToken;
 
-        // make an http delete request to the data api to end the session
-        $request = Http::createPendingRequest();
+        // Laravel 10 does not expose createPendingRequest(); once Laravel 10 support is dropped,
+        // this fallback can go away and we can use Http::createPendingRequest() directly here.
+        if (method_exists(Factory::class, 'createPendingRequest')) {
+            $request = Http::createPendingRequest();
+        } else {
+            $request = Http::acceptJson();
+        }
         $this->applyTlsOptions($request);
         $response = $request->delete($url);
         $this->checkResponseForErrors($response);
@@ -763,6 +768,8 @@ class FileMakerConnection extends Connection
     protected function prepareRequestForSending(#[\SensitiveParameter] $request = null)
     {
         if (! $request) {
+            // Laravel 10 does not expose createPendingRequest(); once Laravel 10 support is dropped,
+            // this fallback can go away and we can use Http::createPendingRequest() directly here.
             if (method_exists(Factory::class, 'createPendingRequest')) {
                 $request = Http::createPendingRequest();
             } else {
