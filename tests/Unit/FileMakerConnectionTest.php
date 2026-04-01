@@ -2,11 +2,13 @@
 
 namespace Tests\Unit;
 
+use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
+use InvalidArgumentException;
 use Mockery;
 use Tests\TestCase;
 
@@ -126,6 +128,46 @@ class FileMakerConnectionTest extends TestCase
 
         $combined = implode(' ', $loggedSql);
         $this->assertStringNotContainsString('dapitester', $combined, 'Raw credentials should not appear in query log');
+    }
+
+    public function test_layout_name_is_encoded_in_url()
+    {
+        $connection = $this->connection();
+        $connection->setLayout('my layout');
+
+        // Use reflection to call the protected getLayoutUrl
+        $ref = new \ReflectionMethod($connection, 'getLayoutUrl');
+        $url = $ref->invoke($connection);
+
+        $this->assertStringContainsString('/layouts/my%20layout', $url);
+        $this->assertStringNotContainsString('/layouts/my layout', $url);
+    }
+
+    public function test_database_name_is_encoded_in_url()
+    {
+        Config::set('database.connections.filemaker.database', 'my database');
+        $connection = $this->connection();
+
+        $ref = new \ReflectionMethod($connection, 'getDatabaseUrl');
+        $url = $ref->invoke($connection);
+
+        $this->assertStringContainsString('/databases/my%20database', $url);
+    }
+
+    public function test_invalid_record_id_is_rejected()
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $builder = new FMBaseBuilder($this->connection());
+        $builder->recordId('abc/../../hack');
+    }
+
+    public function test_numeric_record_id_is_accepted()
+    {
+        $builder = new FMBaseBuilder($this->connection());
+        $builder->recordId(42);
+
+        $this->assertEquals(42, $builder->getRecordId());
     }
 
     protected function overrideDBHost()

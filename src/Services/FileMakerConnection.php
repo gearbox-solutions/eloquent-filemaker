@@ -146,7 +146,7 @@ class FileMakerConnection extends Connection
 
     protected function getDatabaseUrl()
     {
-        return ($this->config['protocol'] ?? 'https') . '://' . $this->config['host'] . '/fmi/data/' . ($this->config['version'] ?? 'vLatest') . '/databases/' . $this->config['database'];
+        return ($this->config['protocol'] ?? 'https') . '://' . $this->config['host'] . '/fmi/data/' . ($this->config['version'] ?? 'vLatest') . '/databases/' . $this->encodePathSegment($this->config['database']);
     }
 
     protected function getRecordUrl()
@@ -161,7 +161,12 @@ class FileMakerConnection extends Connection
             $this->setLayout($layout);
         }
 
-        return $this->getDatabaseUrl() . '/layouts/' . $this->getLayout();
+        return $this->getDatabaseUrl() . '/layouts/' . $this->encodePathSegment($this->getLayout());
+    }
+
+    protected function encodePathSegment(string $value): string
+    {
+        return rawurlencode($value);
     }
 
     /**
@@ -195,7 +200,7 @@ class FileMakerConnection extends Connection
     public function uploadToContainerField(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
-        $url = $this->getRecordUrl() . $query->getRecordId() . '/containers/' . $query->containerFieldName;
+        $url = $this->getRecordUrl() . $query->getRecordId() . '/containers/' . $this->encodePathSegment($query->containerFieldName);
 
         /*
          * The user can insert an array for the file to specify the file name, so we can check for that here
@@ -642,7 +647,7 @@ class FileMakerConnection extends Connection
     public function executeScript(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
-        $url = $this->getLayoutUrl() . '/script/' . $query->script;
+        $url = $this->getLayoutUrl() . '/script/' . $this->encodePathSegment($query->script);
 
         $queryParams = [];
         $param = $query->scriptParam;
