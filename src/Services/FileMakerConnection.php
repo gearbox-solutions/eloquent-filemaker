@@ -59,6 +59,17 @@ class FileMakerConnection extends Connection
 
         $this->setTimeout($config['request_timeout'] ?? 30);
 
+        // Warn when using plain HTTP since credentials will be sent in cleartext
+        $protocol = $config['protocol'] ?? 'https';
+        if ($protocol === 'http' && ! ($config['allow_insecure_http'] ?? false)) {
+            trigger_error(
+                'FileMaker connection "' . ($config['name'] ?? '') . '" uses plain HTTP. '
+                . 'Credentials will be sent in cleartext. Set allow_insecure_http=true to suppress this warning, '
+                . 'or switch to HTTPS.',
+                E_USER_WARNING
+            );
+        }
+
         parent::__construct($pdo, $database, $tablePrefix, $config);
     }
 
@@ -125,8 +136,9 @@ class FileMakerConnection extends Connection
 
         // perform the login
         try {
-            $response = Http::retry($this->attempts, 100)->withBasicAuth($this->config['username'], $this->config['password'])
-                ->post($url, $postBody);
+            $loginRequest = Http::retry($this->attempts, 100)->withBasicAuth($this->config['username'], $this->config['password']);
+            $this->applyTlsOptions($loginRequest);
+            $response = $loginRequest->post($url, $postBody);
         } catch (\Exception $e) {
             $this->logFMQuery('post', $url, $logBody, $start);
             throw $e;
@@ -686,7 +698,9 @@ class FileMakerConnection extends Connection
         $url = $this->getDatabaseUrl() . '/sessions/' . $this->sessionToken;
 
         // make an http delete request to the data api to end the session
-        $response = Http::delete($url);
+        $request = Http::createPendingRequest();
+        $this->applyTlsOptions($request);
+        $response = $request->delete($url);
         $this->checkResponseForErrors($response);
 
         $this->forgetSessionToken();
@@ -740,7 +754,21 @@ class FileMakerConnection extends Connection
             ->retry($this->attempts, 100, fn () => true, false)
             ->withToken($this->sessionToken);
 
+        $this->applyTlsOptions($request);
+
         return $request;
+    }
+
+    protected function applyTlsOptions(PendingRequest $request): void
+    {
+        $verify = $this->config['verify_ssl'] ?? true;
+
+        if (is_string($verify)) {
+            // Treat as path to a CA bundle
+            $request->withOptions(['verify' => $verify]);
+        } elseif ($verify === false) {
+            $request->withoutVerifying();
+        }
     }
 
     /**

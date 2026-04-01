@@ -170,6 +170,70 @@ class FileMakerConnectionTest extends TestCase
         $this->assertEquals(42, $builder->getRecordId());
     }
 
+    public function test_http_protocol_triggers_warning()
+    {
+        $triggered = false;
+        set_error_handler(function ($errno, $errstr) use (&$triggered) {
+            if (str_contains($errstr, 'uses plain HTTP')) {
+                $triggered = true;
+            }
+
+            return true;
+        });
+
+        try {
+            new FileMakerConnection('filemaker', 'tester', '', [
+                'name' => 'filemaker',
+                'host' => 'filemaker.test',
+                'database' => 'tester',
+                'username' => 'test',
+                'password' => 'test',
+                'protocol' => 'http',
+            ]);
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertTrue($triggered, 'Expected a warning about plain HTTP');
+    }
+
+    public function test_http_protocol_with_opt_in_does_not_warn()
+    {
+        // Should not trigger a warning
+        $connection = new FileMakerConnection('filemaker', 'tester', '', [
+            'name' => 'filemaker',
+            'host' => 'filemaker.test',
+            'database' => 'tester',
+            'username' => 'test',
+            'password' => 'test',
+            'protocol' => 'http',
+            'allow_insecure_http' => true,
+        ]);
+
+        $this->assertInstanceOf(FileMakerConnection::class, $connection);
+    }
+
+    public function test_verify_ssl_false_disables_verification()
+    {
+        $connection = new FileMakerConnection('filemaker', 'tester', '', [
+            'name' => 'filemaker',
+            'host' => 'filemaker.test',
+            'database' => 'tester',
+            'username' => 'test',
+            'password' => 'test',
+            'protocol' => 'https',
+            'verify_ssl' => false,
+            'cache_session_token' => false,
+        ]);
+
+        $ref = new \ReflectionMethod($connection, 'prepareRequestForSending');
+        $request = $ref->invoke($connection);
+
+        // The pending request options should have verify=false
+        $options = $request->getOptions();
+        $this->assertFalse($options['verify']);
+    }
+
     protected function overrideDBHost()
     {
         Config::set('database.connections.filemaker.host', 'filemaker.test');
