@@ -102,7 +102,9 @@ class FileMakerConnection extends Connection
         // retrieve and store the session token
         // Store it in the cache if the connection is configured to do so
         if ($this->shouldCacheSessionToken) {
-            $this->sessionToken = Cache::rememberForever($this->sessionTokenCacheKey, function () {
+            // Default to 14 minutes, just under FileMaker's default 15-minute session timeout
+            $ttl = $this->config['session_token_ttl'] ?? 840;
+            $this->sessionToken = Cache::remember($this->sessionTokenCacheKey, $ttl, function () {
                 return $this->fetchNewSessionToken();
             });
         } else {

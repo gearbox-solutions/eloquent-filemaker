@@ -44,7 +44,7 @@ trait FMGuardsAttributes
 
     protected function primeGuardableColumns($forceRefresh = false)
     {
-        if (! isset(static::$guardableColumns[get_class($this)])) {
+        if ($forceRefresh || ! isset(static::$guardableColumns[get_class($this)])) {
             $columns = $this->getColumns($forceRefresh);
 
             if (empty($columns)) {
@@ -56,7 +56,10 @@ trait FMGuardsAttributes
 
     protected function getColumns($forceRefresh = false): array
     {
-        $cacheKey = "eloquent-filemaker-{$this->table}-columns";
+        // Include connection name to prevent collisions when two connections share a layout name
+        $connectionName = $this->getConnectionName() ?? 'default';
+        $cacheKey = "eloquent-filemaker-{$connectionName}-{$this->table}-columns";
+
         $refreshCallback = function () {
             $layoutMetaData = $this->getConnection()->getLayoutMetadata($this->table);
 
