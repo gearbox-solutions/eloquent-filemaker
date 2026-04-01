@@ -333,6 +333,10 @@ class FMBaseBuilder extends Builder
      */
     public function recordId($recordId)
     {
+        if ($recordId !== null && ! is_numeric($recordId)) {
+            throw new InvalidArgumentException('Record ID must be numeric, got: ' . gettype($recordId));
+        }
+
         $this->recordId = $recordId;
 
         return $this;

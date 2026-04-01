@@ -25,7 +25,7 @@ class FileMakerConnection extends Connection
 
     protected ?string $host;
 
-    protected ?string $layout;
+    protected ?string $layout = null;
 
     protected ?string $username;
 
@@ -59,6 +59,17 @@ class FileMakerConnection extends Connection
 
         $this->setTimeout($config['request_timeout'] ?? 30);
 
+        // Warn when using plain HTTP since credentials will be sent in cleartext
+        $protocol = $config['protocol'] ?? 'https';
+        if ($protocol === 'http' && ! ($config['allow_insecure_http'] ?? false)) {
+            trigger_error(
+                'FileMaker connection "' . ($config['name'] ?? '') . '" uses plain HTTP. '
+                . 'Credentials will be sent in cleartext. Set allow_insecure_http=true to suppress this warning, '
+                . 'or switch to HTTPS.',
+                E_USER_WARNING
+            );
+        }
+
         parent::__construct($pdo, $database, $tablePrefix, $config);
     }
 
@@ -78,7 +89,7 @@ class FileMakerConnection extends Connection
      */
     public function getLayout()
     {
-        return $this->tablePrefix . $this->layout;
+        return $this->tablePrefix . ($this->layout ?? '');
     }
 
     public function login()
@@ -91,7 +102,9 @@ class FileMakerConnection extends Connection
         // retrieve and store the session token
         // Store it in the cache if the connection is configured to do so
         if ($this->shouldCacheSessionToken) {
-            $this->sessionToken = Cache::rememberForever($this->sessionTokenCacheKey, function () {
+            // Default to 14 minutes, just under FileMaker's default 15-minute session timeout
+            $ttl = $this->config['session_token_ttl'] ?? 840;
+            $this->sessionToken = Cache::remember($this->sessionTokenCacheKey, $ttl, function () {
                 return $this->fetchNewSessionToken();
             });
         } else {
@@ -118,24 +131,26 @@ class FileMakerConnection extends Connection
             ],
         ];
 
+        // Build a redacted copy for logging so credentials never reach listeners
+        $logBody = $postBody;
+        Arr::set($logBody, 'fmDataSource.0.username', str_repeat('*', strlen(Arr::get($logBody, 'fmDataSource.0.username'))));
+        Arr::set($logBody, 'fmDataSource.0.password', str_repeat('*', strlen(Arr::get($logBody, 'fmDataSource.0.password'))));
+
         // perform the login
         try {
-            $response = Http::retry($this->attempts, 100)->withBasicAuth($this->config['username'], $this->config['password'])
-                ->post($url, $postBody);
+            $loginRequest = Http::retry($this->attempts, 100)->withBasicAuth($this->config['username'], $this->config['password']);
+            $this->applyTlsOptions($loginRequest);
+            $response = $loginRequest->post($url, $postBody);
         } catch (\Exception $e) {
-            // log the query even on an error
-            $this->logFMQuery('post', $url, $postBody, $start);
+            $this->logFMQuery('post', $url, $logBody, $start);
             throw $e;
         }
 
-        // log the query
-        $this->logFMQuery('post', $url, $postBody, $start);
+        // log the query with redacted credentials
+        $this->logFMQuery('post', $url, $logBody, $start);
 
         // Check for errors
         $this->checkResponseForErrors($response);
-
-        Arr::set($postBody, 'fmDataSource.0.username', str_repeat('*', strlen(Arr::get($postBody, 'fmDataSource.0.username'))));
-        Arr::set($postBody, 'fmDataSource.0.password', str_repeat('*', strlen(Arr::get($postBody, 'fmDataSource.0.password'))));
 
         // Get the session token from the response
         $token = Arr::get($response, 'response.token');
@@ -145,7 +160,7 @@ class FileMakerConnection extends Connection
 
     protected function getDatabaseUrl()
     {
-        return ($this->config['protocol'] ?? 'https') . '://' . $this->config['host'] . '/fmi/data/' . ($this->config['version'] ?? 'vLatest') . '/databases/' . $this->config['database'];
+        return ($this->config['protocol'] ?? 'https') . '://' . $this->config['host'] . '/fmi/data/' . ($this->config['version'] ?? 'vLatest') . '/databases/' . $this->encodePathSegment($this->config['database']);
     }
 
     protected function getRecordUrl()
@@ -160,13 +175,18 @@ class FileMakerConnection extends Connection
             $this->setLayout($layout);
         }
 
-        return $this->getDatabaseUrl() . '/layouts/' . $this->getLayout();
+        return $this->getDatabaseUrl() . '/layouts/' . $this->encodePathSegment($this->getLayout());
+    }
+
+    protected function encodePathSegment(string $value): string
+    {
+        return rawurlencode($value);
     }
 
     /**
      * @throws FileMakerDataApiException
      */
-    protected function checkResponseForErrors($response): void
+    protected function checkResponseForErrors(#[\SensitiveParameter] $response): void
     {
         $messages = Arr::get($response, 'messages', []);
 
@@ -177,8 +197,8 @@ class FileMakerConnection extends Connection
                 if ($code !== 0) {
 
                     // If the layout is not the same as the table prefix, a layout has been specified and we
-                    // should to add the layout name for clarity
-                    if ($this->layout) {
+                    // should to add the layout name for clarity (only in debug mode to avoid leaking internals)
+                    if (config('app.debug', false) && $this->layout) {
                         $customMessage = 'Layout: ' . $this->getLayout() . ' - ' . $message['message'];
                     } else {
                         $customMessage = $message['message'];
@@ -194,7 +214,7 @@ class FileMakerConnection extends Connection
     public function uploadToContainerField(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
-        $url = $this->getRecordUrl() . $query->getRecordId() . '/containers/' . $query->containerFieldName;
+        $url = $this->getRecordUrl() . $query->getRecordId() . '/containers/' . $this->encodePathSegment($query->containerFieldName);
 
         /*
          * The user can insert an array for the file to specify the file name, so we can check for that here
@@ -202,6 +222,9 @@ class FileMakerConnection extends Connection
          * [ $file, 'myFile.pdf' ]
          */
         if (is_array($query->containerFile)) {
+            if (count($query->containerFile) !== 2 || ! $this->isFile($query->containerFile[0]) || ! is_string($query->containerFile[1])) {
+                throw new \InvalidArgumentException('Container file array must be [$file, $filename]');
+            }
             // we have a file and file name
             $file = $query->containerFile[0];
             $filename = $query->containerFile[1];
@@ -210,6 +233,8 @@ class FileMakerConnection extends Connection
             $filename = $file->getFilename();
         }
 
+        $filename = $this->sanitizeFilename($filename);
+
         // create a stream resource
         $stream = fopen($file->getPath() . '/' . $file->getFilename(), 'r');
 
@@ -217,6 +242,19 @@ class FileMakerConnection extends Connection
         $response = $this->makeRequest('post', $url, [], $request);
 
         return $response;
+    }
+
+    protected function sanitizeFilename(string $filename): string
+    {
+        // Strip null bytes, path separators, and control characters
+        $filename = str_replace(["\0", '/', '\\'], '', $filename);
+        $filename = preg_replace('/[\x00-\x1F\x7F]/', '', $filename);
+
+        if ($filename === '') {
+            $filename = 'upload';
+        }
+
+        return $filename;
     }
 
     public function getSingleRecordById(FMBaseBuilder $query)
@@ -641,7 +679,7 @@ class FileMakerConnection extends Connection
     public function executeScript(FMBaseBuilder $query)
     {
         $this->setLayout($query->from);
-        $url = $this->getLayoutUrl() . '/script/' . $query->script;
+        $url = $this->getLayoutUrl() . '/script/' . $this->encodePathSegment($query->script);
 
         $queryParams = [];
         $param = $query->scriptParam;
@@ -679,8 +717,15 @@ class FileMakerConnection extends Connection
 
         $url = $this->getDatabaseUrl() . '/sessions/' . $this->sessionToken;
 
-        // make an http delete request to the data api to end the session
-        $response = Http::delete($url);
+        // Laravel 10 does not expose createPendingRequest(); once Laravel 10 support is dropped,
+        // this fallback can go away and we can use Http::createPendingRequest() directly here.
+        if (method_exists(Factory::class, 'createPendingRequest')) {
+            $request = Http::createPendingRequest();
+        } else {
+            $request = Http::acceptJson();
+        }
+        $this->applyTlsOptions($request);
+        $response = $request->delete($url);
         $this->checkResponseForErrors($response);
 
         $this->forgetSessionToken();
@@ -720,9 +765,11 @@ class FileMakerConnection extends Connection
         return $response;
     }
 
-    protected function prepareRequestForSending($request = null)
+    protected function prepareRequestForSending(#[\SensitiveParameter] $request = null)
     {
         if (! $request) {
+            // Laravel 10 does not expose createPendingRequest(); once Laravel 10 support is dropped,
+            // this fallback can go away and we can use Http::createPendingRequest() directly here.
             if (method_exists(Factory::class, 'createPendingRequest')) {
                 $request = Http::createPendingRequest();
             } else {
@@ -734,13 +781,27 @@ class FileMakerConnection extends Connection
             ->retry($this->attempts, 100, fn () => true, false)
             ->withToken($this->sessionToken);
 
+        $this->applyTlsOptions($request);
+
         return $request;
+    }
+
+    protected function applyTlsOptions(PendingRequest $request): void
+    {
+        $verify = $this->config['verify_ssl'] ?? true;
+
+        if (is_string($verify)) {
+            // Treat as path to a CA bundle
+            $request->withOptions(['verify' => $verify]);
+        } elseif ($verify === false) {
+            $request->withoutVerifying();
+        }
     }
 
     /**
      * @throws FileMakerDataApiException
      */
-    protected function makeRequest($method, $url, $params = [], ?PendingRequest $request = null)
+    protected function makeRequest($method, $url, #[\SensitiveParameter] $params = [], #[\SensitiveParameter] ?PendingRequest $request = null)
     {
         $start = microtime(true);
 
@@ -798,7 +859,7 @@ class FileMakerConnection extends Connection
         return $json;
     }
 
-    protected function logFMQuery($method, $url, $params, $start)
+    protected function logFMQuery($method, $url, #[\SensitiveParameter] $params, $start)
     {
         $commandType = $this->getSqlCommandType($method, $url);
 
@@ -809,8 +870,18 @@ class FileMakerConnection extends Connection
                 URL: {$url}
                 DOC;
 
-        if (count($params) > 0) {
-            $sql .= "\nData: " . json_encode($params, JSON_PRETTY_PRINT);
+        $logParams = $params;
+        if ($this->config['redact_query_logs'] ?? false) {
+            $redactKeys = ['fieldData', 'portalData', 'globalFields', 'script.param', 'script.prerequest.param', 'script.presort.param'];
+            foreach ($redactKeys as $key) {
+                if (Arr::has($logParams, $key)) {
+                    Arr::set($logParams, $key, '[redacted]');
+                }
+            }
+        }
+
+        if (count($logParams) > 0) {
+            $sql .= "\nData: " . json_encode($logParams, JSON_PRETTY_PRINT);
         }
 
         $bindings = collect(data_get($params, 'query', []))->flatMap(
