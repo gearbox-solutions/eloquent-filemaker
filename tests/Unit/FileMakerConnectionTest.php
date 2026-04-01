@@ -355,6 +355,50 @@ class FileMakerConnectionTest extends TestCase
         }
     }
 
+    public function test_container_upload_sanitizes_filename()
+    {
+        $connection = new FileMakerConnection('filemaker', 'tester', '', [
+            'name' => 'filemaker',
+            'host' => 'filemaker.test',
+            'database' => 'tester',
+            'username' => 'test',
+            'password' => 'test',
+            'protocol' => 'https',
+            'cache_session_token' => false,
+        ]);
+
+        $ref = new \ReflectionMethod($connection, 'sanitizeFilename');
+
+        $this->assertEquals('test.pdf', $ref->invoke($connection, 'test.pdf'));
+        $this->assertEquals('..test.pdf', $ref->invoke($connection, '../test.pdf'));
+        $this->assertEquals('test.pdf', $ref->invoke($connection, "test\x00.pdf"));
+        $this->assertEquals('upload', $ref->invoke($connection, ''));
+        $this->assertEquals('upload', $ref->invoke($connection, '///'));
+    }
+
+    public function test_container_upload_rejects_malformed_array()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $connection = new FileMakerConnection('filemaker', 'tester', '', [
+            'name' => 'filemaker',
+            'host' => 'filemaker.test',
+            'database' => 'tester',
+            'username' => 'test',
+            'password' => 'test',
+            'protocol' => 'https',
+            'cache_session_token' => false,
+        ]);
+
+        $query = $connection->query();
+        $query->from = 'pets';
+        $query->recordId(1);
+        $query->containerFieldName = 'photo';
+        $query->containerFile = ['not-a-file', 123]; // bad payload
+
+        $connection->uploadToContainerField($query);
+    }
+
     protected function overrideDBHost()
     {
         Config::set('database.connections.filemaker.host', 'filemaker.test');

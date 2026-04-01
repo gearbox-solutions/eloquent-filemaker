@@ -220,6 +220,9 @@ class FileMakerConnection extends Connection
          * [ $file, 'myFile.pdf' ]
          */
         if (is_array($query->containerFile)) {
+            if (count($query->containerFile) !== 2 || ! $this->isFile($query->containerFile[0]) || ! is_string($query->containerFile[1])) {
+                throw new \InvalidArgumentException('Container file array must be [$file, $filename]');
+            }
             // we have a file and file name
             $file = $query->containerFile[0];
             $filename = $query->containerFile[1];
@@ -228,6 +231,8 @@ class FileMakerConnection extends Connection
             $filename = $file->getFilename();
         }
 
+        $filename = $this->sanitizeFilename($filename);
+
         // create a stream resource
         $stream = fopen($file->getPath() . '/' . $file->getFilename(), 'r');
 
@@ -235,6 +240,19 @@ class FileMakerConnection extends Connection
         $response = $this->makeRequest('post', $url, [], $request);
 
         return $response;
+    }
+
+    protected function sanitizeFilename(string $filename): string
+    {
+        // Strip null bytes, path separators, and control characters
+        $filename = str_replace(["\0", '/', '\\'], '', $filename);
+        $filename = preg_replace('/[\x00-\x1F\x7F]/', '', $filename);
+
+        if ($filename === '') {
+            $filename = 'upload';
+        }
+
+        return $filename;
     }
 
     public function getSingleRecordById(FMBaseBuilder $query)
