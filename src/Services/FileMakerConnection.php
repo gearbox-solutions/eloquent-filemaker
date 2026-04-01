@@ -118,24 +118,25 @@ class FileMakerConnection extends Connection
             ],
         ];
 
+        // Build a redacted copy for logging so credentials never reach listeners
+        $logBody = $postBody;
+        Arr::set($logBody, 'fmDataSource.0.username', str_repeat('*', strlen(Arr::get($logBody, 'fmDataSource.0.username'))));
+        Arr::set($logBody, 'fmDataSource.0.password', str_repeat('*', strlen(Arr::get($logBody, 'fmDataSource.0.password'))));
+
         // perform the login
         try {
             $response = Http::retry($this->attempts, 100)->withBasicAuth($this->config['username'], $this->config['password'])
                 ->post($url, $postBody);
         } catch (\Exception $e) {
-            // log the query even on an error
-            $this->logFMQuery('post', $url, $postBody, $start);
+            $this->logFMQuery('post', $url, $logBody, $start);
             throw $e;
         }
 
-        // log the query
-        $this->logFMQuery('post', $url, $postBody, $start);
+        // log the query with redacted credentials
+        $this->logFMQuery('post', $url, $logBody, $start);
 
         // Check for errors
         $this->checkResponseForErrors($response);
-
-        Arr::set($postBody, 'fmDataSource.0.username', str_repeat('*', strlen(Arr::get($postBody, 'fmDataSource.0.username'))));
-        Arr::set($postBody, 'fmDataSource.0.password', str_repeat('*', strlen(Arr::get($postBody, 'fmDataSource.0.password'))));
 
         // Get the session token from the response
         $token = Arr::get($response, 'response.token');
@@ -166,7 +167,7 @@ class FileMakerConnection extends Connection
     /**
      * @throws FileMakerDataApiException
      */
-    protected function checkResponseForErrors($response): void
+    protected function checkResponseForErrors(#[\SensitiveParameter] $response): void
     {
         $messages = Arr::get($response, 'messages', []);
 
@@ -720,7 +721,7 @@ class FileMakerConnection extends Connection
         return $response;
     }
 
-    protected function prepareRequestForSending($request = null)
+    protected function prepareRequestForSending(#[\SensitiveParameter] $request = null)
     {
         if (! $request) {
             if (method_exists(Factory::class, 'createPendingRequest')) {
@@ -740,7 +741,7 @@ class FileMakerConnection extends Connection
     /**
      * @throws FileMakerDataApiException
      */
-    protected function makeRequest($method, $url, $params = [], ?PendingRequest $request = null)
+    protected function makeRequest($method, $url, #[\SensitiveParameter] $params = [], #[\SensitiveParameter] ?PendingRequest $request = null)
     {
         $start = microtime(true);
 
@@ -798,7 +799,7 @@ class FileMakerConnection extends Connection
         return $json;
     }
 
-    protected function logFMQuery($method, $url, $params, $start)
+    protected function logFMQuery($method, $url, #[\SensitiveParameter] $params, $start)
     {
         $commandType = $this->getSqlCommandType($method, $url);
 

@@ -3,8 +3,10 @@
 namespace Tests\Unit;
 
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Mockery;
 use Tests\TestCase;
@@ -90,6 +92,40 @@ class FileMakerConnectionTest extends TestCase
         $token = Cache::get('filemaker-session-' . $connection->getName());
 
         $this->assertEquals('new-token', $token);
+    }
+
+    public function test_login_query_log_does_not_contain_raw_credentials()
+    {
+        $this->overrideDBHost();
+        Http::fake([
+            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response([
+                'messages' => [['code' => '0', 'message' => 'OK']],
+                'response' => ['token' => 'test-token'],
+            ], 200),
+        ]);
+
+        $loggedSql = [];
+        $this->app['events']->listen(QueryExecuted::class, function (QueryExecuted $event) use (&$loggedSql) {
+            $loggedSql[] = $event->sql;
+        });
+
+        $connection = new FileMakerConnection('filemaker', 'tester', '', [
+            'name' => 'filemaker',
+            'host' => 'filemaker.test',
+            'database' => 'tester',
+            'username' => 'dapitester',
+            'password' => 'dapitester',
+            'protocol' => 'http',
+            'cache_session_token' => false,
+        ]);
+        $connection->setEventDispatcher($this->app['events']);
+
+        $connection->login();
+
+        $this->assertNotEmpty($loggedSql, 'Expected at least one query log entry from login');
+
+        $combined = implode(' ', $loggedSql);
+        $this->assertStringNotContainsString('dapitester', $combined, 'Raw credentials should not appear in query log');
     }
 
     protected function overrideDBHost()
