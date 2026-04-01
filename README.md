@@ -78,9 +78,13 @@ You may use the following code block below as a template, which has some good de
     'prefix' => env('DB_PREFIX', ''),
     'version' => env('DB_VERSION', 'vLatest'),
     'protocol' => env('DB_PROTOCOL', 'https'),
+    'allow_insecure_http' => env('DB_ALLOW_INSECURE_HTTP', false), // must be true to use protocol=http without a warning
+    'verify_ssl' => env('DB_VERIFY_SSL', true), // set to false for self-signed certs, or a path to a CA bundle
     'cache_session_token' => env('DB_CACHE_SESSION_TOKEN', true), // set to false to log out after each reqeust. This can be slower than re-using a session token, but allows for globals to be set for individual user values.
+    'session_token_ttl' => env('DB_SESSION_TOKEN_TTL', 840), // session token cache TTL in seconds (default 14 min, just under FM's 15 min timeout)
     'empty_strings_to_null' => env('DB_EMPTY_STRINGS_TO_NULL', true), // set to false to return empty strings instead of null values when fields are empty in FileMaker
     'request_timeout' => env('DB_REQUEST_TIMEOUT', 30), // set the request timeout in seconds (default 30)
+    'redact_query_logs' => env('DB_REDACT_QUERY_LOGS', false), // set to true to mask fieldData, portalData, globalFields and script params in query log events
 ]
 ```
 You should add one database connection configuration for each FileMaker database you will be connecting to. Each file can have completely different configurations, and can even be on different servers.
