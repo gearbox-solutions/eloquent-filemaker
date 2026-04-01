@@ -6,7 +6,6 @@ use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Mockery;
 use Tests\TestCase;
@@ -19,11 +18,12 @@ class FileMakerConnectionTest extends TestCase
     protected function tearDown(): void
     {
         Mockery::close();
+        parent::tearDown();
     }
 
     public function test_connection_gets_the_default_database_configuration()
     {
-        $connection = app(FileMakerConnection::class);
+        $connection = $this->connection();
 
         $this->assertEquals('filemaker', $connection->getConfig('name'));
         $this->assertEquals('tester', $connection->getConfig('database'));
@@ -31,11 +31,11 @@ class FileMakerConnectionTest extends TestCase
 
     public function test_set_connection_changes_the_database_configuration()
     {
-        $connection = app(FileMakerConnection::class);
+        $connection = $this->connection();
         $this->assertEquals('filemaker', $connection->getConfig('name'));
         $this->assertEquals('tester', $connection->getConfig('database'));
 
-        $connection->setConnection('filemaker2');
+        $connection = $this->connection('filemaker2');
 
         $this->assertEquals('filemaker2', $connection->getConfig('name'));
         $this->assertEquals('tester2', $connection->getConfig('database'));
@@ -43,7 +43,7 @@ class FileMakerConnectionTest extends TestCase
 
     public function test_set_layout_changes_the_layout_used()
     {
-        $connection = app(FileMakerConnection::class);
+        $connection = $this->connection();
         $this->assertEquals('', $connection->getLayout());
 
         $connection->setLayout('dapi-pet');
@@ -53,7 +53,7 @@ class FileMakerConnectionTest extends TestCase
 
     public function test_database_prefix_is_added_to_layout_names()
     {
-        $connection = app(FileMakerConnection::class)->setConnection('prefix');
+        $connection = $this->connection('prefix');
 
         $this->assertEquals('dapi-', $connection->getLayout());
 
@@ -68,13 +68,13 @@ class FileMakerConnectionTest extends TestCase
     {
         $this->overrideDBHost();
         Http::fake([
-            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200),
+            'https://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200),
         ]);
-        $connection = app(FileMakerConnection::class)->setConnection('filemaker');
+        $connection = $this->connection();
 
         $connection->login();
 
-        $token = Cache::get('filemaker-session-' . $connection->getName());
+        $token = Cache::get('eloquent-filemaker-session-token-' . $connection->getName());
 
         $this->assertEquals('new-token', $token);
     }
@@ -83,13 +83,13 @@ class FileMakerConnectionTest extends TestCase
     {
         $this->overrideDBHost();
         Http::fake([
-            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200),
+            'https://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response(['response' => ['token' => 'new-token']], 200),
         ]);
-        $connection = app(FileMakerConnection::class)->setConnection('filemaker');
+        $connection = $this->connection();
 
         $connection->login();
 
-        $token = Cache::get('filemaker-session-' . $connection->getName());
+        $token = Cache::get('eloquent-filemaker-session-token-' . $connection->getName());
 
         $this->assertEquals('new-token', $token);
     }
@@ -98,7 +98,7 @@ class FileMakerConnectionTest extends TestCase
     {
         $this->overrideDBHost();
         Http::fake([
-            'http://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response([
+            'https://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response([
                 'messages' => [['code' => '0', 'message' => 'OK']],
                 'response' => ['token' => 'test-token'],
             ], 200),
@@ -115,7 +115,7 @@ class FileMakerConnectionTest extends TestCase
             'database' => 'tester',
             'username' => 'dapitester',
             'password' => 'dapitester',
-            'protocol' => 'http',
+            'protocol' => 'https',
             'cache_session_token' => false,
         ]);
         $connection->setEventDispatcher($this->app['events']);
@@ -131,6 +131,11 @@ class FileMakerConnectionTest extends TestCase
     protected function overrideDBHost()
     {
         Config::set('database.connections.filemaker.host', 'filemaker.test');
-        Config::set('database.connections.filemaker.protocol', 'http');
+        Config::set('database.connections.filemaker.protocol', 'https');
+    }
+
+    protected function connection(string $name = 'filemaker'): FileMakerConnection
+    {
+        return app('db')->connection($name);
     }
 }

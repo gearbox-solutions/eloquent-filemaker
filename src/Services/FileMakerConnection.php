@@ -25,7 +25,7 @@ class FileMakerConnection extends Connection
 
     protected ?string $host;
 
-    protected ?string $layout;
+    protected ?string $layout = null;
 
     protected ?string $username;
 
@@ -78,7 +78,7 @@ class FileMakerConnection extends Connection
      */
     public function getLayout()
     {
-        return $this->tablePrefix . $this->layout;
+        return $this->tablePrefix . ($this->layout ?? '');
     }
 
     public function login()
