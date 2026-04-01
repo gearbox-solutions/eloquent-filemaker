@@ -195,8 +195,8 @@ class FileMakerConnection extends Connection
                 if ($code !== 0) {
 
                     // If the layout is not the same as the table prefix, a layout has been specified and we
-                    // should to add the layout name for clarity
-                    if ($this->layout) {
+                    // should to add the layout name for clarity (only in debug mode to avoid leaking internals)
+                    if (config('app.debug', false) && $this->layout) {
                         $customMessage = 'Layout: ' . $this->getLayout() . ' - ' . $message['message'];
                     } else {
                         $customMessage = $message['message'];
@@ -843,8 +843,18 @@ class FileMakerConnection extends Connection
                 URL: {$url}
                 DOC;
 
-        if (count($params) > 0) {
-            $sql .= "\nData: " . json_encode($params, JSON_PRETTY_PRINT);
+        $logParams = $params;
+        if ($this->config['redact_query_logs'] ?? false) {
+            $redactKeys = ['fieldData', 'portalData', 'globalFields', 'script.param', 'script.prerequest.param', 'script.presort.param'];
+            foreach ($redactKeys as $key) {
+                if (Arr::has($logParams, $key)) {
+                    Arr::set($logParams, $key, '[redacted]');
+                }
+            }
+        }
+
+        if (count($logParams) > 0) {
+            $sql .= "\nData: " . json_encode($logParams, JSON_PRETTY_PRINT);
         }
 
         $bindings = collect(data_get($params, 'query', []))->flatMap(

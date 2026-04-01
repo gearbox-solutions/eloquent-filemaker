@@ -234,6 +234,127 @@ class FileMakerConnectionTest extends TestCase
         $this->assertFalse($options['verify']);
     }
 
+    public function test_redact_query_logs_masks_field_data()
+    {
+        Http::fake([
+            'https://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response([
+                'messages' => [['code' => '0', 'message' => 'OK']],
+                'response' => ['token' => 'test-token'],
+            ], 200),
+            'https://filemaker.test/fmi/data/vLatest/databases/tester/layouts/pets/records/*' => Http::response([
+                'messages' => [['code' => '0', 'message' => 'OK']],
+                'response' => [],
+            ], 200),
+        ]);
+
+        $loggedSql = [];
+        $this->app['events']->listen(QueryExecuted::class, function (QueryExecuted $event) use (&$loggedSql) {
+            $loggedSql[] = $event->sql;
+        });
+
+        $connection = new FileMakerConnection('filemaker', 'tester', '', [
+            'name' => 'filemaker',
+            'host' => 'filemaker.test',
+            'database' => 'tester',
+            'username' => 'test',
+            'password' => 'test',
+            'protocol' => 'https',
+            'cache_session_token' => false,
+            'redact_query_logs' => true,
+        ]);
+        $connection->setEventDispatcher($this->app['events']);
+
+        $query = $connection->query();
+        $query->from = 'pets';
+        $query->recordId(1);
+        $query->fieldData = ['name' => 'secret-value'];
+
+        try {
+            $connection->editRecord($query);
+        } catch (\Exception $e) {
+            // Expected since we're faking
+        }
+
+        $combined = implode(' ', $loggedSql);
+        $this->assertStringNotContainsString('secret-value', $combined, 'fieldData should be redacted');
+        $this->assertStringContainsString('[redacted]', $combined);
+    }
+
+    public function test_default_logging_preserves_field_data()
+    {
+        Http::fake([
+            'https://filemaker.test/fmi/data/vLatest/databases/tester/sessions' => Http::response([
+                'messages' => [['code' => '0', 'message' => 'OK']],
+                'response' => ['token' => 'test-token'],
+            ], 200),
+            'https://filemaker.test/fmi/data/vLatest/databases/tester/layouts/pets/records/*' => Http::response([
+                'messages' => [['code' => '0', 'message' => 'OK']],
+                'response' => [],
+            ], 200),
+        ]);
+
+        $loggedSql = [];
+        $this->app['events']->listen(QueryExecuted::class, function (QueryExecuted $event) use (&$loggedSql) {
+            $loggedSql[] = $event->sql;
+        });
+
+        $connection = new FileMakerConnection('filemaker', 'tester', '', [
+            'name' => 'filemaker',
+            'host' => 'filemaker.test',
+            'database' => 'tester',
+            'username' => 'test',
+            'password' => 'test',
+            'protocol' => 'https',
+            'cache_session_token' => false,
+            // redact_query_logs not set, defaults to false
+        ]);
+        $connection->setEventDispatcher($this->app['events']);
+
+        $query = $connection->query();
+        $query->from = 'pets';
+        $query->recordId(1);
+        $query->fieldData = ['name' => 'visible-value'];
+
+        try {
+            $connection->editRecord($query);
+        } catch (\Exception $e) {
+            // Expected
+        }
+
+        $combined = implode(' ', $loggedSql);
+        $this->assertStringContainsString('visible-value', $combined, 'fieldData should be visible when redaction is off');
+    }
+
+    public function test_exception_hides_layout_in_production()
+    {
+        Config::set('app.debug', false);
+
+        $connection = new FileMakerConnection('filemaker', 'tester', '', [
+            'name' => 'filemaker',
+            'host' => 'filemaker.test',
+            'database' => 'tester',
+            'username' => 'test',
+            'password' => 'test',
+            'protocol' => 'https',
+            'cache_session_token' => false,
+        ]);
+        $connection->setLayout('secret-layout');
+
+        $fakeResponse = new \Illuminate\Http\Client\Response(
+            new \GuzzleHttp\Psr7\Response(200, [], json_encode([
+                'messages' => [['code' => '401', 'message' => 'No records match']],
+            ]))
+        );
+
+        try {
+            $ref = new \ReflectionMethod($connection, 'checkResponseForErrors');
+            $ref->invoke($connection, $fakeResponse);
+            $this->fail('Expected exception');
+        } catch (\Exception $e) {
+            $this->assertStringNotContainsString('secret-layout', $e->getMessage());
+        }
+    }
+
     protected function overrideDBHost()
     {
         Config::set('database.connections.filemaker.host', 'filemaker.test');
