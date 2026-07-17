@@ -11,6 +11,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -667,7 +668,7 @@ class FileMakerConnection extends Connection
     /**
      * Log out of the database, invalidating our session token
      *
-     * @return \Illuminate\Http\Client\Response|void
+     * @return Response|void
      *
      * @throws FileMakerDataApiException
      */

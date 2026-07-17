@@ -10,6 +10,7 @@ use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasRelationships;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 trait FMHasRelationships
 {
@@ -112,7 +113,7 @@ trait FMHasRelationships
      * @param  string|null  $type
      * @param  string|null  $id
      * @param  string|null  $localKey
-     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
+     * @return MorphMany
      */
     public function morphMany($related, $name, $type = null, $id = null, $localKey = null)
     {

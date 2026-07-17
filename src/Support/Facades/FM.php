@@ -4,6 +4,7 @@ namespace GearboxSolutions\EloquentFileMaker\Support\Facades;
 
 use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Facade;
 
 /**
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static FileMakerConnection getLayoutMetadata($layoutName = null)
  * @method static \Illuminate\Http\Client\Response|void disconnect()
  *
- * @see \Illuminate\Database\DatabaseManager
+ * @see DatabaseManager
  * @see FileMakerConnection
  *
  * */
