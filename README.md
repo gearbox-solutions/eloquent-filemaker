@@ -1,8 +1,8 @@
 # Eloquent-FileMaker
+
 [![Total Downloads](https://img.shields.io/packagist/dt/gearbox-solutions/eloquent-filemaker)](https://packagist.org/packages/gearbox-solutions/eloquent-filemaker)
 [![Latest Stable Version](https://img.shields.io/packagist/v/gearbox-solutions/eloquent-filemaker)](https://packagist.org/packages/gearbox-solutions/eloquent-filemaker)
 [![License](https://img.shields.io/packagist/l/gearbox-solutions/eloquent-filemaker)](https://github.com/gearbox-solutions/eloquent-filemaker/blob/2.x/LICENSE)
-
 
 Eloquent-FileMaker is a PHP package for Laravel to make working with FileMaker databases through the FileMaker Data API easier. The goal of this project is to provide as similar an interface for working with FileMaker records through the Data API as you would get with working with MySQL in native Laravel.
 
@@ -13,32 +13,36 @@ This package lets you easily connect to your FileMaker database through the Data
 This package is built and maintained by [Gearbox Solutions](https://gearboxgo.com/). We build fantastic web apps with technologies like Laravel, Vue, React, and Node. If you would like assistance building your own web app, either using this package or other projects, please [contact us](https://gearboxgo.com/) for a free introductory consultation to discuss your project.
 
 ## Features
-* Uses the FileMaker Data API for accessing your FileMaker data
-* Support for accessing multiple files or with multiple sets of credentials
-* FMModel class
-    * Extends the base Model class, allowing compatibility with many standard model features
-    * Relationship support
-    * Container data read/write
-    * Automatic name/layout/table resolution
-    * Portal data read/write
-    * FileMaker -> Laravel field name remapping
-* Automatic authentication and session management
-* Eloquent query builder and base query builder
-* Raw connection service for easy Data API access
-* FileMaker database connection driver
-* Running scripts
-* And more!
+
+- Uses the FileMaker Data API for accessing your FileMaker data
+- Support for accessing multiple files or with multiple sets of credentials
+- FMModel class
+  - Extends the base Model class, allowing compatibility with many standard model features
+  - Relationship support
+  - Container data read/write
+  - Automatic name/layout/table resolution
+  - Portal data read/write
+  - FileMaker -> Laravel field name remapping
+- Automatic authentication and session management
+- Eloquent query builder and base query builder
+- Raw connection service for easy Data API access
+- FileMaker database connection driver
+- Running scripts
+- And more!
 
 ## Supported Laravel Versions
+
 We support the [currently supported versions of Laravel](https://laravel.com/docs/master/releases). Earlier versions of Laravel may be compatible, but could be dropped in the future if incompatible changes are required.
 
 ## What's new in 2.0
-* Added support for Laravel 11
-* Empty fields in FileMaker are returned as null instead of an empty string by default
-* FileMaker Sessions only last for the duration of a single request to Laravel instead of being reused for 15 minutes by default - this can be changed in the config 
-* Improvements to whereNot logic and implementation to make it behave more closely to what it should be
+
+- Added support for Laravel 11
+- Empty fields in FileMaker are returned as null instead of an empty string by default
+- FileMaker Sessions only last for the duration of a single request to Laravel instead of being reused for 15 minutes by default - this can be changed in the config
+- Improvements to whereNot logic and implementation to make it behave more closely to what it should be
 
 ### Upgrading from 1.x to 2.x
+
 Run `composer require gearbox-solutions/eloquent-filemaker:^2.0` to upgrade to the latest version of the package.
 
 #### Potential changes to your code
@@ -46,14 +50,17 @@ Run `composer require gearbox-solutions/eloquent-filemaker:^2.0` to upgrade to t
 The usage of the package has generally remained the same. However, there are a few changes which may affect your code. Read the changes below to see what refactoring may be necessary when upgrading.
 
 ##### Major - Changes to empty fields
+
 In version 1.0, empty fields in FileMaker were returned as an empty string. In version 2.0, empty fields are returned as null. This change makes working with FileMaker data a bit more like what a Laravel developer would expect from a database.
 
 If you'd like to continue with the old behavior your can change the `empty_strings_to_null` config value to false to keep with the empty strings. Otherwise, if you have any code which relies on empty fields being returned as an empty string, you may need to refactor your code to work with the new behavior.
 
 ##### Minor - Improvements to whereNot logic
+
 There were some cases where whereNot may return results that were probably not correct or expected. This has been fixed in version 2.0. If you have any code which relies on the old, incorrect behavior of whereNot, you may need to refactor your code to work with the new corrected behavior.
 
 # Installation
+
 Install `gearbox-solutions/eloquent-filemaker` in your project using Composer.
 
 ```
@@ -61,13 +68,15 @@ composer require gearbox-solutions/eloquent-filemaker
 ```
 
 # Usage
+
 With the package installed you can now have access to all the features of this package. There are a few different areas to configure.
 
-
 ## Database configuration
+
 The first thing to do is to add a new data connection in your `database.php` config file. The connections you specify here will be used in your FMModel classes to configure which databases each model will connect to.
 
 You may use the following code block below as a template, which has some good defaults.
+
 ```php
 'filemaker' => [
     'driver' => 'filemaker',
@@ -83,11 +92,13 @@ You may use the following code block below as a template, which has some good de
     'request_timeout' => env('DB_REQUEST_TIMEOUT', 30), // set the request timeout in seconds (default 30)
 ]
 ```
+
 You should add one database connection configuration for each FileMaker database you will be connecting to. Each file can have completely different configurations, and can even be on different servers.
 
 If `cache_session_token` is true, login sessions will be maintained on a per-connection basis and tokens will automatically be cached using whatever cache configuration you have set up for your Laravel app. This prevents the need to re-login to the Data API for each request, which can be a significant performance improvement. If you have a cache configured for your Laravel app, you should generally this to true.
 
 #### Prefix
+
 The prefix configuration option adds a prefix to each of the layout/table names which you specify. You don't need to specify a prefix, but it can be very convenient to do so.
 
 It is good practice to create layouts specifically for the Data API to use, rather than using your regular GUI or developer layouts, which may be slow and have unnecessary fields on them. Creating layouts specifically for your web applications allows for you to optimize your Data API usage and maximize the performance of your web application. With this in mind, an easy way to manage these layout is to organize them together in a folder and give them all a prefix so that you can know what they are used for.
@@ -101,19 +112,23 @@ Eloquent FileMaker will use your app's cache to cache FileMaker Data API session
 Laravel's default is to use the `database` cache driver. If your FileMaker database connection is also your default driver, you will need to change your cache configuration to something else, such as `file` or `redis`. You can change your cache driver in your `.env`
 
 Laravel 11:
+
 ```
 cache_store=file
 ```
 
 Laravel 10 and earlier
+
 ```
 cache_driver=file
 ```
 
 ## Model Classes
+
 Creating model classes is the easiest way to access your FileMaker data, and is the most Laravel-like way of doing things. Create a new model class and change the extension class from `Model` to `FMModel`. This class change enables you to use the features of this package with your models.
 
 ### Artisan make:model command
+
 You can use the default `php artisan make:model` command with a new `--filemaker` flag to make a new `FMModel` instead of the default `Model`. All options available to Laravel's native `make:model` command are still available for use.
 
 ```shell
@@ -127,20 +142,22 @@ If you would like all of your models to be published as FMModel by default so th
 ```shell
 php artisan vendor:publish --tag=eloquent-filemaker-override-model
 ```
+
 This publish will create a `/stubs/model.stub` that will be used by `php artisan make:model` to set up new models. You should use this on projects that will only have models backed by FileMaker.
 
 If you want to customize the model stub ONLY for when the `---filemaker` flag is used, you can do so with the following command:
 
 ```shell
-php artisan vendor:publish --tag=eloquent-filemaker-stubs 
-````
- or
+php artisan vendor:publish --tag=eloquent-filemaker-stubs
+```
+
+or
+
 ```shell
 php artisan vendor:publish --provider="GearboxSolutions\EloquentFileMaker\Providers\FileMakerConnectionServiceProvider"
 ```
+
 This stub publish option is best if you are looking to have a mix of FileMaker backed models and another DB backed model.
-
-
 
 ### Things that work
 
@@ -153,9 +170,11 @@ Our goal is to be able to use any of these Eloquent features which make sense, s
 Be sure to read [Laravel's Eloquent Documentation](https://laravel.com/docs/8.x/eloquent) to see all the things the Eloquent Model class can do.
 
 ### Things that don't work
+
 Because this class extends Model, all of the regular eloquent methods may show as available in your IDE, but some don't make sense in the context of FileMaker's Data API and therefore don't do anything. Some examples of this would be mass updates or raw SQL queries.
 
 ### Setting a layout
+
 Your queries against your FileMaker database require you to get data from a particular layout. Eloquent-FileMaker supports Laravel's name guessing for tables, but in case your layout names don't match you can specify a layout name to use with your models by setting the `$layout` property on your model class.
 
 ```php
@@ -163,6 +182,7 @@ protected $layout = 'MyLayout';
 ```
 
 ### Null values and empty strings
+
 Null is an important, expected possible value for developers when working with databases. FileMaker as a platform, unfortunately, does not have the concept of a null value. A field which has not had a value written to it instead contains an empty string. In order to make this behavior more web-developer-friendly, Eloquent FileMaker automatically converts the value of `''` in a FileMaker field to `null` when reading data from the Data API.
 
 If you would like to have empty FileMaker fields returned as empty strings you can set the `empty_strings_to_null` config value to false in your connection configuration.
@@ -170,18 +190,23 @@ If you would like to have empty FileMaker fields returned as empty strings you c
 Eloquent FileMaker will always automatically convert `null` values to `''` when writing data back to your FileMaker database to prevent errors.
 
 ### Read-only fields
+
 Many fields in your FileMaker database will be read-only, such as summaries and calculations, though you'll still want to get them when retrieving data from your database. FMModels will attempt to write all modified attributes back to your FileMaker database. If you write a read-only field, such as a calculation field, you will receive an error when attempting to write the field back to your FileMaker database.
 
 ### Container Fields
+
 This package supports both reading and writing container field data. Container fields are retrieved from FileMaker as attributes on your model which will contain a URL which can be used to retrieve the file from the container.
 
 Please note: The FileMaker Data API does not allow you to write to container fields in related records:
 
 [FileMaker Data API Container Documentation](https://help.claris.com/en/data-api-guide/content/upload-container-data.html)
+
 > The container field must be a field in the table occurrence of the specified layout. It cannot be a container field in a related table.
 
 #### Writing to container fields
+
 When setting a container field you should set the value to be an `Illuminate/HTTP/File` or `Illuminate/HTTP/UploadedFile` object. These attributes will be written back to your container fields along with any other model updates when the `save()` method is called on your model object.
+
 ```php
 $file = new File(storage_path('app/public/gator.jpg'));
 $newPet->photo = $file;
@@ -189,7 +214,9 @@ $newPet->save();
 ```
 
 #### Custom filenames when inserting files into containers
+
 By default, files are inserted into containers using the filename of the file you are inserting. If you wish to set a new filename when the file is inserted into the container you can do so by passing the file and filename together in an array when setting your container.
+
 ```php
 $file = new File(storage_path('app/public/gator.jpg'));
 $newPet->photo = [$file, 'fluffy.jpg'];
@@ -197,6 +224,7 @@ $newPet->save();
 ```
 
 ### Renaming and Mapping FileMaker Fields
+
 Sometimes you might be working with a FileMaker database with inconvenient field names. These fields can be remapped to model attributes by setting the `$fieldMapping` attribute. This should be an array of strings, mapping FileMaker Field Name => New Attribute Name. You can then use these names as regular Eloquent attributes and they will work with the correct fields in FileMaker
 
 ```php
@@ -212,6 +240,7 @@ $myModel->a_much_better_name = 'my new value';
 ```
 
 ### Fields from related records
+
 If you have included fields from related records through relationships on your Data API layouts you will need to add a `$fieldMapping` property to be able to access your related data.
 
 For example, if you have a Person table with a one-to-one relationship to a record of the first car they owned:
@@ -230,8 +259,8 @@ The related data can be get/set just like any other attribute of the model. The 
 $personFirstCarColor = $person->first_car_color;
 ```
 
-
 ### Portal Data
+
 Portal data can be accessed as an attribute based on the portal's object name on your FileMaker Layout. Fields can be accessed using array keys of the field name.
 
 For example, if you have a portal on a layout whose object name is "person_pet_portal" based on the "person_PET" relationship you can access your portal data via an array of that attribute:
@@ -242,13 +271,14 @@ $firstPetName = $person->person_pet_portal[0]['person_PET::name'];
 ```
 
 You can write back data to the portal the same way:
+
 ```php
 // Set the 'type' of the second related pet in the portal
 $person->person_pet_portal[1]['person_PET::type'] = 'cat';
 ```
 
-
 ### Casting FileMaker Timestamp and Date fields
+
 This package has special handling for casting FileMaker Timestamp and Date fields to Carbon instances for you. To take advantage of this, you must map the fields as you would with a native Laravel Model class. You can use the `$casts` property as you normally would for these attributes.
 
 ```php
@@ -261,6 +291,7 @@ protected $casts = [
 The format Date and Timestamp fields written to FileMaker can be changed via the `$dateFormat` property of your model. This value must be compatible with the format output from the FileMaker Data API for Timestamp values and will be the format written back into your database. One important requirement is that this must be a full timestamp format, not just a date format.
 
 Here are some example formats:
+
 ```php
 protected $dateFormat = 'n/j/Y g:i:s A'; // 7/1/1920 4:01:01 PM
 protected $dateFormat = 'n/j/Y G:i:s'; // 7/1/1920 16:01:01
@@ -270,7 +301,7 @@ protected $dateFormat = 'n/j/Y G:i:s'; // 7/1/1920 16:01:01
 
 The Data API lets you set a [Modification ID](https://help.claris.com/en/data-api-guide/content/edit-record.html) when editing records.
 
- > Specifying a modification ID ensures that you are editing the current version of a record. If the modification ID value does not match the current modification ID value in the database, the record is not changed.
+> Specifying a modification ID ensures that you are editing the current version of a record. If the modification ID value does not match the current modification ID value in the database, the record is not changed.
 
 If you wish to include the modId when editing a record you can call `withModId()` before calling `save()` on the model object. This will send the ModID to FileMaker when updating the record, and will throw a `FileMakerDataApiException` with code `306` if the ModId does not match.
 
@@ -281,7 +312,6 @@ $person->withModId()->save();
 The modId is automatically set on the model object when you retrieve a record from FileMaker, so you don't need to set it manually.
 
 If you want to set the ModId manually you can do so by either passing the modId into `withModId($myModId)` or calling `setModId($myModId)` on the model object.
-
 
 ```php
 
@@ -296,8 +326,8 @@ If you always want the ModId to be included when saving a record, you can set th
 protected $withModId = true;
 ```
 
-
 ## Example FMModel Class
+
 ```php
 // Person.php
 
@@ -347,9 +377,10 @@ In general:
 `https://host/fmi/data/apidoc/`
 where `host` is the IP address or host name of the master machine running FileMaker Server."
 
-Here are a list of methods which will allow you to set the  parameters for the Data API features. Note that most of these can be chain-called, like with the standard query builder.
+Here are a list of methods which will allow you to set the parameters for the Data API features. Note that most of these can be chain-called, like with the standard query builder.
 
 #### Start with
+
 ```php
 FM::table()
 FM::connection()
@@ -358,6 +389,7 @@ FM::setGlobalFields() // not chainable
 ```
 
 #### Chainable
+
 ```php
 // standard query-builder stuff like where, orderBy, etc.
 ->limit( $value )
@@ -380,6 +412,7 @@ FM::setGlobalFields() // not chainable
 ```
 
 #### Final-chain-link methods
+
 ```php
 // standard query-builder stuff like get, first, etc.
 ->findByRecordId()
@@ -391,38 +424,75 @@ FM::setGlobalFields() // not chainable
 ```
 
 #### Request customization methods
+
 ```php
 ->setRetries($retries) // set the number of retries for a request (value of 2 will make 3 requests in total)
-->setTimeout($timeout) // set the timeout for a request in seconds 
+->setTimeout($timeout) // set the timeout for a request in seconds
 ```
 
 #### Examples:
+
 Perform a find for a person named Jaina
+
 ```php
 $person = FM::table('person')->where('nameFirst', 'Jaina')->first();
 ```
 
 Find the 10 most recent invoices for a customer
+
 ```php
 $invoices = FM::layout('invoice')->where('customer_id', $customer->id)->orderByDesc('date')->limit(10)->get();
 ```
 
+Group where clauses in a nested where by passing a closure. FileMaker performs finds as a set of OR'd find requests, so a nested group containing `orWhere` clauses is performed by combining the outer conditions with each alternative in the group as separate find requests.
+
+```php
+$people = FM::table('person')
+    ->where('age', '>', 10)
+    ->where(function ($query) {
+        $query->where('name_first', 'Barbara')
+            ->orWhere('name_last', 'Sanches');
+    })->get();
+
+// find request 1: age > 10 AND name_first = Barbara
+// find request 2: age > 10 AND name_last = Sanches
+```
+
+Negate a group of where clauses with `whereNot`, which is performed by adding "omit" find requests.
+
+```php
+$pets = FM::table('pet')
+    ->where('status', 'active')
+    ->whereNot(function ($query) {
+        $query->where('type', 'dog')
+            ->orWhere('type', 'cat');
+    })->get();
+
+// find request 1: status = active
+// find request 2 (omit): type = dog
+// find request 3 (omit): type = cat
+```
+
 Get layout metadata, which includes field, portal, and value list information
+
 ```php
 $layoutMetadata = FM::getLayoutMetadata('MyLayoutName');
 ```
 
 Get layout metadata for a specific record
+
 ```php
 $layoutMetadata = FM::layout('MyLayoutName')->recordId(879)->getLayoutMetadata();
 ```
 
 Run a script
+
 ```php
 $result = FM::layout('MyLayoutName')->performScript('MyScriptName');
 ```
 
 Run a script with JSON data as a parameter
+
 ```php
 $json = json_encode ([
     'name' => 'Joe Smith',
@@ -433,18 +503,20 @@ $json = json_encode ([
 $result = FM::layout('globals')->performScript('New Contact Request'; $json);
 ```
 
-
 Perform a script on a database other than the default database connection
+
 ```php
 $result = FM::connection('MyOtherDatabaseConnectionName')->layout('MyLayoutName')->performScript('MyScriptName');
 ```
 
 Create a record with an array of field data and then perform a script after record creation, within the same request
+
 ```php
 FM::layout('MyLayoutName')->script('ScriptName')->fieldData($data)->createRecord();
 ```
 
 Set a global field. The full `table_name::field_name` syntax is required for global fields.
+
 ```php
         $globalFields = [
             'GLOB::my_global_field' => 'New global value',
@@ -463,15 +535,17 @@ If you would like to manually log out and end your session you can do so either 
 ```php
 FM::connection()->disconnect();
 ```
- or
+
+or
+
 ```php
 MyModel::getConnectionResolver()->connection()->disconnect();
 ```
 
-
-
 ## Relating Native Laravel models to FMModels
+
 It is possible to have relationships between native Laravel Model objects from your MySQL database and FMModels created from your FileMaker database. To do this, you will need to set up both connections in your `database.config` file and then make sure your models are pointing to the right connection by setting the `$connection` propety in your Model and FMModel classes.
+
 ```php
 protected $connection = 'theConnectionName';
 ```
@@ -481,6 +555,7 @@ Once the connections are set correctly, relationships from FMModel objects to sq
 you can create relationships, such as a belongsTo, by manually creating a new eloquent-filemaker belongsTo object or importing a new trait and setting the appropriate keys.
 
 ### Using trait to create a relationship (2.3.0+)
+
 The `HasHybridRelationships` trait allows the model to automatically resolve relationships from a `Model` to an `FMModel`. Here is an example of using the trait to create a native Laravel User `Model` in a SQL database to belong to a FileMaker-based Company `FMModel` class.
 
 ```php
@@ -491,7 +566,7 @@ use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\HasHybridRelat
 class User extends Model
 {
     use HasHybridRelationships;
-    
+
     public function company()
     {
         // The Company class is an FMModel and is stored in FileMaker
@@ -532,4 +607,5 @@ class User extends Model
 Automated testing is currently in another repository. It's on our list to get those tests cleaned up and moved over to this package so that they're easier to run directly in here.
 
 ## License
+
 Eloquent-FileMaker is open-sourced software licensed under the MIT license.

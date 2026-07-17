@@ -2,6 +2,7 @@
 
 namespace GearboxSolutions\EloquentFileMaker\Database\Query;
 
+use Closure;
 use DateTimeInterface;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Contracts\Support\Arrayable;
@@ -168,6 +169,12 @@ class FMBaseBuilder extends Builder
      */
     public function where($column, $operator = null, $value = null, $boolean = 'and'): FMBaseBuilder
     {
+        // If the column is a Closure it is a nested where group, which should
+        // be built as its own query and then merged into this one
+        if ($column instanceof Closure && is_null($operator)) {
+            return $this->whereNested($column, $boolean);
+        }
+
         $shouldBeOmit = false;
 
         if (Str::contains($boolean, 'not')) {
@@ -221,6 +228,83 @@ class FMBaseBuilder extends Builder
                 $this->{$method}($key, '', $value, 'and');
             }
         }
+
+        return $this;
+    }
+
+    /**
+     * Create a new query instance for a nested where group.
+     */
+    public function forNestedWhere()
+    {
+        $query = parent::forNestedWhere();
+
+        $query->setFieldMapping($this->getFieldMapping());
+
+        return $query;
+    }
+
+    /**
+     * Merge the find requests from a nested where group into this query.
+     *
+     * FileMaker performs finds as a set of OR'd find requests, so an "and"
+     * nested group is applied by combining the current find request's criteria
+     * with each of the group's find requests, while an "or" group's find
+     * requests are simply added as additional find requests.
+     *
+     * @param  FMBaseBuilder  $query
+     * @param  string  $boolean
+     * @return $this
+     */
+    public function addNestedWhereQuery($query, $boolean = 'and')
+    {
+        // Resolve the nested group's find requests, expanding any whereIn clauses
+        $nestedFinds = array_values(array_filter($query->getWheres()));
+
+        if (empty($nestedFinds)) {
+            return $this;
+        }
+
+        if (Str::contains($boolean, 'not')) {
+            // Omit requests remove matching records from the found set, so
+            // NOT (A or B) is performed by adding both A and B as omits
+            foreach ($nestedFinds as $nestedFind) {
+                if (($nestedFind['omit'] ?? 'false') === 'true') {
+                    throw new InvalidArgumentException('Negating a nested where group which contains omit/whereNot clauses is not supported.');
+                }
+
+                $this->addFindRequest();
+                $nestedFind['omit'] = 'true';
+                $this->updateCurrentFind($nestedFind);
+            }
+
+            return $this;
+        }
+
+        if ($boolean === 'or') {
+            foreach ($nestedFinds as $nestedFind) {
+                $this->addFindRequest();
+                $this->updateCurrentFind($nestedFind);
+            }
+
+            return $this;
+        }
+
+        // "and" - a where() after an omit starts a new find request, and so
+        // should a nested group
+        if ($this->isCurrentFindAnOmit()) {
+            $this->addFindRequest();
+        }
+
+        $currentFind = $this->getCurrentFind();
+
+        $combinedFinds = array_map(function ($nestedFind) use ($currentFind) {
+            return array_merge($currentFind, $nestedFind);
+        }, $nestedFinds);
+
+        // Replace the current find request with the combined find requests
+        array_splice($this->wheres, $this->currentFindRequestIndex, 1, $combinedFinds);
+        $this->setFindRequestIndex($this->currentFindRequestIndex + count($combinedFinds) - 1);
 
         return $this;
     }
@@ -999,7 +1083,7 @@ class FMBaseBuilder extends Builder
      * @param  bool  $useDefault
      * @return array
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function prepareValueAndOperator($value, $operator, $useDefault = false)
     {
