@@ -295,7 +295,7 @@ class BaseBuilderRequestTest extends TestCase
         Http::fake();
 
         $this->expectException(FileMakerODataException::class);
-        $this->expectExceptionMessageIsOrContains('A limit or offset cannot be applied to an OData delete');
+        $this->expectExceptionMessage('A limit or offset cannot be applied to an OData delete');
 
         FM::table('pet')->where('type', 'cat')->limit(5)->delete();
     }
@@ -305,7 +305,7 @@ class BaseBuilderRequestTest extends TestCase
         Http::fake();
 
         $this->expectException(FileMakerODataException::class);
-        $this->expectExceptionMessageIsOrContains('A limit or offset cannot be applied to an OData update');
+        $this->expectExceptionMessage('A limit or offset cannot be applied to an OData update');
 
         FM::table('pet')->where('type', 'cat')->limit(5)->update(['name' => 'Cosmo']);
     }

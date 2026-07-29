@@ -219,7 +219,7 @@ class FMBaseBuilderTest extends TestCase
         $builder = $build();
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageIs("The [{$type}] where clause type is not supported by the OData query grammar.");
+        $this->expectExceptionMessage("The [{$type}] where clause type is not supported by the OData query grammar.");
 
         $builder->toSql();
     }
@@ -245,7 +245,7 @@ class FMBaseBuilderTest extends TestCase
     public function test_where_in_with_a_subquery_is_rejected(callable $build)
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageIs('Subqueries are not supported by the OData query grammar.');
+        $this->expectExceptionMessage('Subqueries are not supported by the OData query grammar.');
 
         $build();
     }
@@ -261,13 +261,17 @@ class FMBaseBuilderTest extends TestCase
         $builder = FM::table('pet')->orderByRaw('name desc');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageIs('Raw order by clauses are not supported by the OData query grammar.');
+        $this->expectExceptionMessage('Raw order by clauses are not supported by the OData query grammar.');
 
         $builder->getGrammar()->compileOrders($builder, $builder->orders);
     }
 
     public function test_order_by_accepts_a_sort_direction_enum()
     {
+        if (! enum_exists(SortDirection::class)) {
+            $this->markTestSkipped('The SortDirection enum was introduced in Laravel 13.');
+        }
+
         // Laravel passes the enum internally from enforceOrderBy(), which chunk()/each()/
         // lazy() rely on, so the override must not assume a string
         $builder = FM::table('pet')->orderBy('name', SortDirection::Descending);
