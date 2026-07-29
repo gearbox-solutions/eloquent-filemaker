@@ -199,6 +199,55 @@ class EloquentQueryTest extends TestCase
         $this->assertEquals('Cosmo', $paginator->items()[0]->petName);
     }
 
+    public function test_where_key_not_omits_the_primary_key()
+    {
+        $this->fakeDataApi([
+            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([])),
+        ]);
+
+        Pet::withoutGlobalScopes()->whereKeyNot('ABC-123')->get();
+
+        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
+        $this->assertEquals([['id' => '==ABC-123', 'omit' => 'true']], $data['query']);
+    }
+
+    public function test_where_key_not_after_an_existing_where_adds_a_separate_omit_request()
+    {
+        $this->fakeDataApi([
+            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([])),
+        ]);
+
+        Pet::withoutGlobalScopes()->where('type', 'cat')->whereKeyNot('ABC-123')->get();
+
+        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
+        $this->assertEquals([
+            ['type' => 'cat'],
+            ['id' => '==ABC-123', 'omit' => 'true'],
+        ], $data['query']);
+    }
+
+    public function test_exists_is_true_when_records_are_found()
+    {
+        $this->fakeDataApi([
+            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([
+                $this->fmRecord(['name' => 'Cosmo']),
+            ])),
+        ]);
+
+        $this->assertTrue(Pet::where('petName', 'Cosmo')->exists());
+        $this->assertFalse(Pet::where('petName', 'Cosmo')->doesntExist());
+    }
+
+    public function test_exists_is_false_when_no_records_match()
+    {
+        $this->fakeDataApi([
+            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmErrorResponse(401, 'No records match the request')),
+        ]);
+
+        $this->assertFalse(Pet::where('petName', 'Nobody')->exists());
+        $this->assertTrue(Pet::where('petName', 'Nobody')->doesntExist());
+    }
+
     public function test_has_many_queries_the_related_layout_by_foreign_key()
     {
         $this->fakeDataApi([

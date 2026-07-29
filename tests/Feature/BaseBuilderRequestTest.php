@@ -91,6 +91,22 @@ class BaseBuilderRequestTest extends TestCase
         $this->assertEquals([['fieldName' => 'name', 'sortOrder' => 'descend']], $data['sort']);
     }
 
+    public function test_get_can_filter_each_record_down_to_specific_top_level_keys()
+    {
+        $this->fakeDataApi([
+            $this->layoutUrl('pet') . '/records/*' => Http::response($this->fmRecordsResponse([
+                $this->fmRecord(['name' => 'Cosmo'], [], '10', '1'),
+                $this->fmRecord(['name' => 'Fido'], [], '11', '2'),
+            ])),
+        ]);
+
+        $records = FM::layout('pet')->get(['fieldData', 'recordId']);
+
+        $this->assertCount(2, $records);
+        $this->assertEquals(['fieldData' => ['name' => 'Cosmo'], 'recordId' => '10'], $records[0]);
+        $this->assertEquals(['fieldData' => ['name' => 'Fido'], 'recordId' => '11'], $records[1]);
+    }
+
     public function test_first_limits_the_query_to_one_record()
     {
         $this->fakeDataApi([

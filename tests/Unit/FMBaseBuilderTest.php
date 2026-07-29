@@ -122,6 +122,37 @@ class FMBaseBuilderTest extends TestCase
         ], $wheres);
     }
 
+    public function test_where_not_in_creates_omit_requests()
+    {
+        $wheres = FM::table('pet')->whereNotIn('name', ['Cosmo', 'Fido'])->getWheres();
+
+        $this->assertEquals([
+            ['name' => 'Cosmo', 'omit' => true],
+            ['name' => 'Fido', 'omit' => true],
+        ], $wheres);
+    }
+
+    public function test_where_not_in_after_a_where_keeps_the_where_and_adds_omits()
+    {
+        $wheres = FM::table('pet')->where('type', 'cat')->whereNotIn('name', ['Cosmo', 'Fido'])->getWheres();
+
+        $this->assertEquals([
+            ['type' => 'cat'],
+            ['omit' => true, 'name' => 'Cosmo'],
+            ['omit' => true, 'name' => 'Fido'],
+        ], $wheres);
+    }
+
+    public function test_where_in_after_a_where_not_combines_with_the_omit()
+    {
+        $wheres = FM::table('pet')->whereNot('flagged', 0)->whereIn('name', ['a', 'b'])->getWheres();
+
+        $this->assertEquals([
+            ['omit' => 'true', 'flagged' => '0', 'name' => 'a'],
+            ['omit' => 'true', 'flagged' => '0', 'name' => 'b'],
+        ], $wheres);
+    }
+
     public function test_where_in_with_no_values_forces_an_empty_result_set()
     {
         $builder = FM::table('pet')->whereIn('name', []);
