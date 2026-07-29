@@ -3,6 +3,7 @@
 namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent\Relations;
 
 use GearboxSolutions\EloquentFileMaker\Database\Eloquent\FMModel;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\MorphTo as BaseMorphTo;
 
 class MorphTo extends BaseMorphTo
@@ -11,7 +12,7 @@ class MorphTo extends BaseMorphTo
      * Get all of the relation results for a type.
      *
      * @param  string  $type
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
     protected function getResultsByType($type)
     {

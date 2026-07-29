@@ -4,6 +4,7 @@ namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent;
 
 use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -60,9 +61,11 @@ class FMEloquentBuilder extends Builder
      */
     public function exists()
     {
-        // do the query and check for a 401. The query will error if there are no rows which match the request
+        // A 401 (no records match the request) is caught by the base builder's getData()
+        // and turned into an empty collection rather than being thrown here, so we need to
+        // check the collection itself instead of relying on catching the exception.
         try {
-            $this->limit(1)->get();
+            return $this->limit(1)->get()->isNotEmpty();
         } catch (FileMakerDataApiException $e) {
             if ($e->getCode() == 401) {
                 return false;
@@ -70,9 +73,6 @@ class FMEloquentBuilder extends Builder
                 throw $e;
             }
         }
-
-        // It didn't error, so we have something
-        return true;
     }
 
     /**
@@ -104,7 +104,7 @@ class FMEloquentBuilder extends Builder
         }
 
         // If this is our first where clause we can add the omit directly
-        if (count($this->wheres) === 0) {
+        if (count($this->query->wheres) === 0) {
             return $this->where($this->model->getKeyName(), '==', $id)->omit();
         }
 
@@ -240,7 +240,7 @@ class FMEloquentBuilder extends Builder
      * @param  string  $pageName
      * @param  int|null  $page
      * @param  \Closure|int|null  $total
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator
      *
      * @throws \InvalidArgumentException
      */

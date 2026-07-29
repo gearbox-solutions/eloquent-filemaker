@@ -4,6 +4,7 @@ namespace Tests;
 
 use GearboxSolutions\EloquentFileMaker\Providers\FileMakerConnectionServiceProvider;
 use GearboxSolutions\EloquentFileMaker\Support\Facades\FM;
+use Illuminate\Foundation\Application;
 use Orchestra\Testbench\TestCase as OchestraTestCase;
 
 class TestCase extends OchestraTestCase
@@ -13,7 +14,7 @@ class TestCase extends OchestraTestCase
     /**
      * Get package providers.
      *
-     * @param  \Illuminate\Foundation\Application  $app
+     * @param  Application  $app
      * @return array
      */
     protected function getPackageProviders($app)
@@ -26,7 +27,7 @@ class TestCase extends OchestraTestCase
     /**
      * Override application aliases.
      *
-     * @param  \Illuminate\Foundation\Application  $app
+     * @param  Application  $app
      * @return array
      */
     protected function overrideApplicationProviders($app)
@@ -39,14 +40,16 @@ class TestCase extends OchestraTestCase
     /**
      * Define environment setup.
      *
-     * @param  Illuminate\Foundation\Application  $app
+     * @param  Application  $app
      * @return void
      */
     protected function getEnvironmentSetUp($app)
     {
-        $config = require 'config/database.php';
+        $config = require __DIR__ . '/config/database.php';
 
         $app['config']->set('app.key', 'iLhkC64h3FsbnfBbb1Z3KrH06WKsQw7w');
+
+        $app['config']->set('cache.default', 'array');
 
         $app['config']->set('database.default', 'filemaker');
         $app['config']->set('database.connections.filemaker', $config['connections']['filemaker']);

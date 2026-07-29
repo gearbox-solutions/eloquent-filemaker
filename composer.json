@@ -35,6 +35,9 @@
     "mockery/mockery": "^1.5.1",
     "laravel/pint": "^1.17"
   },
+  "scripts": {
+    "test": "phpunit"
+  },
   "extra": {
     "laravel": {
       "providers": [
