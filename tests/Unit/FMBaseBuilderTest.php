@@ -6,6 +6,9 @@ use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
 use GearboxSolutions\EloquentFileMaker\Support\Facades\FM;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
+use SortDirection;
 use Tests\TestCase;
 
 class FMBaseBuilderTest extends TestCase
@@ -136,18 +139,27 @@ class FMBaseBuilderTest extends TestCase
         $this->assertSame("endswith(name, 'smo')", $sql);
     }
 
-    public function test_where_date_formats_datetime_values_for_the_filter()
+    public function test_where_date_compiles_to_an_unquoted_odata_date_literal()
     {
         $sql = FM::table('person')->whereDate('birthday', new Carbon('1986-07-20'))->toSql();
 
-        $this->assertSame("birthday eq '1986-07-20'", $sql);
+        // quoting the literal would make it an Edm.String, which the server refuses to
+        // compare against a date field
+        $this->assertSame('birthday eq 1986-07-20', $sql);
     }
 
     public function test_where_date_with_an_operator()
     {
         $sql = FM::table('person')->whereDate('birthday', '>', new Carbon('1986-07-20'))->toSql();
 
-        $this->assertSame("birthday gt '1986-07-20'", $sql);
+        $this->assertSame('birthday gt 1986-07-20', $sql);
+    }
+
+    public function test_datetime_values_compile_to_unquoted_odata_timestamp_literals()
+    {
+        $sql = FM::table('person')->where('nextAppointment', '>', new Carbon('1986-07-20 10:30:00'))->toSql();
+
+        $this->assertSame('nextAppointment gt 1986-07-20T10:30:00+00:00', $sql);
     }
 
     public function test_field_names_with_special_characters_are_quoted()
@@ -180,6 +192,88 @@ class FMBaseBuilderTest extends TestCase
         $builder = FM::table('pet')->sort('name', FMBaseBuilder::DESCEND);
 
         $this->assertSame('desc', $builder->orders[0]['direction']);
+    }
+
+    /**
+     * The parent SQL grammar implements compilers for many where types that have no OData
+     * equivalent. Those must be rejected rather than inherited, or they silently emit SQL
+     * fragments (e.g. "year(t) = 2020") into the $filter expression.
+     */
+    public static function unsupportedWhereClauseProvider(): array
+    {
+        return [
+            'whereColumn' => [fn () => FM::table('pet')->whereColumn('a', 'b'), 'Column'],
+            'whereYear' => [fn () => FM::table('pet')->whereYear('t', 2020), 'Year'],
+            'whereMonth' => [fn () => FM::table('pet')->whereMonth('t', 7), 'Month'],
+            'whereDay' => [fn () => FM::table('pet')->whereDay('t', 20), 'Day'],
+            'whereTime' => [fn () => FM::table('pet')->whereTime('t', '10:00'), 'Time'],
+            'whereRaw' => [fn () => FM::table('pet')->whereRaw('name = "Cosmo"'), 'raw'],
+            'whereJsonContains' => [fn () => FM::table('pet')->whereJsonContains('specs->a', 1), 'JsonContains'],
+            'whereFullText' => [fn () => FM::table('pet')->whereFullText('name', 'Cosmo'), 'Fulltext'],
+        ];
+    }
+
+    #[DataProvider('unsupportedWhereClauseProvider')]
+    public function test_unsupported_where_clause_types_are_rejected(callable $build, string $type)
+    {
+        $builder = $build();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageIs("The [{$type}] where clause type is not supported by the OData query grammar.");
+
+        $builder->toSql();
+    }
+
+    /**
+     * Every one of these routes through whereIn(), which is where the guard lives - Laravel
+     * folds a queryable into a plain Expression value rather than its own where "type", so
+     * the grammar's allowlist can't catch it the way it catches whereExists/whereSub.
+     */
+    public static function subqueryWhereInProvider(): array
+    {
+        return [
+            'whereIn' => [fn () => FM::table('pet')->whereIn('id', FM::table('other'))],
+            'orWhereIn' => [fn () => FM::table('pet')->where('a', 1)->orWhereIn('id', FM::table('other'))],
+            'whereNotIn' => [fn () => FM::table('pet')->whereNotIn('id', FM::table('other'))],
+            'orWhereNotIn' => [fn () => FM::table('pet')->where('a', 1)->orWhereNotIn('id', FM::table('other'))],
+            'closure' => [fn () => FM::table('pet')->whereIn('id', fn ($q) => $q->from('other'))],
+            'inside a nested group' => [fn () => FM::table('pet')->where(fn ($q) => $q->whereIn('id', FM::table('other')))],
+        ];
+    }
+
+    #[DataProvider('subqueryWhereInProvider')]
+    public function test_where_in_with_a_subquery_is_rejected(callable $build)
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageIs('Subqueries are not supported by the OData query grammar.');
+
+        $build();
+    }
+
+    public function test_where_in_still_accepts_arrays_and_collections()
+    {
+        $this->assertSame('id in (1,2)', FM::table('pet')->whereIn('id', [1, 2])->toSql());
+        $this->assertSame('id in (1,2)', FM::table('pet')->whereIn('id', collect([1, 2]))->toSql());
+    }
+
+    public function test_order_by_raw_is_rejected()
+    {
+        $builder = FM::table('pet')->orderByRaw('name desc');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageIs('Raw order by clauses are not supported by the OData query grammar.');
+
+        $builder->getGrammar()->compileOrders($builder, $builder->orders);
+    }
+
+    public function test_order_by_accepts_a_sort_direction_enum()
+    {
+        // Laravel passes the enum internally from enforceOrderBy(), which chunk()/each()/
+        // lazy() rely on, so the override must not assume a string
+        $builder = FM::table('pet')->orderBy('name', SortDirection::Descending);
+
+        $this->assertSame('desc', $builder->orders[0]['direction']);
+        $this->assertSame('name desc', $builder->getGrammar()->compileOrders($builder, $builder->orders));
     }
 
     public function test_limit_and_offset_are_set_on_the_builder()

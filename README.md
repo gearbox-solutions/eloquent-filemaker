@@ -42,6 +42,7 @@ Version 3.0 replaces the FileMaker **Data API** connection with FileMaker's **OD
 - Container fields are written as base64-encoded values inline with your other field data, in the same request — no more separate container-upload request.
 - FileMaker scripts (`script()`, `scriptPresort()`, `scriptPrerequest()`, `executeScript()`/`performScript()`) and portals (`portal()`, `limitPortal()`, `offsetPortal()`, `portalData()`) have no OData equivalent and have been removed. Related data should be accessed through Eloquent relationships instead, which already work as separate queries independent of portals.
 - `setGlobalFields()` and `disconnect()` have been removed (no OData equivalent / no session to end).
+- Dates and timestamps are now written and filtered as ISO 8601, which is what OData requires. The default `$dateFormat` is `Y-m-d\TH:i:s` instead of the Data API's `m/j/Y H:i:s`.
 
 ### Upgrading from 2.x to 3.x
 
@@ -53,6 +54,7 @@ You will need to:
 2. Replace `protected $layout = '...';` with `protected $table = '...';` on your models (and `->layout('...')` calls with `->table('...')`).
 3. Remove any usage of `recordId`, `modId`/`withModId`, `duplicate()`, scripts, portals, or `setGlobalFields()`/`disconnect()` — there is no OData equivalent.
 4. Double check any code that inspects the raw shape of query builder responses — records are now flat associative arrays (e.g. `$record['name']`) instead of the Data API's `{fieldData, portalData, recordId, modId}` envelope.
+5. Remove any `$dateFormat` override that was set to a FileMaker display format (e.g. `n/j/Y g:i:s A`) so that the ISO 8601 default applies. Keep the override only for text fields that genuinely store dates in a display format.
 
 <details>
 <summary>What's new in 2.0 (historical)</summary>
@@ -226,14 +228,15 @@ protected $casts = [
 ];
 ```
 
-The format Date and Timestamp fields written to FileMaker can be changed via the `$dateFormat` property of your model. This value must be compatible with the format FileMaker expects for Timestamp values and will be the format written back into your database. One important requirement is that this must be a full timestamp format, not just a date format.
+FileMaker's OData API expects ISO 8601 for Date and Timestamp fields, regardless of the date format your FileMaker file was created with, so this package writes them as `1920-07-01T16:01:01` (or `1920-07-01` for `date` casts) by default. This is the `$dateFormat` property of your model, and you should not normally need to change it.
 
-Here are some example formats:
+If you do have a text field storing dates in a display format, you can override `$dateFormat` on that model as usual. It must be a full timestamp format, not just a date format — `date` casts strip the time portion themselves.
 
 ```php
 protected $dateFormat = 'n/j/Y g:i:s A'; // 7/1/1920 4:01:01 PM
-protected $dateFormat = 'n/j/Y G:i:s'; // 7/1/1920 16:01:01
 ```
+
+Date and timestamp values used in `where()` and `whereDate()` clauses are compiled into bare OData date literals (`birthday eq 1920-07-01`), which is what the server expects when comparing against a real Date or Timestamp field.
 
 ## Example FMModel Class
 
@@ -270,7 +273,13 @@ The FM facade provides access to the `FMBaseBuilder` class, which is also utiliz
 
 With this package in place the `DB` facade will still work for queries against your FileMaker database for basic record queries like `DB::table('pets')->where('name', 'Cosmo')->first()`, but the `FM` facade will allow you to access more FileMaker-specific functionality, such as `getTableMetadata()`, and should generally be used instead of `DB` for accessing your FileMaker data.
 
-Like the FMModel class and Eloquent builder, the goal is to support the same set of features as the `DB` facade so check out the [Laravel Query Builder Documentation](https://laravel.com/docs/master/queries) to see what the basic query builder features are. `where`, `orWhere`, `whereIn`, `whereNotIn`, `whereNull`, `whereNotNull`, `whereBetween`, `whereNot`, nested where groups (via closures), `orderBy`, `limit`/`offset`, and `count` are all supported and are compiled into an OData `$filter`/`$orderby`/`$top`/`$skip`.
+Like the FMModel class and Eloquent builder, the goal is to support the same set of features as the `DB` facade so check out the [Laravel Query Builder Documentation](https://laravel.com/docs/master/queries) to see what the basic query builder features are. `where`, `orWhere`, `whereIn`, `whereNotIn`, `whereNull`, `whereNotNull`, `whereBetween`, `whereDate`, `whereNot`, nested where groups (via closures), `orderBy`, `limit`/`offset`, and `count` are all supported and are compiled into an OData `$filter`/`$orderby`/`$top`/`$skip`.
+
+Query builder features with no OData equivalent throw an exception rather than silently producing a filter that doesn't mean what you asked for. That includes raw clauses (`whereRaw`, `orderByRaw`), subqueries, column-to-column comparisons (`whereColumn`), and date-part clauses (`whereYear`, `whereMonth`, `whereDay`, `whereTime`) — use `whereDate` or a `whereBetween` over a date range instead.
+
+#### Updating and deleting multiple records
+
+`update()` and `delete()` on a query are sent as a single OData request against every record matching your `$filter`. There is no OData equivalent of SQL's `UPDATE ... LIMIT n`, so applying a `limit()` or `offset()` to a write throws rather than quietly ignoring the limit and writing to the whole matched set. To write to a bounded number of records, fetch them first and save each one.
 
 #### Request customization methods
 

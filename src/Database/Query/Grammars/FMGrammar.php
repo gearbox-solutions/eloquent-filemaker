@@ -30,6 +30,26 @@ class FMGrammar extends Grammar
     ];
 
     /**
+     * The where clause "types" this grammar knows how to compile into OData, lower-cased
+     * because Laravel is not consistent about the casing it uses ("between" vs "Basic").
+     *
+     * This must be an explicit allowlist rather than a method_exists() check: the parent
+     * Grammar implements compilers for many more types (whereColumn, whereYear, whereExists,
+     * whereJsonContains, ...) which would otherwise be inherited and silently emit SQL
+     * fragments into the $filter expression.
+     */
+    protected array $supportedWhereTypes = [
+        'basic',
+        'like',
+        'in',
+        'notin',
+        'null',
+        'notnull',
+        'between',
+        'nested',
+    ];
+
+    /**
      * Get the format for database stored dates.
      *
      * @return string
@@ -71,13 +91,11 @@ class FMGrammar extends Grammar
         foreach ($query->wheres as $where) {
             [$boolean, $negate] = $this->parseWhereBoolean($where['boolean']);
 
-            $method = 'where' . $where['type'];
-
-            if (! method_exists($this, $method)) {
+            if (! in_array(strtolower($where['type']), $this->supportedWhereTypes, true)) {
                 throw new RuntimeException("The [{$where['type']}] where clause type is not supported by the OData query grammar.");
             }
 
-            $fragment = $this->{$method}($query, $where);
+            $fragment = $this->{'where' . $where['type']}($query, $where);
 
             if ($fragment === '') {
                 continue;
@@ -165,8 +183,10 @@ class FMGrammar extends Grammar
             return (string) $value;
         }
 
+        // OData date/time literals are written bare, not quoted like strings - quoting one
+        // makes it an Edm.String and the server rejects the comparison against a date field.
         if ($value instanceof DateTimeInterface) {
-            $value = $value->format($this->getDateFormat());
+            return $value->format($this->getDateFormat());
         }
 
         return "'" . str_replace("'", "''", (string) $value) . "'";
@@ -289,11 +309,6 @@ class FMGrammar extends Grammar
         return $filter === '' ? '' : '(' . $filter . ')';
     }
 
-    protected function whereRaw(Builder $query, $where)
-    {
-        throw new RuntimeException('Raw where clauses are not supported by the OData query grammar.');
-    }
-
     /**
      * Compile the query's orders into a bare $orderby expression (no "order by " prefix).
      */
@@ -304,6 +319,12 @@ class FMGrammar extends Grammar
         }
 
         return (new Collection($orders))->map(function ($order) use ($query) {
+            // Raw orders (orderByRaw) carry a "sql" key instead of a column and have no
+            // OData equivalent, so fail loudly rather than on an undefined array key.
+            if (! isset($order['column'])) {
+                throw new RuntimeException('Raw order by clauses are not supported by the OData query grammar.');
+            }
+
             $direction = strtolower($order['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
 
             return $this->wrapMapped($query, $order['column']) . ' ' . $direction;

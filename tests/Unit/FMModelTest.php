@@ -9,6 +9,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Tests\Models\Person;
+use Tests\Models\PersonWithCustomDateFormat;
 use Tests\Models\Pet;
 use Tests\Models\ReadOnlyFieldsPet;
 use Tests\TestCase;
@@ -99,23 +100,34 @@ class FMModelTest extends TestCase
         $this->assertSame(0, $pet->getAttributes()['flagged']);
     }
 
-    public function test_date_cast_attributes_are_stored_as_date_only_strings()
+    public function test_date_cast_attributes_are_stored_as_iso_date_only_strings()
     {
         $person = new Person;
 
         $person->birthday = new Carbon('1986-07-22');
 
-        // the model's date format is 'm/j/Y H:i:s' and date casts strip the time portion
-        $this->assertSame('07/22/1986', $person->getAttributes()['birthday']);
+        // OData expects ISO 8601, and date casts strip the time portion
+        $this->assertSame('1986-07-22', $person->getAttributes()['birthday']);
         $this->assertEquals('1986-07-22', $person->birthday->format('Y-m-d'));
     }
 
-    public function test_datetime_objects_are_stored_as_formatted_strings()
+    public function test_datetime_objects_are_stored_as_iso_timestamp_strings()
     {
         $person = new Person;
 
         $person->prevAppointment = new DateTime('1986-07-21 19:20:00');
 
+        $this->assertSame('1986-07-21T19:20:00', $person->getAttributes()['prevAppointment']);
+    }
+
+    public function test_a_custom_date_format_is_still_honoured()
+    {
+        $person = new PersonWithCustomDateFormat;
+
+        $person->birthday = new Carbon('1986-07-22');
+        $person->prevAppointment = new DateTime('1986-07-21 19:20:00');
+
+        $this->assertSame('07/22/1986', $person->getAttributes()['birthday']);
         $this->assertSame('07/21/1986 19:20:00', $person->getAttributes()['prevAppointment']);
     }
 

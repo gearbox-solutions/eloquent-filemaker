@@ -53,9 +53,13 @@ abstract class FMModel extends Model
     /**
      * The date format to use when writing to the database.
      *
+     * FileMaker's OData API expects ISO 8601 for Date and Timestamp fields, regardless of
+     * the date format the FileMaker file itself was created with. Timestamps are written
+     * without a timezone offset, since FileMaker timestamps are timezone-naive.
+     *
      * @var string
      */
-    protected $dateFormat = 'm/j/Y H:i:s';
+    protected $dateFormat = 'Y-m-d\TH:i:s';
 
     public static function all($columns = ['*'])
     {

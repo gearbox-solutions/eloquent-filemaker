@@ -55,7 +55,32 @@ class FileMakerConnection extends Connection
     {
         $response = $this->makeRequest('get', $this->getTableUrl($query->from), $this->buildQueryParams($query));
 
-        return $response['value'] ?? [];
+        $records = $response['value'] ?? [];
+
+        // FileMaker may apply server-driven paging and return only part of the result set
+        // along with an @odata.nextLink to the remainder. Follow those links so that get()
+        // returns every matching record rather than silently truncating.
+        $followed = [];
+
+        while (! empty($response['@odata.nextLink'])) {
+            $nextLink = $response['@odata.nextLink'];
+
+            // Guard against a server echoing back a link we've already followed, which
+            // would otherwise loop forever.
+            if (isset($followed[$nextLink])) {
+                break;
+            }
+
+            $followed[$nextLink] = true;
+
+            // No params here on purpose: the next link is a complete URL with its own query
+            // string, and passing an (even empty) query array would overwrite it.
+            $response = $this->makeRequest('get', $nextLink);
+
+            $records = array_merge($records, $response['value'] ?? []);
+        }
+
+        return $records;
     }
 
     /**
@@ -138,6 +163,8 @@ class FileMakerConnection extends Connection
      */
     public function update($query, $bindings = [])
     {
+        $this->assertNoLimitOnWrite($query, 'update');
+
         $data = $this->buildWriteData($query);
 
         if (empty($data)) {
@@ -166,6 +193,8 @@ class FileMakerConnection extends Connection
      */
     public function delete($query, $bindings = [])
     {
+        $this->assertNoLimitOnWrite($query, 'delete');
+
         $affected = $this->count($query);
 
         if ($affected === 0) {
@@ -175,6 +204,24 @@ class FileMakerConnection extends Connection
         $this->makeRawRequest('delete', $this->getTableUrl($query->from) . $this->queryStringSuffix($query));
 
         return $affected;
+    }
+
+    /**
+     * A bulk update/delete is expressed purely as a $filter on the collection endpoint -
+     * there is no OData equivalent of SQL's "UPDATE ... LIMIT n". Silently dropping the
+     * limit would write to every matching record, so refuse the query instead.
+     *
+     * @throws FileMakerODataException
+     */
+    protected function assertNoLimitOnWrite(FMBaseBuilder $query, string $operation): void
+    {
+        if (is_null($query->limit) && is_null($query->offset)) {
+            return;
+        }
+
+        throw new FileMakerODataException(
+            "A limit or offset cannot be applied to an OData {$operation}, which affects every record matching the query. Remove the limit/offset, or fetch the records first and {$operation} them individually."
+        );
     }
 
     protected function queryStringSuffix(FMBaseBuilder $query): string
@@ -310,7 +357,12 @@ class FileMakerConnection extends Connection
         $request = $this->prepareRequestForSending($request);
 
         try {
-            $response = $request->{$method}($url, $params);
+            // Call without the params argument when there is nothing to send: an empty
+            // array would still be applied as a query/body and would clobber a query
+            // string already present on the URL (as on an @odata.nextLink).
+            $response = empty($params)
+                ? $request->{$method}($url)
+                : $request->{$method}($url, $params);
         } catch (\Exception $e) {
             $this->logODataQuery($method, $url, $params, $start);
             throw $e;

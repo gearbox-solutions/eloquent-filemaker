@@ -40,8 +40,10 @@ trait FMHasAttributes
         // check the key's cast to see if it is cast to a date or custom date:format
         $castType = $this->getCasts()[$key] ?? '';
         $isDate = $castType == 'date' || str_starts_with($castType, 'date:');
-        if ($isDate && ($value !== null)) {
-            $value = Arr::first(explode(' ', $value));
+        if ($isDate && is_string($value)) {
+            // Strip the time portion, which is separated from the date by a "T" in the
+            // default ISO 8601 $dateFormat, or by a space in a custom one.
+            $value = Arr::first(preg_split('/[ T]/', $value));
         }
 
         // FileMaker can't handle true and false, so we need to change to 1 and 0

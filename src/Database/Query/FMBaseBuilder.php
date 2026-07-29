@@ -5,11 +5,13 @@ namespace GearboxSolutions\EloquentFileMaker\Database\Query;
 use DateTimeInterface;
 use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerODataException;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\Expression;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use RuntimeException;
 
 class FMBaseBuilder extends Builder
 {
@@ -46,11 +48,16 @@ class FMBaseBuilder extends Builder
      */
     public function orderBy($column, $direction = self::ASCEND): FMBaseBuilder
     {
-        $direction = match (strtolower($direction)) {
-            'ascend' => 'asc',
-            'descend' => 'desc',
-            default => $direction,
-        };
+        // $direction may be a SortDirection enum rather than a string - Laravel passes one
+        // internally from enforceOrderBy() (used by chunk(), each(), lazy(), ...). Leave
+        // anything that isn't a string alone and let the parent handle it.
+        if (is_string($direction)) {
+            $direction = match (strtolower($direction)) {
+                'ascend' => 'asc',
+                'descend' => 'desc',
+                default => $direction,
+            };
+        }
 
         parent::orderBy($column, $direction);
 
@@ -142,6 +149,26 @@ class FMBaseBuilder extends Builder
     public function setFieldMapping($fieldMapping): void
     {
         $this->fieldMapping = $fieldMapping;
+    }
+
+    /**
+     * OData has no subquery support. Laravel folds a queryable into a single Expression
+     * value rather than a distinct where "type", so the grammar can't tell it apart from a
+     * legitimate expression - it has to be caught here, or it compiles to `column in ('')`.
+     *
+     * @param  string  $column
+     * @param  mixed  $values
+     * @param  string  $boolean
+     * @param  bool  $not
+     * @return $this
+     */
+    public function whereIn($column, $values, $boolean = 'and', $not = false)
+    {
+        if ($this->isQueryable($values)) {
+            throw new RuntimeException('Subqueries are not supported by the OData query grammar.');
+        }
+
+        return parent::whereIn($column, $values, $boolean, $not);
     }
 
     /**
@@ -283,7 +310,10 @@ class FMBaseBuilder extends Builder
             $value = $value->format('Y-m-d');
         }
 
-        return $this->where($column, $operator, $value, $boolean);
+        // A date field is compared against a bare OData date literal (2020-01-31). Passing
+        // it as an expression keeps the grammar from quoting it into an Edm.String, which
+        // the server would reject as a type mismatch.
+        return $this->where($column, $operator, new Expression($value), $boolean);
     }
 
     public function toSql(): string

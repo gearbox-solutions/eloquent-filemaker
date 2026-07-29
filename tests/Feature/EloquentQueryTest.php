@@ -248,6 +248,32 @@ class EloquentQueryTest extends TestCase
         $this->assertEquals("id eq 'P-1'", $params['$filter']);
     }
 
+    /**
+     * chunk() orders by the primary key via Eloquent's enforceOrderBy(), which passes a
+     * SortDirection enum rather than a string to orderBy().
+     */
+    public function test_chunk_pages_through_results_and_orders_by_the_key()
+    {
+        Http::fakeSequence()
+            ->push($this->odataListResponse([['id' => 'A', 'name' => 'Cosmo']]))
+            ->push($this->odataListResponse([['id' => 'B', 'name' => 'Fido']]))
+            ->push($this->odataListResponse([]));
+
+        $seen = [];
+
+        Pet::query()->chunk(1, function ($pets) use (&$seen) {
+            foreach ($pets as $pet) {
+                $seen[] = $pet->petName;
+            }
+        });
+
+        $this->assertEquals(['Cosmo', 'Fido'], $seen);
+
+        $params = $this->queryParams($this->recordedRequests($this->tableUrl('pet'), 'get')[0]);
+        $this->assertEquals('id asc', $params['$orderby']);
+        $this->assertEquals('1', $params['$top']);
+    }
+
     public function test_eager_loading_uses_a_where_in_on_the_owner_key()
     {
         $this->fakeOData([

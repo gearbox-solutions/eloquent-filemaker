@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerODataException;
 use GearboxSolutions\EloquentFileMaker\Support\Facades\FM;
 use Illuminate\Http\File;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -255,6 +256,71 @@ class BaseBuilderRequestTest extends TestCase
 
         $this->assertSame(0, $deletedCount);
         $this->assertCount(0, $this->recordedRequests($this->tableUrl('pet'), 'delete'));
+    }
+
+    public function test_server_driven_paging_is_followed_via_the_next_link()
+    {
+        $nextLink = $this->tableUrl('pet') . '?$skiptoken=abc';
+
+        Http::fakeSequence()
+            ->push($this->odataListResponse([['name' => 'Cosmo']]) + ['@odata.nextLink' => $nextLink])
+            ->push($this->odataListResponse([['name' => 'Fido']]));
+
+        $records = FM::table('pet')->get();
+
+        $this->assertEquals(['Cosmo', 'Fido'], $records->pluck('name')->all());
+
+        // the next link is a complete URL and must be requested verbatim, not rebuilt
+        $requests = $this->recordedRequests($this->tableUrl('pet'), 'get');
+        $this->assertCount(2, $requests);
+        $this->assertEquals($nextLink, $requests[1]->url());
+    }
+
+    public function test_a_next_link_the_server_repeats_does_not_loop_forever()
+    {
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response(
+                $this->odataListResponse([['name' => 'Cosmo']]) + ['@odata.nextLink' => $this->tableUrl('pet') . '?$skiptoken=abc']
+            ),
+        ]);
+
+        $records = FM::table('pet')->get();
+
+        $this->assertCount(2, $records);
+        $this->assertCount(2, $this->recordedRequests($this->tableUrl('pet'), 'get'));
+    }
+
+    public function test_a_limit_cannot_be_applied_to_a_delete()
+    {
+        Http::fake();
+
+        $this->expectException(FileMakerODataException::class);
+        $this->expectExceptionMessageIsOrContains('A limit or offset cannot be applied to an OData delete');
+
+        FM::table('pet')->where('type', 'cat')->limit(5)->delete();
+    }
+
+    public function test_a_limit_cannot_be_applied_to_an_update()
+    {
+        Http::fake();
+
+        $this->expectException(FileMakerODataException::class);
+        $this->expectExceptionMessageIsOrContains('A limit or offset cannot be applied to an OData update');
+
+        FM::table('pet')->where('type', 'cat')->limit(5)->update(['name' => 'Cosmo']);
+    }
+
+    public function test_a_rejected_write_sends_no_requests_at_all()
+    {
+        Http::fake();
+
+        try {
+            FM::table('pet')->where('type', 'cat')->limit(5)->delete();
+        } catch (FileMakerODataException) {
+            // expected - assert below that nothing was written or even counted
+        }
+
+        Http::assertNothingSent();
     }
 
     public function test_container_fields_are_base64_encoded_inline_with_other_field_data()
