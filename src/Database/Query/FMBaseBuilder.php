@@ -486,9 +486,12 @@ class FMBaseBuilder extends Builder
     {
         $records = collect(Arr::get($this->getData(), 'response.data', []));
 
-        // filter to only requested columns
+        // filter each record down to only the requested top-level keys
+        // (e.g. 'fieldData', 'portalData', 'recordId', 'modId')
         if ($columns !== ['*']) {
-            $records = $records->intersectByKeys(array_flip($columns));
+            $records = $records->map(function ($record) use ($columns) {
+                return Arr::only($record, $columns);
+            });
         }
 
         return $records;
@@ -686,19 +689,9 @@ class FMBaseBuilder extends Builder
 
         $newWheres = collect([]);
 
-        // loop through each where
-        // If it is an omit, skip it
-        // If the where in is an omit, skip it
+        // loop through each where and merge in any whereIn clauses attached to it
         foreach ($this->wheres as $index => $where) {
             $whereInRequest = $whereInRequests->get($index) ?? [];
-
-            if (($where['omit'] ?? 'false') === 'true') {
-                if (count(array_keys($where)) > 1 || (count(array_keys($where)) === 1 && (collect($whereInRequest)->value('omit') ?? 'false') === 'false')) {
-                    $newWheres->push($where);
-
-                    continue;
-                }
-            }
 
             if (empty($whereInRequest)) {
                 $newWheres->push($where);
@@ -999,7 +992,7 @@ class FMBaseBuilder extends Builder
      * @param  bool  $useDefault
      * @return array
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function prepareValueAndOperator($value, $operator, $useDefault = false)
     {
@@ -1054,7 +1047,9 @@ class FMBaseBuilder extends Builder
             return true;
         }
 
-        return collect($wheres->first())->keys()->except(['omit'])->isEmpty();
+        // keys() returns the field names as values (not keys), so 'omit' has to
+        // be filtered out by value with diff(), not by key with except()
+        return collect($wheres->first())->keys()->diff(['omit'])->isEmpty();
     }
 
     public function setFindRequestIndex($index)

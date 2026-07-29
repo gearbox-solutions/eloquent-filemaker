@@ -2,7 +2,9 @@
 
 namespace GearboxSolutions\EloquentFileMaker\Database\Schema;
 
-class FMBuilder extends \Illuminate\Database\Schema\Builder
+use Illuminate\Database\Schema\Builder;
+
+class FMBuilder extends Builder
 {
     /**
      * Get the column listing for a given table.
