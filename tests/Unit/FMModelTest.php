@@ -11,25 +11,18 @@ use Illuminate\Support\Facades\DB;
 use Tests\Models\Person;
 use Tests\Models\Pet;
 use Tests\Models\ReadOnlyFieldsPet;
-use Tests\Support\MocksDataApi;
 use Tests\TestCase;
 
 class FMModelTest extends TestCase
 {
-    use MocksDataApi;
-
     protected function cosmoRecord(): array
     {
-        return $this->fmRecord([
+        return [
             'id' => 'ABC-123',
             'name' => 'Cosmo',
             'type' => 'cat',
             'flagged' => 1,
-        ], [
-            'pets' => [
-                ['per_PET::name' => 'Fido', 'recordId' => '55', 'modId' => '1'],
-            ],
-        ], '879', '2');
+        ];
     }
 
     public function test_create_from_record_hydrates_a_model()
@@ -38,8 +31,6 @@ class FMModelTest extends TestCase
 
         $this->assertEquals('ABC-123', $pet->id);
         $this->assertEquals('cat', $pet->type);
-        $this->assertEquals('879', $pet->getRecordId());
-        $this->assertEquals('2', $pet->getModId());
         $this->assertTrue($pet->exists);
         $this->assertTrue($pet->isClean());
     }
@@ -53,18 +44,9 @@ class FMModelTest extends TestCase
         $this->assertNull($pet->name);
     }
 
-    public function test_create_from_record_includes_portal_data()
-    {
-        $pet = Pet::createFromRecord($this->cosmoRecord());
-
-        $this->assertEquals([
-            ['per_PET::name' => 'Fido', 'recordId' => '55', 'modId' => '1'],
-        ], $pet->pets);
-    }
-
     public function test_create_from_record_converts_empty_strings_to_null()
     {
-        $pet = Pet::createFromRecord($this->fmRecord(['name' => 'Cosmo', 'type' => '']));
+        $pet = Pet::createFromRecord(['name' => 'Cosmo', 'type' => '']);
 
         $this->assertNull($pet->type);
     }
@@ -74,7 +56,7 @@ class FMModelTest extends TestCase
         Config::set('database.connections.filemaker.empty_strings_to_null', false);
         DB::purge('filemaker');
 
-        $pet = Pet::createFromRecord($this->fmRecord(['name' => 'Cosmo', 'type' => '']));
+        $pet = Pet::createFromRecord(['name' => 'Cosmo', 'type' => '']);
 
         $this->assertSame('', $pet->type);
     }
@@ -82,8 +64,8 @@ class FMModelTest extends TestCase
     public function test_create_models_from_record_set_returns_an_eloquent_collection()
     {
         $models = Pet::createModelsFromRecordSet(collect([
-            $this->fmRecord(['name' => 'Cosmo']),
-            $this->fmRecord(['name' => 'Fido'], [], '2'),
+            ['name' => 'Cosmo'],
+            ['name' => 'Fido'],
         ]));
 
         $this->assertInstanceOf(Collection::class, $models);
@@ -101,7 +83,7 @@ class FMModelTest extends TestCase
 
     public function test_empty_strings_are_cast_to_null_for_cast_attributes()
     {
-        $pet = Pet::createFromRecord($this->fmRecord(['name' => 'Cosmo', 'creationTimestamp' => '']));
+        $pet = Pet::createFromRecord(['name' => 'Cosmo', 'creationTimestamp' => '']);
 
         $this->assertNull($pet->creationTimestamp);
     }
@@ -137,12 +119,11 @@ class FMModelTest extends TestCase
         $this->assertSame('07/21/1986 19:20:00', $person->getAttributes()['prevAppointment']);
     }
 
-    public function test_get_layout_is_used_as_the_table_name()
+    public function test_table_property_is_used_as_the_table_name()
     {
         $pet = new Pet;
 
         $this->assertEquals('pet', $pet->getTable());
-        $this->assertEquals('pet', $pet->getLayout());
     }
 
     public function test_columns_are_not_qualified_with_a_table_name()
@@ -169,7 +150,7 @@ class FMModelTest extends TestCase
         $this->assertEquals(['name' => 'Cosmo'], $pet->getAttributesForFileMakerWrite()->toArray());
     }
 
-    public function test_container_fields_are_written_separately_from_field_data()
+    public function test_container_fields_are_included_in_the_write_payload()
     {
         $path = tempnam(sys_get_temp_dir(), 'efm-test-');
         file_put_contents($path, 'fake image data');
@@ -178,42 +159,13 @@ class FMModelTest extends TestCase
         $pet->petName = 'Cosmo';
         $pet->photo = new File($path);
 
-        $this->assertEquals(['petName' => 'Cosmo'], $pet->getAttributesForFileMakerWrite()->toArray());
-        $this->assertEquals(['photo'], $pet->getContainersToWrite()->toArray());
+        $written = $pet->getAttributesForFileMakerWrite();
+
+        // getAttributesForFileMakerWrite() returns attribute names; mapping to FileMaker
+        // field names happens later, when the query builder's fieldData() is called
+        $this->assertSame('Cosmo', $written['petName']);
+        $this->assertInstanceOf(File::class, $written['photo']);
 
         unlink($path);
-    }
-
-    public function test_a_file_with_a_custom_file_name_is_treated_as_a_container()
-    {
-        $path = tempnam(sys_get_temp_dir(), 'efm-test-');
-        file_put_contents($path, 'fake image data');
-
-        $pet = new Pet;
-        $pet->photo = [new File($path), 'fluffy.jpg'];
-
-        $this->assertEquals(['photo'], $pet->getContainersToWrite()->toArray());
-
-        unlink($path);
-    }
-
-    public function test_with_mod_id_can_set_a_mod_id_directly()
-    {
-        $pet = new Pet;
-
-        $this->assertFalse($pet->usingModId());
-
-        $pet->withModId(5);
-
-        $this->assertTrue($pet->usingModId());
-        $this->assertEquals(5, $pet->getModId());
-
-        $pet->withModId(false);
-        $this->assertFalse($pet->usingModId());
-    }
-
-    public function test_duplicating_an_unsaved_model_returns_false()
-    {
-        $this->assertFalse((new Pet)->duplicate());
     }
 }

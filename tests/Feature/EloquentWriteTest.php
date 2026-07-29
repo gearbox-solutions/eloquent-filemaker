@@ -6,35 +6,45 @@ use Illuminate\Http\File;
 use Illuminate\Support\Facades\Http;
 use Tests\Models\Car;
 use Tests\Models\GuardedPerson;
-use Tests\Models\Person;
 use Tests\Models\Pet;
-use Tests\Support\MocksDataApi;
+use Tests\Support\MocksOData;
 use Tests\TestCase;
 
 class EloquentWriteTest extends TestCase
 {
-    use MocksDataApi;
+    use MocksOData;
 
     protected function hydratedPet(): Pet
     {
-        return Pet::createFromRecord($this->fmRecord([
+        return Pet::createFromRecord([
             'id' => 'ABC-123',
             'name' => 'Cosmo',
             'type' => 'cat',
             'flagged' => 1,
-        ], [], '879', '2'));
+        ]);
     }
 
-    public function test_saving_a_new_model_creates_a_record_and_refreshes_it()
+    protected function personMetadataXml(): string
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/records/*' => Http::sequence()
-                // response to the create
-                ->push($this->fmResultResponse(['recordId' => '100', 'modId' => '0']))
-                // response to the refresh after the insert
-                ->push($this->fmRecordsResponse([
-                    $this->fmRecord(['id' => 'NEW-UUID', 'name' => 'Mr.Bigglesworth', 'flagged' => 1], [], '100', '0'),
-                ])),
+        return <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+              <edmx:DataServices>
+                <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="Tester">
+                  <EntityType Name="person">
+                    <Property Name="nameLast" Type="Edm.String"/>
+                    <Property Name="numberOfArms" Type="Edm.Int32"/>
+                  </EntityType>
+                </Schema>
+              </edmx:DataServices>
+            </edmx:Edmx>
+            XML;
+    }
+
+    public function test_saving_a_new_model_creates_a_record_and_hydrates_from_the_response()
+    {
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response(['id' => 'NEW-UUID', 'name' => 'Mr.Bigglesworth', 'flagged' => 1]),
         ]);
 
         $pet = new Pet;
@@ -43,25 +53,19 @@ class EloquentWriteTest extends TestCase
         $pet->save();
 
         $this->assertTrue($pet->exists);
-        $this->assertEquals('100', $pet->getRecordId());
-        // the generated primary key is filled in from the post-insert refresh
         $this->assertEquals('NEW-UUID', $pet->id);
+        $this->assertEquals('Mr.Bigglesworth', $pet->petName);
 
-        $create = $this->recordedRequest($this->layoutUrl('pet') . '/records/', 'post');
-        // attribute names are mapped back to FileMaker field names and booleans converted
-        $this->assertEquals(['fieldData' => ['name' => 'Mr.Bigglesworth', 'flagged' => 1]], $this->bodyData($create));
-
-        $this->recordedRequest($this->layoutUrl('pet') . '/records/100', 'get');
+        // a single request creates the record; the OData response already contains the
+        // generated primary key and any calculated field values, so no refresh is needed
+        $create = $this->recordedRequest($this->tableUrl('pet'), 'post');
+        $this->assertEquals(['name' => 'Mr.Bigglesworth', 'flagged' => 1], $this->bodyData($create));
     }
 
     public function test_create_only_fills_fillable_attributes()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/records/*' => Http::sequence()
-                ->push($this->fmResultResponse(['recordId' => '100', 'modId' => '0']))
-                ->push($this->fmRecordsResponse([
-                    $this->fmRecord(['id' => 'NEW-UUID', 'name' => 'myNewPet', 'type' => 'hamster'], [], '100', '0'),
-                ])),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response(['id' => 'NEW-UUID', 'name' => 'myNewPet', 'type' => 'hamster']),
         ]);
 
         $pet = Pet::create([
@@ -70,28 +74,18 @@ class EloquentWriteTest extends TestCase
             'serial' => 999,
         ]);
 
-        $this->assertEquals('100', $pet->getRecordId());
+        $this->assertEquals('NEW-UUID', $pet->id);
 
-        $create = $this->recordedRequest($this->layoutUrl('pet') . '/records/', 'post');
+        $create = $this->recordedRequest($this->tableUrl('pet'), 'post');
         // serial is not fillable and should not be sent
-        $this->assertEquals(['fieldData' => ['name' => 'myNewPet', 'type' => 'hamster']], $this->bodyData($create));
+        $this->assertEquals(['name' => 'myNewPet', 'type' => 'hamster'], $this->bodyData($create));
     }
 
     public function test_guarded_attributes_are_not_written_to_filemaker()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('person') . '/records/*' => Http::sequence()
-                ->push($this->fmResultResponse(['recordId' => '200', 'modId' => '0']))
-                ->push($this->fmRecordsResponse([
-                    $this->fmRecord(['id' => 'P-1', 'nameLast' => 'Armstrong'], [], '200', '0'),
-                ])),
-            // guarding specific fields makes the model check the layout's field names
-            $this->layoutUrl('person') => Http::response($this->fmResultResponse([
-                'fieldMetaData' => [
-                    ['name' => 'nameLast'],
-                    ['name' => 'numberOfArms'],
-                ],
-            ])),
+        $this->fakeOData([
+            $this->baseUrl() . '/$metadata' => Http::response($this->personMetadataXml()),
+            $this->tableUrl('person') . '*' => Http::response(['id' => '200', 'nameLast' => 'Armstrong']),
         ]);
 
         $person = GuardedPerson::create([
@@ -99,16 +93,18 @@ class EloquentWriteTest extends TestCase
             'nameLast' => 'Armstrong',
         ]);
 
-        $this->assertEquals('200', $person->getRecordId());
+        // GuardedPerson maps the 'id' FileMaker field to the 'primaryKey' attribute
+        $this->assertEquals('200', $person->primaryKey);
 
-        $create = $this->recordedRequest($this->layoutUrl('person') . '/records/', 'post');
-        $this->assertEquals(['fieldData' => ['nameLast' => 'Armstrong']], $this->bodyData($create));
+        $create = $this->recordedRequest($this->tableUrl('person'), 'post');
+        $this->assertEquals(['nameLast' => 'Armstrong'], $this->bodyData($create));
     }
 
     public function test_saving_an_existing_model_patches_only_dirty_fields()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/records/*' => Http::response($this->fmResultResponse(['modId' => '3'])),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '/$count*' => $this->odataCountResponse(1),
+            $this->tableUrl('pet') . '*' => Http::response([]),
         ]);
 
         $pet = $this->hydratedPet();
@@ -116,11 +112,9 @@ class EloquentWriteTest extends TestCase
 
         $this->assertTrue($pet->save());
 
-        $patch = $this->recordedRequest($this->layoutUrl('pet') . '/records/879', 'patch');
-        $this->assertEquals(['fieldData' => ['name' => 'Cosmo Updated']], $this->bodyData($patch));
-
-        // the modId is updated from the edit response
-        $this->assertEquals('3', $pet->getModId());
+        $patch = $this->recordedRequest($this->tableUrl('pet'), 'patch');
+        $this->assertEquals(['name' => 'Cosmo Updated'], $this->bodyData($patch));
+        $this->assertEquals("id eq 'ABC-123'", $this->queryParams($patch)['$filter']);
     }
 
     public function test_saving_a_model_with_no_changes_sends_no_requests()
@@ -134,69 +128,39 @@ class EloquentWriteTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_with_mod_id_includes_the_mod_id_when_editing()
+    public function test_deleting_a_model_deletes_it_by_its_primary_key()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/records/*' => Http::response($this->fmResultResponse(['modId' => '3'])),
-        ]);
-
-        $pet = $this->hydratedPet();
-        $pet->petName = 'Cosmo Updated';
-        $pet->withModId()->save();
-
-        $patch = $this->recordedRequest($this->layoutUrl('pet') . '/records/879', 'patch');
-        $this->assertEquals('2', $this->bodyData($patch)['modId']);
-    }
-
-    public function test_deleting_a_model_deletes_by_its_record_id()
-    {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/records/*' => Http::response($this->fmResultResponse()),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '/$count*' => $this->odataCountResponse(1),
+            $this->tableUrl('pet') . '*' => Http::response([]),
         ]);
 
         $pet = $this->hydratedPet();
 
         $this->assertTrue($pet->delete());
 
-        $request = $this->recordedRequest($this->layoutUrl('pet') . '/records/879', 'delete');
-        $this->assertEquals('DELETE', $request->method());
+        $delete = $this->recordedRequest($this->tableUrl('pet'), 'delete');
+        $this->assertEquals("id eq 'ABC-123'", $this->queryParams($delete)['$filter']);
     }
 
-    public function test_deleting_from_a_query_bulk_deletes_the_found_models()
+    public function test_deleting_from_a_query_bulk_deletes_the_matched_models()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['name' => 'Junk'], [], '7'),
-                $this->fmRecord(['name' => 'Junk'], [], '8'),
-            ])),
-            $this->layoutUrl('pet') . '/records/*' => Http::response($this->fmResultResponse()),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '/$count*' => $this->odataCountResponse(2),
+            $this->tableUrl('pet') . '*' => Http::response([]),
         ]);
 
         $deletedCount = Pet::where('petName', 'Junk')->delete();
 
         $this->assertSame(2, $deletedCount);
-        $this->assertCount(2, $this->recordedRequests($this->layoutUrl('pet') . '/records/', 'delete'));
-    }
-
-    public function test_duplicating_a_model_returns_the_new_record_id()
-    {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/records/*' => Http::response($this->fmResultResponse(['recordId' => '900', 'modId' => '0'])),
-        ]);
-
-        $pet = $this->hydratedPet();
-
-        $newRecordId = $pet->duplicate();
-
-        $this->assertEquals('900', $newRecordId);
-        $this->recordedRequest($this->layoutUrl('pet') . '/records/879', 'post');
+        $this->assertCount(1, $this->recordedRequests($this->tableUrl('pet'), 'delete'));
     }
 
     public function test_refresh_reloads_the_model_attributes()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/records/*' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['id' => 'ABC-123', 'name' => 'Fresh Name'], [], '879', '5'),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([
+                ['id' => 'ABC-123', 'name' => 'Fresh Name'],
             ])),
         ]);
 
@@ -208,13 +172,15 @@ class EloquentWriteTest extends TestCase
         $this->assertEquals('Fresh Name', $pet->petName);
         $this->assertTrue($pet->isClean());
 
-        $this->recordedRequest($this->layoutUrl('pet') . '/records/879', 'get');
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('pet'), 'get'));
+        $this->assertEquals("id eq 'ABC-123'", $params['$filter']);
     }
 
-    public function test_setting_a_container_field_uploads_the_file_on_save()
+    public function test_setting_a_container_field_is_base64_encoded_in_the_update_patch()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/records/*' => Http::response($this->fmResultResponse(['modId' => '4'])),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '/$count*' => $this->odataCountResponse(1),
+            $this->tableUrl('pet') . '*' => Http::response([]),
         ]);
 
         $path = tempnam(sys_get_temp_dir(), 'efm-test-');
@@ -224,63 +190,30 @@ class EloquentWriteTest extends TestCase
         $pet->photo = new File($path);
         $pet->save();
 
-        $upload = $this->recordedRequest($this->layoutUrl('pet') . '/records/879/containers/photo', 'post');
-        $this->assertTrue($upload->hasFile('upload'));
-
-        // no field data changed, so nothing should be patched
-        $this->assertCount(0, $this->recordedRequests($this->layoutUrl('pet') . '/records/879', 'patch'));
-
-        // the modId is updated from the container upload response
-        $this->assertEquals('4', $pet->getModId());
+        $patch = $this->recordedRequest($this->tableUrl('pet'), 'patch');
+        $this->assertEquals(base64_encode('fake image data'), $this->bodyData($patch)['photo']);
 
         unlink($path);
     }
 
     public function test_json_fields_can_be_updated_with_arrow_syntax()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('car') . '/records/*' => Http::response($this->fmResultResponse(['modId' => '2'])),
+        $this->fakeOData([
+            $this->tableUrl('car') . '/$count*' => $this->odataCountResponse(1),
+            $this->tableUrl('car') . '*' => Http::response([]),
         ]);
 
-        $car = Car::createFromRecord($this->fmRecord([
+        $car = Car::createFromRecord([
             'model' => 'Celica',
             'tech_specs_json' => '{"year":2000}',
-        ], [], '10', '1'));
+        ]);
+        $car->id = '10';
+        $car->syncOriginal();
 
         $car->update(['tech_specs_json->year' => 2001]);
 
-        $patch = $this->recordedRequest($this->layoutUrl('car') . '/records/10', 'patch');
-        $this->assertEquals(['fieldData' => ['tech_specs_json' => '{"year":2001}']], $this->bodyData($patch));
+        $patch = $this->recordedRequest($this->tableUrl('car'), 'patch');
+        $this->assertEquals(['tech_specs_json' => '{"year":2001}'], $this->bodyData($patch));
         $this->assertEquals(2001, $car->tech_specs_json['year']);
-    }
-
-    public function test_modified_portal_data_is_sent_with_only_the_changed_fields()
-    {
-        $this->fakeDataApi([
-            $this->layoutUrl('person') . '/records/*' => Http::response($this->fmResultResponse(['modId' => '6'])),
-        ]);
-
-        $person = Person::createFromRecord($this->fmRecord([
-            'id' => 'P-1',
-            'nameFirst' => 'David',
-        ], [
-            'cars_named' => [
-                ['per_CAR::model' => 'Celica', 'per_CAR::year' => 2001, 'recordId' => '11', 'modId' => '2'],
-            ],
-        ], '300', '5'));
-
-        $cars = $person->cars_named;
-        $cars[0]['per_CAR::model'] = 'Celicaa';
-        $person->cars_named = $cars;
-        $person->save();
-
-        $patch = $this->recordedRequest($this->layoutUrl('person') . '/records/300', 'patch');
-        $this->assertEquals([
-            'portalData' => [
-                'cars_named' => [
-                    ['per_CAR::model' => 'Celicaa', 'recordId' => '11'],
-                ],
-            ],
-        ], $this->bodyData($patch));
     }
 }

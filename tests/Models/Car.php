@@ -8,7 +8,7 @@ class Car extends FMModel
 {
     protected $connection = 'filemaker';
 
-    protected $layout = 'car';
+    protected $table = 'car';
 
     protected $guarded = [];
 

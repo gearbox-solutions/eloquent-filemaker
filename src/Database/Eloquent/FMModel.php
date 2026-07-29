@@ -6,16 +6,12 @@ use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\FMGuardsAttrib
 use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\FMHasAttributes;
 use GearboxSolutions\EloquentFileMaker\Database\Eloquent\Concerns\FMHasRelationships;
 use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;
 use Illuminate\Database\Eloquent\Relations\Pivot;
-use Illuminate\Http\File;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection as BaseCollection;
-use Illuminate\Support\Str;
 
 abstract class FMModel extends Model
 {
@@ -48,30 +44,6 @@ abstract class FMModel extends Model
     ];
 
     /**
-     * The layout to be used when retrieving this model. This is equivalent to the standard laravel $table property and
-     * either one can be used.
-     */
-    protected $layout;
-
-    /**
-     * The internal FileMaker record ID. This is not the primary key of the record used in relationships. This field is
-     * automatically updated when records are retrieved or saved.
-     */
-    protected $recordId;
-
-    /**
-     * The internal FileMaker ModId which keeps track of the modification number of a particular FileMaker record. This
-     * value is automatically set when records are retrieved or saved.
-     */
-    protected $modId;
-
-    /**
-     * A flag to determine if the last retrieved ModId for the record should be sent when editing a record. The Data
-     * API will return an error if the record has been modified and current ModId does not match the one being sent.
-     */
-    protected $withModId = false;
-
-    /**
      * The "type" of the primary key ID. FileMaker uses UUID strings by default.
      *
      * @var string
@@ -85,70 +57,40 @@ abstract class FMModel extends Model
      */
     protected $dateFormat = 'm/j/Y H:i:s';
 
-    public function __construct(array $attributes = [])
-    {
-        // Laravel uses tables normally, but FileMaker users layouts, so we'll let users set either one for clarity
-        // Set table if the user didn't set it and set $layout instead
-        if (! $this->table) {
-            $this->setTable($this->layout);
-        }
-        parent::__construct($attributes);
-    }
-
     public static function all($columns = ['*'])
     {
-        return static::query()->limit(1000000000000000000)->get(
+        return static::query()->get(
             is_array($columns) ? $columns : func_get_args()
         );
     }
 
     /**
-     * Create a model object from the returned FileMaker data
+     * Create a model object from a flat record as returned by the OData API
      *
      * @param  array  $record
      * @return FMModel
      */
     public static function createFromRecord($record)
     {
-        // create a new static instance for the class or child class
-        $instance = new static;
+        return (new static)->hydrateFromRecord($record);
+    }
 
-        // just get the field data to make it easier to work with
-        $fieldData = $record['fieldData'];
-        $portalData = $record['portalData'];
-
-        $fieldMapping = $instance->getFieldMapping();
-
-        // Only do field mapping if one has been defined
-        if (! empty($fieldMapping)) {
-            // Fill the attributes from fieldMapping with the fieldData retrieved from FileMaker
-            $fieldData = collect($fieldData)->mapWithKeys(function ($value, $key) use ($fieldMapping) {
-                return [$fieldMapping[$key] ?? $key => $value];
-            })->toArray();
-        }
-
-        // check our config to see if we should map empty strings to null - users may decide they don't want this
-        $emptyStringToNull = $instance->getConnection()->getConfig()['empty_strings_to_null'] ?? true;
-        if ($emptyStringToNull) {
-            // map each value to null if it's an empty string
-            $fieldData = collect($fieldData)->map(function ($value) {
-                return $value === '' ? null : $value;
-            })->toArray();
-        }
-
-        // fill in the field data and portal data we've mapped and retrieved
-        $combinedAttributes = [...$fieldData, ...$portalData];
-        $instance->setRawAttributes($combinedAttributes, true);
-
-        $recordId = $record['recordId'];
-        $modId = $record['modId'];
-        $instance->setRecordId($recordId);
-        $instance->setModId($modId);
-        $instance->exists = true;
+    /**
+     * Fill this model's raw attributes directly from a flat OData record, bypassing any
+     * mutators/casts (the record already reflects FileMaker's storage representation).
+     * Used both for hydrating freshly-fetched records and for hydrating a model in place
+     * after a create/refresh response.
+     *
+     * @return $this
+     */
+    public function hydrateFromRecord($record)
+    {
+        $this->setRawAttributes($this->mapRecordAttributes($record), true);
+        $this->exists = true;
         // Sync the original data array so we know if it's been modified
-        $instance->syncOriginal();
+        $this->syncOriginal();
 
-        return $instance;
+        return $this;
     }
 
     public static function createModelsFromRecordSet(BaseCollection $records): Collection
@@ -173,25 +115,7 @@ abstract class FMModel extends Model
      */
     public function fillFromRecord($record)
     {
-        // just get the field data to make it easier to work with
-        $fieldData = $record['fieldData'];
-        $portalData = $record['portalData'];
-
-        $fieldMapping = $this->getFieldMapping();
-
-        // Only do field mapping if one has been defined
-        if (! empty($fieldMapping)) {
-            // Fill the attributes from fieldMapping with the fieldData retrieved from FileMaker
-            $fieldData = collect($fieldData)->mapWithKeys(function ($value, $key) use ($fieldMapping) {
-                return [$fieldMapping[$key] ?? $key => $value];
-            })->toArray();
-        }
-
-        // fill in the field data we've mapped and retrieved
-        tap($this)->forceFill($fieldData);
-
-        // fill in the portal data we've retrieved
-        tap($this)->forceFill($portalData);
+        tap($this)->forceFill($this->mapRecordAttributes($record));
 
         // Sync the original data array so we know if it's been modified
         $this->syncOriginal();
@@ -199,57 +123,28 @@ abstract class FMModel extends Model
         return $this;
     }
 
-    public function getRecordId()
-    {
-        return $this->recordId;
-    }
-
-    public function setRecordId($recordId)
-    {
-        $this->recordId = $recordId;
-    }
-
     /**
-     * @return int|null
+     * Map a flat OData record's field names through the model's $fieldMapping and apply the
+     * empty-string-to-null convention.
      */
-    public function getModId()
+    protected function mapRecordAttributes($record): array
     {
-        return $this->modId;
-    }
+        $fieldMapping = $this->getFieldMapping();
 
-    /**
-     * @param  int  $modId
-     */
-    public function setModId($modId): void
-    {
-        $this->modId = $modId;
-    }
-
-    /**
-     * Include the modification Id when editing a record
-     *
-     * @param  int|string|bool  $includeModId  This can be an integer to set the ModId or a boolean to include it or not
-     */
-    public function withModId(int|string|bool $includeModId = true): static
-    {
-        // check if the parameter is an integer, if not, default to true
-        if (! is_bool($includeModId)) {
-            $modId = $includeModId;
-
-            // set the mod ID and include it
-            $this->setModId($modId);
-            $includeModId = true;
+        if (! empty($fieldMapping)) {
+            $record = collect($record)->mapWithKeys(function ($value, $key) use ($fieldMapping) {
+                return [$fieldMapping[$key] ?? $key => $value];
+            })->toArray();
         }
 
-        // remove any set ModId if the user wishes to remove it
-        $this->withModId = $includeModId;
+        $emptyStringToNull = $this->getConnection()->getConfig()['empty_strings_to_null'] ?? true;
+        if ($emptyStringToNull) {
+            $record = collect($record)->map(function ($value) {
+                return $value === '' ? null : $value;
+            })->toArray();
+        }
 
-        return $this;
-    }
-
-    public function usingModId(): bool
-    {
-        return $this->withModId;
+        return $record;
     }
 
     public function getReadOnlyFields()
@@ -265,44 +160,6 @@ abstract class FMModel extends Model
         return $this->fieldMapping;
     }
 
-    public function duplicate()
-    {
-
-        // Check to make sure this model exists before attempting to duplicate
-        if ($this->getRecordId() === null) {
-            // This doesn't exist yet, so exit here
-            return false;
-        }
-
-        // model events for duplicating, like create/update
-        if ($this->fireModelEvent('duplicating') === false) {
-            return false;
-        }
-
-        $response = $this->newQuery()->duplicate();
-        // Get the newly created recordId and return it
-        $newRecordId = $response['response']['recordId'];
-        $this->fireModelEvent('duplicated', false);
-
-        return $newRecordId;
-    }
-
-    /**
-     * @return string
-     */
-    public function getLayout()
-    {
-        return $this->getTable();
-    }
-
-    /**
-     * @param  mixed  $layout
-     */
-    public function setLayout($layout): void
-    {
-        $this->setTable($layout);
-    }
-
     /**
      * Create a new Eloquent query builder for the model.
      *
@@ -316,7 +173,6 @@ abstract class FMModel extends Model
 
     protected function performUpdate(Builder $query)
     {
-
         // If the updating event returns false, we will cancel the update operation so
         // developers can hook Validation systems into their models and cancel this
         // operation if the model does not pass validation. Otherwise, we update.
@@ -331,22 +187,10 @@ abstract class FMModel extends Model
             $this->updateTimestamps();
         }
 
-        // Once we have run the update operation, we will fire the "updated" event for
-        // this model instance. This will allow developers to hook into these after
-        // models are updated, giving them a chance to do any special processing.
         $dirty = $this->getDirty();
 
         if (count($dirty) > 0) {
-            try {
-                $query->editRecord();
-            } catch (FileMakerDataApiException $e) {
-                // attempting to update and not actually modifying a record just returns a 0 by default to show no records were modified
-                // If we don't actually modify anything it isn't considered an error in Laravel and we just continue
-                if ($e->getCode() !== 101) {
-                    // There was some error other than record missing, so throw it
-                    throw $e;
-                }
-            }
+            $this->setKeysForSaveQuery($query)->editRecord();
 
             $this->syncChanges();
 
@@ -354,19 +198,6 @@ abstract class FMModel extends Model
         }
 
         return true;
-    }
-
-    /**
-     * Set the keys for a save update query.
-     *
-     * @param  Builder  $query
-     * @return Builder
-     */
-    protected function setKeysForSaveQuery($query)
-    {
-        $query->toBase()->recordId($this->recordId);
-
-        return $query;
     }
 
     /**
@@ -387,33 +218,8 @@ abstract class FMModel extends Model
             $this->updateTimestamps();
         }
 
-        // If the model has an incrementing key, we can use the "insertGetId" method on
-        // the query builder, which will give us back the final inserted ID for this
-        // table from the database. Not all tables have to be incrementing though.
-        $attributes = $this->getAttributesForInsert();
+        $query->createRecord();
 
-        if ($this->getIncrementing()) {
-            $query->createRecord();
-            // perform a refresh after the insert to get the generated primary key / ID and calculated data
-            $this->setRawAttributes(
-                $this->findByRecordId($this->recordId)->attributes
-            );
-        }
-
-        // If the table isn't incrementing we'll simply insert these attributes as they
-        // are. These attribute arrays must contain an "id" column previously placed
-        // there by the developer as the manually determined key for these models.
-        else {
-            if (empty($attributes)) {
-                return true;
-            }
-
-            $query->createRecord();
-        }
-
-        // We will go ahead and set the exists property to true, so that it is set when
-        // the created event is fired, just in case the developer tries to update it
-        // during the event. This will allow them to do so and run an update here.
         $this->exists = true;
 
         $this->wasRecentlyCreated = true;
@@ -424,7 +230,8 @@ abstract class FMModel extends Model
     }
 
     /**
-     * Strip out containers and read-only fields to prepare for a write query
+     * Strip out read-only fields to prepare for a write query. Container (file) values are
+     * left as-is here; they're base64-encoded by the connection when the request is sent.
      *
      * @return BaseCollection
      */
@@ -437,68 +244,7 @@ abstract class FMModel extends Model
         // Remove any fields which have been marked as read-only so we don't try to write and cause an error
         $fieldData->forget($this->getReadOnlyFields());
 
-        // Remove any fields which have been set to write a file, as they should be handled as containers
-        foreach ($fieldData as $key => $field) {
-            // remove any containers to be written.
-            // users can set the field to be a File, UploadFile, or array [$file, 'MyFile.pdf']
-            if ($this->isContainer($field)) {
-                $fieldData->forget($key);
-            }
-        }
-
         return $fieldData;
-    }
-
-    public function getContainersToWrite()
-    {
-        // get dirty fields
-        $fieldData = collect($this->getAttributes());
-        $fieldData = $fieldData->intersectByKeys($this->getDirty());
-
-        $containers = collect([]);
-
-        // Track any fields which have been set to write a file, as they should be handled as containers
-        foreach ($fieldData as $key => $field) {
-            // remove any containers to be written.
-            if ($this->isContainer($field)) {
-                $containers->push($key);
-            }
-        }
-
-        return $containers;
-    }
-
-    protected function isContainer($field)
-    {
-
-        // if this is a file then we know it's a container
-        if ($this->isFile($field)) {
-            return true;
-        }
-
-        // if it's an array, it could be a file => filename key-value pair.
-        // it's a conainer if the first object in the array is a file
-        if (is_array($field) && count($field) === 2 && $this->isFile($field[0])) {
-            return true;
-        }
-
-        return false;
-    }
-
-    protected function isFile($object)
-    {
-        return is_a($object, File::class) ||
-        is_a($object, UploadedFile::class);
-    }
-
-    /**
-     * Get the table associated with the model.
-     *
-     * @return string
-     */
-    public function getTable()
-    {
-        return $this->table ?? $this->layout ?? Str::snake(Str::pluralStudly(class_basename($this)));
     }
 
     /**
@@ -521,14 +267,17 @@ abstract class FMModel extends Model
      */
     public function refresh()
     {
-        // make sure we have a FileMaker internal recordId
-        if ($this->recordId === null) {
+        if (! $this->exists) {
             return $this;
         }
 
-        $this->setRawAttributes(
-            $this->findByRecordId($this->recordId)->attributes
-        );
+        $fresh = $this->newQueryWithoutScopes()->find($this->getKey());
+
+        if ($fresh === null) {
+            return $this;
+        }
+
+        $this->setRawAttributes($fresh->attributes);
 
         $this->load(collect($this->relations)->reject(function ($relation) {
             return $relation instanceof Pivot

@@ -11,7 +11,7 @@ class ReadOnlyFieldsPet extends FMModel
 {
     protected $connection = 'filemaker';
 
-    protected $layout = 'pet';
+    protected $table = 'pet';
 
     protected $guarded = [];
 

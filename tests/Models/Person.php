@@ -8,7 +8,7 @@ class Person extends FMModel
 {
     protected $connection = 'filemaker';
 
-    protected $layout = 'person';
+    protected $table = 'person';
 
     protected $primaryKey = 'primaryKey';
 

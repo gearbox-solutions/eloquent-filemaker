@@ -9,7 +9,7 @@ class Pet extends FMModel
 {
     protected $connection = 'filemaker';
 
-    protected $layout = 'pet';
+    protected $table = 'pet';
 
     protected $keyType = 'string';
 

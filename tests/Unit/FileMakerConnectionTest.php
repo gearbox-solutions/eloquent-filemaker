@@ -3,19 +3,17 @@
 namespace Tests\Unit;
 
 use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerODataException;
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
 use GearboxSolutions\EloquentFileMaker\Support\Facades\FM;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Tests\Support\MocksDataApi;
+use Tests\Support\MocksOData;
 use Tests\TestCase;
 
 class FileMakerConnectionTest extends TestCase
 {
-    use MocksDataApi;
+    use MocksOData;
 
     public function test_connection_gets_the_default_database_configuration()
     {
@@ -33,148 +31,64 @@ class FileMakerConnectionTest extends TestCase
         $this->assertEquals('tester2', $connection->getConfig('database'));
     }
 
-    public function test_set_layout_changes_the_layout_used()
+    public function test_table_returns_a_base_builder_for_the_table()
     {
-        $connection = app(FileMakerConnection::class);
-
-        $connection->setLayout('dapi-pet');
-
-        $this->assertEquals('dapi-pet', $connection->getLayout());
-    }
-
-    public function test_database_prefix_is_added_to_layout_names()
-    {
-        $connection = DB::connection('prefix');
-
-        $connection->setLayout('pet');
-        $this->assertEquals('dapi-pet', $connection->getLayout());
-
-        $connection->setLayout('car');
-        $this->assertEquals('dapi-car', $connection->getLayout());
-    }
-
-    public function test_table_returns_a_base_builder_for_the_layout()
-    {
-        $builder = DB::connection('filemaker')->layout('pet');
+        $builder = DB::connection('filemaker')->table('pet');
 
         $this->assertInstanceOf(FMBaseBuilder::class, $builder);
         $this->assertEquals('pet', $builder->from);
     }
 
-    public function test_login_fetches_and_caches_a_session_token()
+    public function test_requests_are_sent_with_basic_auth()
     {
-        $this->fakeDataApi();
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([])),
+        ]);
 
-        $connection = DB::connection('filemaker');
-        $connection->login();
-
-        $this->assertEquals('test-session-token', Cache::get('eloquent-filemaker-session-token-filemaker'));
+        FM::table('pet')->get();
 
         Http::assertSent(function ($request) {
-            return $request->url() === $this->baseUrl() . '/sessions'
-                && $request->hasHeader('Authorization', 'Basic ' . base64_encode('dapitester:dapitester'));
+            return $request->hasHeader('Authorization', 'Basic ' . base64_encode('odatatester:odatatester'));
         });
     }
 
-    public function test_login_reuses_a_cached_session_token()
+    public function test_database_prefix_is_added_to_table_names()
     {
-        Http::fake();
-        Cache::forever('eloquent-filemaker-session-token-filemaker', 'already-cached-token');
-
-        DB::connection('filemaker')->login();
-
-        Http::assertNothingSent();
-    }
-
-    public function test_session_token_is_not_cached_when_caching_is_disabled()
-    {
-        Config::set('database.connections.filemaker.cache_session_token', false);
-        DB::purge('filemaker');
-
-        $this->fakeDataApi();
-
-        DB::connection('filemaker')->login();
-
-        $this->assertNull(Cache::get('eloquent-filemaker-session-token-filemaker'));
-        Http::assertSentCount(1);
-    }
-
-    public function test_a_failed_login_throws_a_data_api_exception()
-    {
-        Http::fake([
-            $this->baseUrl() . '/sessions' => Http::response($this->fmErrorResponse(212, 'Invalid user account and/or password')),
+        $this->fakeOData([
+            $this->baseUrl('prefix') . '/odata-pet*' => Http::response($this->odataListResponse([])),
         ]);
 
-        $this->expectException(FileMakerDataApiException::class);
-        $this->expectExceptionCode(212);
-
-        FM::layout('pet')->where('name', 'Cosmo')->get();
-    }
-
-    public function test_disconnect_ends_the_session_and_forgets_the_token()
-    {
-        $this->fakeDataApi([
-            $this->baseUrl() . '/sessions/*' => Http::response($this->fmResultResponse()),
-        ]);
-
-        $connection = DB::connection('filemaker');
-        $connection->login();
-        $this->assertNotNull(Cache::get('eloquent-filemaker-session-token-filemaker'));
-
-        $connection->disconnect();
+        DB::connection('prefix')->table('pet')->get();
 
         Http::assertSent(function ($request) {
-            return $request->method() === 'DELETE'
-                && $request->url() === $this->baseUrl() . '/sessions/test-session-token';
+            return str_starts_with($request->url(), $this->baseUrl('prefix') . '/odata-pet');
         });
-        $this->assertNull(Cache::get('eloquent-filemaker-session-token-filemaker'));
     }
 
-    public function test_an_expired_session_token_is_refreshed_and_the_request_retried()
+    public function test_an_error_response_throws_an_odata_exception_with_the_http_status_as_the_code()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::sequence()
-                ->push($this->fmErrorResponse(952, 'Invalid FileMaker Data API token'))
-                ->push($this->fmRecordsResponse([
-                    $this->fmRecord(['name' => 'Cosmo']),
-                ])),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => $this->odataErrorResponse('Invalid credentials', 401),
         ]);
 
-        $records = FM::layout('pet')->where('name', 'Cosmo')->get();
+        $this->expectException(FileMakerODataException::class);
+        $this->expectExceptionCode(401);
 
-        $this->assertCount(1, $records);
-
-        // the expired token should have triggered a second login and a second find request
-        $this->assertCount(2, $this->recordedRequests($this->baseUrl() . '/sessions', 'post'));
-        $this->assertCount(2, $this->recordedRequests($this->layoutUrl('pet') . '/_find'));
+        FM::table('pet')->where('name', 'Cosmo')->get();
     }
 
-    public function test_data_api_errors_throw_an_exception_with_the_layout_and_code()
+    public function test_error_message_is_taken_from_the_odata_error_body()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmErrorResponse(102, 'Field is missing')),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => $this->odataErrorResponse('Field is missing', 400),
         ]);
 
         try {
-            FM::layout('pet')->where('name', 'Cosmo')->get();
-            $this->fail('A FileMakerDataApiException should have been thrown');
-        } catch (FileMakerDataApiException $e) {
-            $this->assertEquals(102, $e->getCode());
-            $this->assertEquals('Layout: pet - Field is missing', $e->getMessage());
+            FM::table('pet')->get();
+            $this->fail('A FileMakerODataException should have been thrown');
+        } catch (FileMakerODataException $e) {
+            $this->assertEquals('Field is missing', $e->getMessage());
+            $this->assertEquals(400, $e->getCode());
         }
-    }
-
-    public function test_set_global_fields_patches_the_globals_endpoint()
-    {
-        $this->fakeDataApi([
-            $this->baseUrl() . '/globals/' => Http::response($this->fmResultResponse()),
-        ]);
-
-        FM::setGlobalFields(['GLOB::testGlobal' => 'a test global value']);
-
-        $request = $this->recordedRequest($this->baseUrl() . '/globals/', 'patch');
-        $this->assertEquals([
-            'globalFields' => ['GLOB::testGlobal' => 'a test global value'],
-        ], $request->data());
     }
 }

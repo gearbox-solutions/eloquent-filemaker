@@ -14,10 +14,6 @@ class FMBuilder extends Builder
      */
     public function getColumnListing($table)
     {
-        $layoutMetaData = $this->connection->getLayoutMetadata($table);
-        $fieldMetaData = $layoutMetaData['fieldMetaData'];
-        $columns = array_column($fieldMetaData, 'name');
-
-        return $columns;
+        return $this->connection->getTableMetadata($table);
     }
 }

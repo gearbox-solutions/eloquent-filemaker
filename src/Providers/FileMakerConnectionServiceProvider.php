@@ -3,9 +3,7 @@
 namespace GearboxSolutions\EloquentFileMaker\Providers;
 
 use GearboxSolutions\EloquentFileMaker\Commands\FMModelMakeCommand;
-use GearboxSolutions\EloquentFileMaker\Middleware\EndSession;
 use GearboxSolutions\EloquentFileMaker\Services\FileMakerConnection;
-use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\ServiceProvider;
 
 class FileMakerConnectionServiceProvider extends ServiceProvider
@@ -37,8 +35,6 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
             return $app['fm.connection'];
         });
 
-        app('router')->aliasMiddleware('fm.end-session', EndSession::class);
-
         if ($this->app->runningInConsole()) {
             $this->commands([
                 FMModelMakeCommand::class,
@@ -51,11 +47,8 @@ class FileMakerConnectionServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot(Kernel $kernel)
+    public function boot()
     {
-        // add the middleware to the global middleware so that we always end the FileMaker session
-        $kernel->pushMiddleware(EndSession::class);
-
         $this->publishes([
             __DIR__ . '/../config/eloquent-filemaker.php' => config_path('eloquent-filemaker.php'),
         ], 'eloquent-filemaker-config');

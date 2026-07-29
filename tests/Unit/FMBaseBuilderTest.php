@@ -12,222 +12,174 @@ class FMBaseBuilderTest extends TestCase
 {
     public function test_where_with_two_arguments_defaults_to_equals()
     {
-        $wheres = FM::table('pet')->where('name', 'Cosmo')->getWheres();
+        $sql = FM::table('pet')->where('name', 'Cosmo')->toSql();
 
-        $this->assertSame([['name' => 'Cosmo']], $wheres);
+        $this->assertSame("name eq 'Cosmo'", $sql);
     }
 
-    public function test_where_with_an_operator_prepends_the_operator_to_the_value()
+    public function test_where_with_an_operator_is_translated_to_odata()
     {
-        $wheres = FM::table('pet')->where('serial', '>', 500)->getWheres();
+        $sql = FM::table('pet')->where('serial', '>', 500)->toSql();
 
-        $this->assertSame([['serial' => '>500']], $wheres);
+        $this->assertSame('serial gt 500', $sql);
     }
 
-    public function test_chained_wheres_combine_into_a_single_find_request()
+    public function test_chained_wheres_combine_with_and()
     {
-        $wheres = FM::table('pet')->where('name', 'Cosmo')->where('type', 'cat')->getWheres();
+        $sql = FM::table('pet')->where('name', 'Cosmo')->where('type', 'cat')->toSql();
 
-        $this->assertSame([['name' => 'Cosmo', 'type' => 'cat']], $wheres);
+        $this->assertSame("name eq 'Cosmo' and type eq 'cat'", $sql);
     }
 
-    public function test_or_where_creates_a_second_find_request()
+    public function test_or_where_combines_with_or()
     {
-        $wheres = FM::table('pet')->where('name', 'Cosmo')->orWhere('name', 'Fido')->getWheres();
+        $sql = FM::table('pet')->where('name', 'Cosmo')->orWhere('name', 'Fido')->toSql();
 
-        $this->assertSame([['name' => 'Cosmo'], ['name' => 'Fido']], $wheres);
+        $this->assertSame("name eq 'Cosmo' or name eq 'Fido'", $sql);
     }
 
-    public function test_where_not_creates_an_omit_request()
+    public function test_where_not_negates_and_parenthesizes_the_condition()
     {
-        $wheres = FM::table('pet')->whereNot('name', 'Cosmo')->getWheres();
+        $sql = FM::table('pet')->whereNot('name', 'Cosmo')->toSql();
 
-        $this->assertSame([['omit' => 'true', 'name' => 'Cosmo']], $wheres);
+        $this->assertSame("not (name eq 'Cosmo')", $sql);
     }
 
-    public function test_where_after_where_not_starts_a_new_find_request()
+    public function test_where_after_where_not_is_still_anded_together()
     {
-        $wheres = FM::table('pet')->whereNot('name', 'Cosmo')->where('type', 'cat')->getWheres();
+        $sql = FM::table('pet')->whereNot('name', 'Cosmo')->where('type', 'cat')->toSql();
 
-        $this->assertSame([['omit' => 'true', 'name' => 'Cosmo'], ['type' => 'cat']], $wheres);
+        $this->assertSame("not (name eq 'Cosmo') and type eq 'cat'", $sql);
     }
 
-    public function test_where_not_after_where_starts_a_new_omit_request()
+    public function test_where_in_compiles_to_an_in_expression()
     {
-        $wheres = FM::table('pet')->where('type', 'cat')->whereNot('name', 'Cosmo')->getWheres();
+        $sql = FM::table('pet')->whereIn('name', ['Cosmo', 'Fido'])->toSql();
 
-        $this->assertSame([['type' => 'cat'], ['omit' => 'true', 'name' => 'Cosmo']], $wheres);
+        $this->assertSame("name in ('Cosmo','Fido')", $sql);
     }
 
-    public function test_chained_where_nots_combine_into_a_single_omit_request()
+    public function test_where_not_in_compiles_to_a_negated_in_expression()
     {
-        $wheres = FM::table('pet')->whereNot('name', 'Cosmo')->whereNot('serial', '>500')->getWheres();
+        $sql = FM::table('pet')->whereNotIn('name', ['Cosmo', 'Fido'])->toSql();
 
-        $this->assertSame([['omit' => 'true', 'name' => 'Cosmo', 'serial' => '>500']], $wheres);
+        $this->assertSame("not (name in ('Cosmo','Fido'))", $sql);
     }
 
-    public function test_or_where_not_creates_a_separate_omit_request()
+    public function test_where_in_with_no_values_compiles_to_a_literal_false()
     {
-        $wheres = FM::table('pet')->whereNot('name', 'Cosmo')->orWhereNot('serial', '>500')->getWheres();
+        $sql = FM::table('pet')->whereIn('name', [])->toSql();
 
-        $this->assertSame([['omit' => 'true', 'name' => 'Cosmo'], ['omit' => 'true', 'serial' => '>500']], $wheres);
+        $this->assertSame('false', $sql);
     }
 
-    public function test_omit_can_be_removed_from_the_current_find_request()
+    public function test_where_not_in_with_no_values_compiles_to_a_literal_true()
     {
-        $wheres = FM::table('pet')->where('name', 'Cosmo')->omit()->omit(false)->getWheres();
+        $sql = FM::table('pet')->whereNotIn('name', [])->toSql();
 
-        $this->assertSame([['name' => 'Cosmo', 'omit' => 'false']], $wheres);
-    }
-
-    public function test_where_with_an_associative_array_combines_into_one_find_request()
-    {
-        $wheres = FM::table('pet')->where(['name' => 'Cosmo', 'type' => 'cat'])->getWheres();
-
-        $this->assertSame([['name' => 'Cosmo', 'type' => 'cat']], $wheres);
-    }
-
-    public function test_where_with_an_array_of_arrays_applies_each_condition()
-    {
-        $wheres = FM::table('pet')->where([['serial', '>', 500], ['name', 'Cosmo']])->getWheres();
-
-        $this->assertSame([['serial' => '>500', 'name' => 'Cosmo']], $wheres);
-    }
-
-    public function test_where_in_expands_to_one_find_request_per_value()
-    {
-        $wheres = FM::table('pet')->whereIn('name', ['Cosmo', 'Fido'])->getWheres();
-
-        $this->assertSame([['name' => 'Cosmo'], ['name' => 'Fido']], $wheres);
-    }
-
-    public function test_where_in_after_a_where_cross_joins_with_the_current_find_request()
-    {
-        $wheres = FM::table('pet')->where('type', 'cat')->whereIn('name', ['Cosmo', 'Fido'])->getWheres();
-
-        $this->assertSame([
-            ['type' => 'cat', 'name' => 'Cosmo'],
-            ['type' => 'cat', 'name' => 'Fido'],
-        ], $wheres);
-    }
-
-    public function test_or_where_in_adds_additional_find_requests()
-    {
-        $wheres = FM::table('pet')->where('type', 'cat')->orWhereIn('name', ['Cosmo', 'Fido'])->getWheres();
-
-        $this->assertSame([
-            ['type' => 'cat'],
-            ['name' => 'Cosmo'],
-            ['name' => 'Fido'],
-        ], $wheres);
-    }
-
-    public function test_where_not_in_creates_omit_requests()
-    {
-        $wheres = FM::table('pet')->whereNotIn('name', ['Cosmo', 'Fido'])->getWheres();
-
-        $this->assertEquals([
-            ['name' => 'Cosmo', 'omit' => true],
-            ['name' => 'Fido', 'omit' => true],
-        ], $wheres);
-    }
-
-    public function test_where_not_in_after_a_where_keeps_the_where_and_adds_omits()
-    {
-        $wheres = FM::table('pet')->where('type', 'cat')->whereNotIn('name', ['Cosmo', 'Fido'])->getWheres();
-
-        $this->assertEquals([
-            ['type' => 'cat'],
-            ['omit' => true, 'name' => 'Cosmo'],
-            ['omit' => true, 'name' => 'Fido'],
-        ], $wheres);
-    }
-
-    public function test_where_in_after_a_where_not_combines_with_the_omit()
-    {
-        $wheres = FM::table('pet')->whereNot('flagged', 0)->whereIn('name', ['a', 'b'])->getWheres();
-
-        $this->assertEquals([
-            ['omit' => 'true', 'flagged' => '0', 'name' => 'a'],
-            ['omit' => 'true', 'flagged' => '0', 'name' => 'b'],
-        ], $wheres);
-    }
-
-    public function test_where_in_with_no_values_forces_an_empty_result_set()
-    {
-        $builder = FM::table('pet')->whereIn('name', []);
-
-        $this->assertSame([['name' => '=']], $builder->getWheres());
-        $this->assertTrue($builder->isForcingHighOffset());
+        $this->assertSame('true', $sql);
     }
 
     public function test_where_between_builds_a_range_query()
     {
-        $wheres = FM::table('pet')->whereBetween('serial', [550, 552])->getWheres();
+        $sql = FM::table('pet')->whereBetween('serial', [550, 552])->toSql();
 
-        $this->assertSame([['serial' => '550...552']], $wheres);
+        $this->assertSame('(serial ge 550 and serial le 552)', $sql);
     }
 
-    public function test_where_null_finds_empty_fields()
+    public function test_where_not_between_negates_the_range_query()
     {
-        $wheres = FM::table('pet')->whereNull('name')->getWheres();
+        $sql = FM::table('pet')->whereNotBetween('serial', [550, 552])->toSql();
 
-        $this->assertSame([['name' => '=']], $wheres);
+        $this->assertSame('not (serial ge 550 and serial le 552)', $sql);
     }
 
-    public function test_where_not_null_finds_non_empty_fields()
+    public function test_where_null_matches_null_or_empty_string()
     {
-        $wheres = FM::table('pet')->whereNotNull('name')->getWheres();
+        $sql = FM::table('pet')->whereNull('name')->toSql();
 
-        $this->assertSame([['name' => '*']], $wheres);
+        $this->assertSame("(name eq null or name eq '')", $sql);
     }
 
-    public function test_where_date_formats_datetime_values_for_filemaker()
+    public function test_where_not_null_excludes_null_and_empty_string()
     {
-        $wheres = FM::table('person')->whereDate('birthday', new Carbon('1986-07-20'))->getWheres();
+        $sql = FM::table('pet')->whereNotNull('name')->toSql();
 
-        $this->assertSame([['birthday' => '=7/20/1986']], $wheres);
+        $this->assertSame("(name ne null and name ne '')", $sql);
+    }
+
+    public function test_where_like_with_wildcards_on_both_sides_uses_contains()
+    {
+        $sql = FM::table('pet')->where('name', 'like', '%osm%')->toSql();
+
+        $this->assertSame("contains(name, 'osm')", $sql);
+    }
+
+    public function test_where_like_with_a_trailing_wildcard_uses_startswith()
+    {
+        $sql = FM::table('pet')->where('name', 'like', 'Cos%')->toSql();
+
+        $this->assertSame("startswith(name, 'Cos')", $sql);
+    }
+
+    public function test_where_like_with_a_wildcard_in_the_middle_throws()
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        FM::table('pet')->where('name', 'like', '%os%mo%')->toSql();
+    }
+
+    public function test_where_like_with_a_leading_wildcard_uses_endswith()
+    {
+        $sql = FM::table('pet')->where('name', 'like', '%smo')->toSql();
+
+        $this->assertSame("endswith(name, 'smo')", $sql);
+    }
+
+    public function test_where_date_formats_datetime_values_for_the_filter()
+    {
+        $sql = FM::table('person')->whereDate('birthday', new Carbon('1986-07-20'))->toSql();
+
+        $this->assertSame("birthday eq '1986-07-20'", $sql);
     }
 
     public function test_where_date_with_an_operator()
     {
-        $wheres = FM::table('person')->whereDate('birthday', '>', new Carbon('1986-07-20'))->getWheres();
+        $sql = FM::table('person')->whereDate('birthday', '>', new Carbon('1986-07-20'))->toSql();
 
-        $this->assertSame([['birthday' => '>7/20/1986']], $wheres);
+        $this->assertSame("birthday gt '1986-07-20'", $sql);
     }
 
-    public function test_where_with_an_invalid_operator_and_value_combination_throws()
+    public function test_field_names_with_special_characters_are_quoted()
     {
-        $this->expectException(InvalidArgumentException::class);
+        $sql = FM::table('pet')->where('first name', 'Cosmo')->toSql();
 
-        FM::table('pet')->where('name', '>', null);
+        $this->assertSame('"first name" eq \'Cosmo\'', $sql);
     }
 
-    public function test_order_by_builds_filemaker_sort_orders()
+    public function test_order_by_builds_an_orderby_expression()
     {
         $builder = FM::table('pet')->orderBy('name')->orderBy('serial', 'desc');
 
         $this->assertSame([
-            ['fieldName' => 'name', 'sortOrder' => 'ascend'],
-            ['fieldName' => 'serial', 'sortOrder' => 'descend'],
+            ['column' => 'name', 'direction' => 'asc'],
+            ['column' => 'serial', 'direction' => 'desc'],
         ], $builder->orders);
     }
 
-    public function test_order_by_converts_laravel_sort_directions()
+    public function test_order_by_accepts_filemaker_ascend_descend_vocabulary()
     {
-        $builder = FM::table('pet')->orderBy('name', 'asc')->orderByDesc('serial');
+        $builder = FM::table('pet')->orderBy('name', FMBaseBuilder::ASCEND)->orderByDesc('serial');
 
-        $this->assertSame([
-            ['fieldName' => 'name', 'sortOrder' => 'ascend'],
-            ['fieldName' => 'serial', 'sortOrder' => 'descend'],
-        ], $builder->orders);
+        $this->assertSame('asc', $builder->orders[0]['direction']);
+        $this->assertSame('desc', $builder->orders[1]['direction']);
     }
 
     public function test_sort_is_an_alias_for_order_by()
     {
         $builder = FM::table('pet')->sort('name', FMBaseBuilder::DESCEND);
 
-        $this->assertSame([['fieldName' => 'name', 'sortOrder' => 'descend']], $builder->orders);
+        $this->assertSame('desc', $builder->orders[0]['direction']);
     }
 
     public function test_limit_and_offset_are_set_on_the_builder()
@@ -238,96 +190,27 @@ class FMBaseBuilderTest extends TestCase
         $this->assertSame(5, $builder->offset);
     }
 
-    public function test_script_methods_set_script_properties()
-    {
-        $builder = FM::table('pet')
-            ->script('my script', 'my param')
-            ->scriptPresort('presort script', 'presort param')
-            ->scriptPrerequest('prerequest script', 'prerequest param')
-            ->layoutResponse('other layout');
-
-        $this->assertSame('my script', $builder->script);
-        $this->assertSame('my param', $builder->scriptParam);
-        $this->assertSame('presort script', $builder->scriptPresort);
-        $this->assertSame('presort param', $builder->scriptPresortParam);
-        $this->assertSame('prerequest script', $builder->scriptPrerequest);
-        $this->assertSame('prerequest param', $builder->scriptPrerequestParam);
-        $this->assertSame('other layout', $builder->layoutResponse);
-    }
-
-    public function test_script_params_can_be_set_in_chained_calls()
-    {
-        $builder = FM::table('pet')
-            ->script('my script')
-            ->scriptParam('my param')
-            ->scriptPresort('presort script')
-            ->scriptPresortParam('presort param')
-            ->scriptPrerequest('prerequest script')
-            ->scriptPrerequestParam('prerequest param');
-
-        $this->assertSame('my param', $builder->scriptParam);
-        $this->assertSame('presort param', $builder->scriptPresortParam);
-        $this->assertSame('prerequest param', $builder->scriptPrerequestParam);
-    }
-
-    public function test_portal_appends_a_single_portal_name()
-    {
-        $builder = FM::table('person')->portal('pets')->portal('cars');
-
-        $this->assertSame(['pets', 'cars'], $builder->portal);
-    }
-
-    public function test_portal_with_an_array_replaces_the_portal_list()
-    {
-        $builder = FM::table('person')->portal('pets')->portal(['cars', 'houses']);
-
-        $this->assertSame(['cars', 'houses'], $builder->portal);
-    }
-
-    public function test_limit_portal_and_offset_portal_track_portal_settings()
-    {
-        $builder = FM::table('person')
-            ->limitPortal('cars', 3)
-            ->offsetPortal('cars', 2);
-
-        $this->assertSame([['portalName' => 'cars', 'limit' => 3]], $builder->limitPortals);
-        $this->assertSame([['portalName' => 'cars', 'offset' => 2]], $builder->offsetPortals);
-    }
-
-    public function test_layout_sets_the_from_table()
-    {
-        $builder = FM::table('x')->layout('pet');
-
-        $this->assertSame('pet', $builder->from);
-    }
-
-    public function test_record_id_and_mod_id_are_set_on_the_builder()
-    {
-        $builder = FM::table('pet')->recordId(123)->modId('4');
-
-        $this->assertSame(123, $builder->getRecordId());
-        $this->assertSame('4', $builder->modId);
-    }
-
     public function test_field_mapping_remaps_where_columns_to_filemaker_field_names()
     {
         $builder = FM::table('pet');
         $builder->setFieldMapping(['name' => 'petName']);
 
-        $wheres = $builder->where('petName', 'Cosmo')->getWheres();
+        $sql = $builder->where('petName', 'Cosmo')->toSql();
 
-        $this->assertSame([['name' => 'Cosmo']], $wheres);
+        $this->assertSame("name eq 'Cosmo'", $sql);
     }
 
-    public function test_field_mapping_remaps_sort_and_where_in_columns()
+    public function test_field_mapping_remaps_where_in_and_order_by_columns()
     {
         $builder = FM::table('pet');
         $builder->setFieldMapping(['name' => 'petName']);
 
         $builder->whereIn('petName', ['Cosmo'])->orderBy('petName');
 
-        $this->assertSame([['name' => 'Cosmo']], $builder->getWheres());
-        $this->assertSame([['fieldName' => 'name', 'sortOrder' => 'ascend']], $builder->orders);
+        $this->assertSame("name in ('Cosmo')", $builder->toSql());
+        $this->assertSame([
+            ['column' => 'petName', 'direction' => 'asc'],
+        ], $builder->orders);
     }
 
     public function test_field_data_remaps_columns_to_filemaker_field_names()
@@ -340,13 +223,10 @@ class FMBaseBuilderTest extends TestCase
         $this->assertSame(['name' => 'Cosmo', 'type' => 'cat'], $builder->fieldData);
     }
 
-    public function test_to_sql_returns_the_computed_find_requests_as_json()
+    public function test_to_sql_returns_the_compiled_filter()
     {
         $sql = FM::table('pet')->where('type', 'cat')->whereIn('name', ['Cosmo', 'Fido'])->toSql();
 
-        $this->assertSame(json_encode([
-            ['type' => 'cat', 'name' => 'Cosmo'],
-            ['type' => 'cat', 'name' => 'Fido'],
-        ]), $sql);
+        $this->assertSame("type eq 'cat' and name in ('Cosmo','Fido')", $sql);
     }
 }

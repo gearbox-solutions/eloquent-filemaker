@@ -9,18 +9,18 @@ use Illuminate\Support\Facades\Http;
 use Tests\Models\Car;
 use Tests\Models\Person;
 use Tests\Models\Pet;
-use Tests\Support\MocksDataApi;
+use Tests\Support\MocksOData;
 use Tests\TestCase;
 
 class EloquentQueryTest extends TestCase
 {
-    use MocksDataApi;
+    use MocksOData;
 
-    public function test_a_model_query_sends_a_find_request_and_hydrates_models()
+    public function test_a_model_query_sends_a_filtered_request_and_hydrates_models()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['id' => 'ABC-123', 'name' => 'Cosmo', 'type' => 'cat'], [], '879', '2'),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([
+                ['id' => 'ABC-123', 'name' => 'Cosmo', 'type' => 'cat'],
             ])),
         ]);
 
@@ -29,57 +29,55 @@ class EloquentQueryTest extends TestCase
         $this->assertInstanceOf(Collection::class, $pets);
         $this->assertInstanceOf(Pet::class, $pets[0]);
         $this->assertEquals('Cosmo', $pets[0]->petName);
-        $this->assertEquals('879', $pets[0]->getRecordId());
         $this->assertTrue($pets[0]->exists);
 
         // the query should use the FileMaker field name and include the global scope
-        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
-        $this->assertEquals([['name' => 'Cosmo', 'flagged' => '1']], $data['query']);
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('pet'), 'get'));
+        $this->assertEquals("name eq 'Cosmo' and flagged eq 1", $params['$filter']);
     }
 
     public function test_global_scopes_are_applied_to_queries_without_wheres()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([])),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([])),
         ]);
 
         Pet::query()->get();
 
-        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
-        $this->assertEquals([['flagged' => '1']], $data['query']);
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('pet'), 'get'));
+        $this->assertEquals('flagged eq 1', $params['$filter']);
     }
 
-    public function test_without_global_scopes_gets_all_records()
+    public function test_without_global_scopes_sends_no_filter()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/records/*' => Http::response($this->fmRecordsResponse([])),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([])),
         ]);
 
         Pet::withoutGlobalScopes()->get();
 
-        // with no query parameters at all this is a get records request instead of a find
-        $this->recordedRequest($this->layoutUrl('pet') . '/records/', 'get');
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('pet'), 'get'));
+        $this->assertArrayNotHasKey('$filter', $params);
     }
 
-    public function test_global_scopes_are_applied_to_each_find_request()
+    public function test_global_scopes_combine_with_an_or_where()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([])),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([])),
         ]);
 
         Pet::where('petName', 'Cosmo')->orWhere('petName', 'Astrid')->get();
 
-        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
-        $this->assertEquals([
-            ['name' => 'Cosmo', 'flagged' => '1'],
-            ['name' => 'Astrid', 'flagged' => '1'],
-        ], $data['query']);
+        // Eloquent wraps the pre-existing wheres in a group before ANDing in the global
+        // scope, so the scope correctly applies to both branches of the "or"
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('pet'), 'get'));
+        $this->assertEquals("(name eq 'Cosmo' or name eq 'Astrid') and flagged eq 1", $params['$filter']);
     }
 
     public function test_local_scopes_combine_with_wheres_and_where_ins()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([])),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([])),
         ]);
 
         Pet::withoutGlobalScopes()
@@ -88,39 +86,15 @@ class EloquentQueryTest extends TestCase
             ->whereIn('petName', ['Cosmo', 'Astrid', 'Scooter'])
             ->get();
 
-        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
-        $this->assertEquals([
-            ['flagged' => '1', 'type' => 'cat', 'name' => 'Cosmo'],
-            ['flagged' => '1', 'type' => 'cat', 'name' => 'Astrid'],
-            ['flagged' => '1', 'type' => 'cat', 'name' => 'Scooter'],
-        ], $data['query']);
-    }
-
-    public function test_or_where_in_after_a_scope_adds_separate_find_requests()
-    {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([])),
-        ]);
-
-        Pet::withoutGlobalScopes()
-            ->where('flagged', 1)
-            ->cats()
-            ->orWhereIn('petName', ['Cosmo', 'Astrid'])
-            ->get();
-
-        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
-        $this->assertEquals([
-            ['flagged' => '1', 'type' => 'cat'],
-            ['name' => 'Cosmo'],
-            ['name' => 'Astrid'],
-        ], $data['query']);
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('pet'), 'get'));
+        $this->assertEquals("flagged eq 1 and type eq 'cat' and name in ('Cosmo','Astrid','Scooter')", $params['$filter']);
     }
 
     public function test_find_queries_by_the_primary_key()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['id' => 'ABC-123', 'name' => 'Cosmo']),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([
+                ['id' => 'ABC-123', 'name' => 'Cosmo'],
             ])),
         ]);
 
@@ -128,14 +102,14 @@ class EloquentQueryTest extends TestCase
 
         $this->assertEquals('ABC-123', $pet->id);
 
-        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
-        $this->assertEquals([['id' => '=ABC-123', 'flagged' => '1']], $data['query']);
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('pet'), 'get'));
+        $this->assertEquals("id eq 'ABC-123' and flagged eq 1", $params['$filter']);
     }
 
     public function test_find_or_fail_throws_when_no_records_match()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmErrorResponse(401, 'No records match the request')),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([])),
         ]);
 
         $this->expectException(ModelNotFoundException::class);
@@ -145,9 +119,9 @@ class EloquentQueryTest extends TestCase
 
     public function test_first_limits_the_query_to_a_single_record()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['name' => 'Cosmo']),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([
+                ['name' => 'Cosmo'],
             ])),
         ]);
 
@@ -155,27 +129,25 @@ class EloquentQueryTest extends TestCase
 
         $this->assertInstanceOf(Pet::class, $pet);
 
-        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
-        $this->assertEquals(1, $data['limit']);
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('pet'), 'get'));
+        $this->assertEquals('1', $params['$top']);
     }
 
     public function test_value_returns_a_single_attribute_from_the_first_record()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['name' => 'Cosmo', 'type' => 'cat']),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([
+                ['name' => 'Cosmo', 'type' => 'cat'],
             ])),
         ]);
 
         $this->assertEquals('cat', Pet::where('petName', 'Cosmo')->value('type'));
     }
 
-    public function test_count_returns_the_found_count()
+    public function test_count_returns_the_matching_count()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['name' => 'Cosmo']),
-            ], 25)),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '/$count*' => $this->odataCountResponse(25),
         ]);
 
         $this->assertSame(25, Pet::query()->count());
@@ -183,10 +155,10 @@ class EloquentQueryTest extends TestCase
 
     public function test_paginate_returns_a_paginator_of_models()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['name' => 'Cosmo']),
-                $this->fmRecord(['name' => 'Astrid'], [], '2'),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([
+                ['name' => 'Cosmo'],
+                ['name' => 'Astrid'],
             ], 12)),
         ]);
 
@@ -199,38 +171,23 @@ class EloquentQueryTest extends TestCase
         $this->assertEquals('Cosmo', $paginator->items()[0]->petName);
     }
 
-    public function test_where_key_not_omits_the_primary_key()
+    public function test_where_key_not_excludes_the_primary_key()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([])),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([])),
         ]);
 
         Pet::withoutGlobalScopes()->whereKeyNot('ABC-123')->get();
 
-        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
-        $this->assertEquals([['id' => '==ABC-123', 'omit' => 'true']], $data['query']);
-    }
-
-    public function test_where_key_not_after_an_existing_where_adds_a_separate_omit_request()
-    {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([])),
-        ]);
-
-        Pet::withoutGlobalScopes()->where('type', 'cat')->whereKeyNot('ABC-123')->get();
-
-        $data = $this->recordedRequest($this->layoutUrl('pet') . '/_find')->data();
-        $this->assertEquals([
-            ['type' => 'cat'],
-            ['id' => '==ABC-123', 'omit' => 'true'],
-        ], $data['query']);
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('pet'), 'get'));
+        $this->assertEquals("id ne 'ABC-123'", $params['$filter']);
     }
 
     public function test_exists_is_true_when_records_are_found()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['name' => 'Cosmo']),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([
+                ['name' => 'Cosmo'],
             ])),
         ]);
 
@@ -240,24 +197,24 @@ class EloquentQueryTest extends TestCase
 
     public function test_exists_is_false_when_no_records_match()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('pet') . '/_find' => Http::response($this->fmErrorResponse(401, 'No records match the request')),
+        $this->fakeOData([
+            $this->tableUrl('pet') . '*' => Http::response($this->odataListResponse([])),
         ]);
 
         $this->assertFalse(Pet::where('petName', 'Nobody')->exists());
         $this->assertTrue(Pet::where('petName', 'Nobody')->doesntExist());
     }
 
-    public function test_has_many_queries_the_related_layout_by_foreign_key()
+    public function test_has_many_queries_the_related_table_by_foreign_key()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('car') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['model' => 'Celica', 'person_id' => 'P-1'], [], '10'),
-                $this->fmRecord(['model' => 'Supra', 'person_id' => 'P-1'], [], '11'),
+        $this->fakeOData([
+            $this->tableUrl('car') . '*' => Http::response($this->odataListResponse([
+                ['model' => 'Celica', 'p_id' => 'P-1'],
+                ['model' => 'Supra', 'p_id' => 'P-1'],
             ])),
         ]);
 
-        $person = Person::createFromRecord($this->fmRecord(['id' => 'P-1', 'nameFirst' => 'David']));
+        $person = Person::createFromRecord(['primaryKey' => 'P-1', 'name_first' => 'David']);
 
         $cars = $person->cars;
 
@@ -265,19 +222,21 @@ class EloquentQueryTest extends TestCase
         $this->assertInstanceOf(Car::class, $cars[0]);
         $this->assertEquals('Celica', $cars[0]->model);
 
-        $data = $this->recordedRequest($this->layoutUrl('car') . '/_find')->data();
-        $this->assertEquals([['person_id' => '==P-1']], $data['query']);
+        // Car's fieldMapping maps the 'p_id' attribute to the 'person_id' FileMaker field,
+        // which contains an underscore and so is quoted
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('car'), 'get'));
+        $this->assertEquals("\"person_id\" eq 'P-1'", $params['$filter']);
     }
 
     public function test_belongs_to_queries_the_owner_by_its_primary_key()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('person') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['id' => 'P-1', 'nameFirst' => 'David']),
+        $this->fakeOData([
+            $this->tableUrl('person') . '*' => Http::response($this->odataListResponse([
+                ['id' => 'P-1', 'name_first' => 'David'],
             ])),
         ]);
 
-        $car = Car::createFromRecord($this->fmRecord(['model' => 'Celica', 'person_id' => 'P-1']));
+        $car = Car::createFromRecord(['model' => 'Celica', 'p_id' => 'P-1']);
 
         $person = $car->person;
 
@@ -285,30 +244,30 @@ class EloquentQueryTest extends TestCase
         $this->assertEquals('David', $person->name_first);
 
         // Person maps the 'id' FileMaker field to the primaryKey attribute
-        $data = $this->recordedRequest($this->layoutUrl('person') . '/_find')->data();
-        $this->assertEquals([['id' => '==P-1']], $data['query']);
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('person'), 'get'));
+        $this->assertEquals("id eq 'P-1'", $params['$filter']);
     }
 
     public function test_eager_loading_uses_a_where_in_on_the_owner_key()
     {
-        $this->fakeDataApi([
-            $this->layoutUrl('car') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['model' => 'Celica', 'person_id' => 'P-1'], [], '10'),
-                $this->fmRecord(['model' => 'Beetle', 'person_id' => 'P-2'], [], '11'),
+        $this->fakeOData([
+            $this->tableUrl('car') . '*' => Http::response($this->odataListResponse([
+                ['model' => 'Celica', 'p_id' => 'P-1'],
+                ['model' => 'Beetle', 'p_id' => 'P-2'],
             ])),
-            $this->layoutUrl('person') . '/_find' => Http::response($this->fmRecordsResponse([
-                $this->fmRecord(['id' => 'P-1', 'nameFirst' => 'David'], [], '20'),
-                $this->fmRecord(['id' => 'P-2', 'nameFirst' => 'Steve'], [], '21'),
+            $this->tableUrl('person') . '*' => Http::response($this->odataListResponse([
+                ['id' => 'P-1', 'name_first' => 'David'],
+                ['id' => 'P-2', 'name_first' => 'Steve'],
             ])),
         ]);
 
-        $cars = Car::with('person')->where('model', '*')->get();
+        $cars = Car::with('person')->where('model', '!=', '')->get();
 
         $this->assertTrue($cars[0]->relationLoaded('person'));
         $this->assertEquals('David', $cars[0]->person->name_first);
         $this->assertEquals('Steve', $cars[1]->person->name_first);
 
-        $data = $this->recordedRequest($this->layoutUrl('person') . '/_find')->data();
-        $this->assertEquals([['id' => 'P-1'], ['id' => 'P-2']], $data['query']);
+        $params = $this->queryParams($this->recordedRequest($this->tableUrl('person'), 'get'));
+        $this->assertEquals("id in ('P-1','P-2')", $params['$filter']);
     }
 }

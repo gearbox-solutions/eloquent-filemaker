@@ -3,20 +3,18 @@
 namespace GearboxSolutions\EloquentFileMaker\Database\Eloquent;
 
 use GearboxSolutions\EloquentFileMaker\Database\Query\FMBaseBuilder;
-use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
+use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerODataException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Arr;
 
 class FMEloquentBuilder extends Builder
 {
     /**
      * @return Collection
      *
-     * @throws FileMakerDataApiException
+     * @throws FileMakerODataException
      */
     public function get($columns = ['*'])
     {
@@ -47,7 +45,7 @@ class FMEloquentBuilder extends Builder
         $this->query = new FMBaseBuilder($model->getConnection());
 
         $this->model = $model;
-        $this->query->layout($model->getLayout())
+        $this->query->from($model->getTable())
             ->setFieldMapping($model->getFieldMapping());
 
         return $this;
@@ -61,18 +59,7 @@ class FMEloquentBuilder extends Builder
      */
     public function exists()
     {
-        // A 401 (no records match the request) is caught by the base builder's getData()
-        // and turned into an empty collection rather than being thrown here, so we need to
-        // check the collection itself instead of relying on catching the exception.
-        try {
-            return $this->limit(1)->get()->isNotEmpty();
-        } catch (FileMakerDataApiException $e) {
-            if ($e->getCode() == 401) {
-                return false;
-            } else {
-                throw $e;
-            }
-        }
+        return $this->limit(1)->get()->isNotEmpty();
     }
 
     /**
@@ -83,42 +70,6 @@ class FMEloquentBuilder extends Builder
     public function doesntExist()
     {
         return ! $this->exists();
-    }
-
-    /**
-     * Add a where clause on the primary key to the query.
-     *
-     * @param  mixed  $id
-     * @return $this
-     */
-    public function whereKeyNot($id)
-    {
-        if (is_array($id) || $id instanceof Arrayable) {
-            $this->query->whereNotIn($this->model->getQualifiedKeyName(), $id);
-
-            return $this;
-        }
-
-        if ($id !== null && $this->model->getKeyType() === 'string') {
-            $id = (string) $id;
-        }
-
-        // If this is our first where clause we can add the omit directly
-        if (count($this->query->wheres) === 0) {
-            return $this->where($this->model->getKeyName(), '==', $id)->omit();
-        }
-
-        // otherwise we need to add a find and omit
-        return $this->orWhere($this->model->getKeyName(), '==', $id)->omit();
-    }
-
-    public function findByRecordId($recordId)
-    {
-        $response = $this->query->findByRecordId($recordId);
-        $newRecord = $response['response']['data'][0];
-        $newModel = $this->model::createFromRecord($newRecord);
-
-        return $newModel;
     }
 
     /**
@@ -137,57 +88,18 @@ class FMEloquentBuilder extends Builder
     }
 
     /**
-     * Delete records from the database.
-     *
-     * @return mixed
+     * Write the model's dirty attributes to FileMaker. Assumes the query has already been
+     * constrained to the model's primary key (see FMModel::performUpdate()).
      */
-    public function delete()
-    {
-        if (isset($this->onDelete)) {
-            return call_user_func($this->onDelete, $this);
-        }
-
-        return $this->toBase()->recordId($this->model->getRecordId())->delete();
-    }
-
     public function editRecord()
     {
-        /** @var FMModel $model */
-        $model = $this->model;
-
-        // Map the columns to FileMaker fields and strip out read-only fields/containers
         $fieldsToWrite = $this->model->getAttributesForFileMakerWrite();
 
-        $modifiedPortals = [];
-        foreach ($fieldsToWrite as $key => $value) {
-            // Check if the field is a portal (it should be an array if it is)
-            if (is_array($value)) {
-                $modifiedPortals[$key] = $this->getOnlyModifiedPortalFields($fieldsToWrite[$key], $this->model->getOriginal($key));
-                $fieldsToWrite->forget($key);
-            }
+        if ($fieldsToWrite->count() === 0) {
+            return;
         }
 
-        // set the ModID if that option is set on the model
-        if ($model->usingModId()) {
-            $this->query->modId($model->getModId());
-        }
-
-        if ($fieldsToWrite->count() > 0 || count($modifiedPortals) > 0) {
-            // we have some regular text fields to update
-            // forward this request to a base query builder to execute the edit record request
-            $response = $this->query->fieldData($fieldsToWrite->toArray())->portalData($modifiedPortals)->recordId($model->getRecordId())->editRecord();
-
-            // update the model's mod ID from the response
-            $this->model->setModId($this->getModIdFromFmResponse($response));
-        }
-
-        // also update any container fields which have changed
-        // Only attempt to write modified container fields
-        $modifiedContainerFields = $this->model->getContainersToWrite();
-        foreach ($modifiedContainerFields as $containerField) {
-            $eachResponse = $this->query->recordId($model->getRecordId())->setContainer($containerField, $model->getAttribute($containerField));
-            $this->model->setModId($this->getModIdFromFmResponse($eachResponse));
-        }
+        $this->query->fieldData($fieldsToWrite->toArray())->editRecord();
     }
 
     public function createRecord()
@@ -195,41 +107,14 @@ class FMEloquentBuilder extends Builder
         /** @var FMModel $model */
         $model = $this->model;
 
-        // Map the columns to FileMaker fields and strip out read-only fields/containers
         $fieldsToWrite = $this->model->getAttributesForFileMakerWrite();
 
-        // we always need to create the record, even if there are no regular or portal fields which have been set
-        // forward this request to a base query builder to execute the create record request
-        $request = $this->query->fieldData($fieldsToWrite->toArray());
-        if ($model->portalData) {
-            $request->portalData($model->portalData);
-        }
+        $record = $this->query->fieldData($fieldsToWrite->toArray())->createRecord();
 
-        $response = $request->createRecord();
-
-        // Update the model's record ID from the response
-        $recordId = $response['response']['recordId'];
-        $this->model->setRecordId($recordId);
-        // update the model's mod ID from the response
-        $this->model->setModId($this->getModIdFromFmResponse($response));
-
-        // also set any container fields which have been set
-        // Only attempt to write modified container fields
-        $modifiedContainerFields = $this->model->getContainersToWrite();
-        foreach ($modifiedContainerFields as $containerField) {
-            $eachResponse = $this->query->recordId($model->getRecordId())->setContainer($containerField, $model->getAttribute($containerField));
-            $this->model->setModId($this->getModIdFromFmResponse($eachResponse));
-        }
-    }
-
-    protected function getModIdFromFmResponse($response)
-    {
-        return $response['response']['modId'];
-    }
-
-    public function duplicate()
-    {
-        return $this->query->duplicate($this->model->getRecordId());
+        // The OData API returns the full created entity (including any auto-entered or
+        // calculated field values), so we can hydrate the model directly from the response
+        // instead of issuing a separate "refresh" request.
+        $model->hydrateFromRecord($record);
     }
 
     /**
@@ -250,91 +135,15 @@ class FMEloquentBuilder extends Builder
 
         $perPage = $perPage ?: $this->model->getPerPage();
 
-        $response = $this->forPage($page, $perPage)->toBase()->getData();
+        $query = $this->forPage($page, $perPage)->toBase();
+        $response = $query->connection->selectWithCount($query);
 
-        $total = Arr::get($response, 'response.dataInfo.foundCount', 0);
-        $results = $this->model->createModelsFromRecordSet(
-            collect(Arr::get($response, 'response.data'))
-        );
+        $total = $response['@odata.count'] ?? 0;
+        $results = $this->model->createModelsFromRecordSet(collect($response['value'] ?? []));
 
         return $this->paginator($results, $total, $perPage, $page, [
             'path' => Paginator::resolveCurrentPath(),
             'pageName' => $pageName,
         ]);
-    }
-
-    /**
-     * Compares a model's modified portal data and original portal data and returns portal data with only modified fields and recordIds
-     *
-     * @param  $array1  array The modified portal data
-     * @param  $array2  array The model's original portal data
-     */
-    protected function getOnlyModifiedPortalFields($array1, $array2): array
-    {
-        $result = [];
-        foreach ($array1 as $key => $val) {
-            if ($array2[$key] != $val) {
-                // go recursive if we're comparing two arrays
-                if (is_array($val) && is_array($array2[$key])) {
-                    $result[$key] = $this->getOnlyModifiedPortalFields($val, $array2[$key]);
-                } else {
-                    // These are normal values, so compare directly
-                    $result[$key] = $val;
-                    // at least one field is modified, so also set the recordID if it isn't set yet
-                    if (! isset($result['recordId'])) {
-                        $result['recordId'] = $array1['recordId'];
-                    }
-                }
-            } else {
-                // The values are equal
-            }
-        }
-
-        return $result;
-    }
-
-    public function applyScopes()
-    {
-        $builder = parent::applyScopes();
-
-        return $builder;
-    }
-
-    /**
-     * Apply the given scope on the current builder instance.
-     *
-     * @return mixed
-     */
-    protected function callScope(callable $scope, array $parameters = [])
-    {
-        array_unshift($parameters, $this);
-
-        $query = $this->getQuery();
-
-        $result = $this;
-
-        $scopeApplied = false;
-
-        foreach ($query->wheres as $index => $find) {
-            if (($find['omit'] ?? 'false') === 'true') {
-                continue;
-            }
-
-            $query->setFindRequestIndex($index);
-
-            $result = $scope(...$parameters) ?? $this;
-
-            $scopeApplied = true;
-        }
-
-        if (! $scopeApplied) {
-            array_unshift($query->wheres, []);
-
-            $query->setFindRequestIndex(0);
-
-            $result = $scope(...$parameters) ?? $this;
-        }
-
-        return $result;
     }
 }

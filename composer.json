@@ -7,7 +7,7 @@
     "Gearbox Solutions",
     "FileMaker",
     "Database",
-    "Data API",
+    "OData",
     "Models",
     "Eloquent",
     "Laravel"
@@ -28,7 +28,8 @@
     "php": ">=8.0",
     "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
     "guzzlehttp/guzzle": "^7.5",
-    "ext-json": "*"
+    "ext-json": "*",
+    "ext-simplexml": "*"
   },
   "require-dev": {
     "orchestra/testbench": "^10.0|^11.0",

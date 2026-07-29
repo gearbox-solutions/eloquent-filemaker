@@ -2,26 +2,17 @@
 
 namespace GearboxSolutions\EloquentFileMaker\Database\Query;
 
-use Closure;
 use DateTimeInterface;
-use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerDataApiException;
-use Illuminate\Contracts\Support\Arrayable;
+use GearboxSolutions\EloquentFileMaker\Exceptions\FileMakerODataException;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
-use InvalidArgumentException;
 
 class FMBaseBuilder extends Builder
 {
-    /**
-     * The internal FileMaker Record ID to act on
-     */
-    protected $recordId;
-
     /**
      * An array of fields to map to FileMaker fields
      *
@@ -30,107 +21,15 @@ class FMBaseBuilder extends Builder
     protected $fieldMapping = [];
 
     /**
-     * The name of the FileMaker script to be run after the action specified by the API call and after the subsequent sort.
-     *
-     * @var string
-     */
-    public $script;
-
-    /**
-     * The text string to use as a parameter for the script that was named by script.
-     *
-     * @var string
-     */
-    public $scriptParam;
-
-    /**
-     * The name of the script to be run before the action specified by the API call and the subsequent sort.
-     *
-     * @var string
-     */
-    public $scriptPrerequest;
-
-    /**
-     * The text string to use as a parameter for the script that was named by script.prerequest.
-     *
-     * @var string
-     */
-    public $scriptPrerequestParam;
-
-    /**
-     * The name of the script to be run after the action specified by the API call but before the subsequent sort.
-     *
-     * @var string
-     */
-    public $scriptPresort;
-
-    /**
-     * The text string to use as a parameter for the script that was named by script.presort.
-     *
-     * @var string
-     */
-    public $scriptPresortParam;
-
-    /**
-     * The layout to switch to when processing response.
-     *
-     * @var string
-     */
-    public $layoutResponse;
-
-    /**
-     * Field data to be used when creating or editing a record;
+     * Field data to be used when creating or editing a record
      *
      * @var array
      */
     public $fieldData;
 
-    /**
-     * An array of global fields to set
-     *
-     * @var array
-     */
-    public $globalFields = [];
+    public const ASCEND = 'asc';
 
-    /**
-     * An array of portals which should have limits set it the response.
-     * The default limit is 50 records if no value is specified.
-     */
-    public array $limitPortals = [];
-
-    /**
-     * An array of portals which should have the offset set it the response.
-     * This is actually the "starting record", and so the default value is 1.
-     */
-    public array $offsetPortals = [];
-
-    /**
-     * @var int The index of the current request in the find request array
-     */
-    protected int $currentFindRequestIndex = -1;
-
-    public const ASCEND = 'ascend';
-
-    public const DESCEND = 'descend';
-
-    /**
-     * An array of portal data to be used when creating or updating a record
-     *
-     * @var array
-     */
-    public $portalData;
-
-    /**
-     * An array of portal objects to return with the record. Not setting this value will return all portals on the layout.
-     *
-     * @var array
-     */
-    public $portal = [];
-
-    /**
-     * @var int
-     */
-    public $modId;
+    public const DESCEND = 'desc';
 
     /**
      * All of the available clause operators.
@@ -138,300 +37,22 @@ class FMBaseBuilder extends Builder
      * @var string[]
      */
     public $operators = [
-        '=', '==', '≠', '!', '<', '>', '<=', '≤', '>=', '≥', '~',
+        '=', '==', '≠', '!=', '<>', '<', '>', '<=', '≤', '>=', '≥', 'like', 'not like',
     ];
 
-    public $containerFieldName;
-
-    public $containerFile;
-
     /**
-     * Array to track the whereIn clauses because FM processes WhereIns differently than other DB engines
-     *
-     * @var array
+     * Set the "orders" for the query, normalizing FileMaker's "ascend"/"descend" direction
+     * vocabulary to the standard "asc"/"desc" that the base Builder (and our grammar) expect.
      */
-    protected $whereIns = [];
-
-    /**
-     * Flag to be used to enforce that FileMaker Data API gives us an empty set instead of erroring or returning unexpected records
-     *
-     * @var bool = false
-     */
-    protected $forceHighOffset = false;
-
-    public function isForcingHighOffset()
-    {
-        return $this->forceHighOffset;
-    }
-
-    /**
-     * Add a basic where clause to the query.
-     */
-    public function where($column, $operator = null, $value = null, $boolean = 'and'): FMBaseBuilder
-    {
-        // If the column is a Closure it is a nested where group, which should
-        // be built as its own query and then merged into this one
-        if ($column instanceof Closure && is_null($operator)) {
-            return $this->whereNested($column, $boolean);
-        }
-
-        $shouldBeOmit = false;
-
-        if (Str::contains($boolean, 'not')) {
-            $shouldBeOmit = true;
-            $boolean = trim(str_replace('not', '', $boolean));
-        }
-
-        // This is an "orWhere" type query, so add a find request and then work from there
-        if ($boolean === 'or' || ($shouldBeOmit !== $this->isCurrentFindAnOmit())) {
-            $this->addFindRequest();
-        }
-
-        if ($shouldBeOmit) {
-            $this->omit();
-        }
-
-        // If the column is an array, we will assume it is an array of key-value pairs
-        // and can add them each as a where clause. We will maintain the boolean we
-        // received when the method was called and pass it into the nested where.
-        //
-        // If the first value is an array it means the second value is an omit for the whole request
-        if (is_array($column)) {
-            $this->addArrayOfWheres($column, $boolean);
-
-            return $this;
-        }
-
-        // Here we will make some assumptions about the operator. If only 2 values are
-        // passed to the method, we will assume that the operator is an equals sign
-        // and keep going. Otherwise, we'll require the operator to be passed in.
-        [$value, $operator] = $this->prepareValueAndOperator(
-            $value, $operator, func_num_args() === 2
-        );
-
-        $currentFind = $this->getCurrentFind();
-
-        $currentFind[$this->getMappedFieldName($column)] = $operator . $value;
-
-        // add the where clause KvP to the last item in the array of wheres
-        $this->updateCurrentFind($currentFind);
-
-        return $this;
-    }
-
-    protected function addArrayOfWheres($column, $boolean, $method = 'where')
-    {
-        foreach ($column as $key => $value) {
-            if (is_numeric($key) && is_array($value)) {
-                $this->{$method}(...array_values($value));
-            } else {
-                $this->{$method}($key, '', $value, 'and');
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * Create a new query instance for a nested where group.
-     */
-    public function forNestedWhere()
-    {
-        $query = parent::forNestedWhere();
-
-        $query->setFieldMapping($this->getFieldMapping());
-
-        return $query;
-    }
-
-    /**
-     * Merge the find requests from a nested where group into this query.
-     *
-     * FileMaker performs finds as a set of OR'd find requests, so an "and"
-     * nested group is applied by combining the current find request's criteria
-     * with each of the group's find requests, while an "or" group's find
-     * requests are simply added as additional find requests.
-     *
-     * @param  FMBaseBuilder  $query
-     * @param  string  $boolean
-     * @return $this
-     */
-    public function addNestedWhereQuery($query, $boolean = 'and')
-    {
-        // Resolve the nested group's find requests, expanding any whereIn clauses
-        $nestedFinds = array_values(array_filter($query->getWheres()));
-
-        if (empty($nestedFinds)) {
-            return $this;
-        }
-
-        if (Str::contains($boolean, 'not')) {
-            // Omit requests remove matching records from the found set, so
-            // NOT (A or B) is performed by adding both A and B as omits
-            foreach ($nestedFinds as $nestedFind) {
-                if (($nestedFind['omit'] ?? 'false') === 'true') {
-                    throw new InvalidArgumentException('Negating a nested where group which contains omit/whereNot clauses is not supported.');
-                }
-
-                $this->addFindRequest();
-                $nestedFind['omit'] = 'true';
-                $this->updateCurrentFind($nestedFind);
-            }
-
-            return $this;
-        }
-
-        if ($boolean === 'or') {
-            foreach ($nestedFinds as $nestedFind) {
-                $this->addFindRequest();
-                $this->updateCurrentFind($nestedFind);
-            }
-
-            return $this;
-        }
-
-        // "and" - a where() after an omit starts a new find request, and so
-        // should a nested group
-        if ($this->isCurrentFindAnOmit()) {
-            $this->addFindRequest();
-        }
-
-        $currentFind = $this->getCurrentFind();
-
-        $combinedFinds = array_map(function ($nestedFind) use ($currentFind) {
-            return array_merge($currentFind, $nestedFind);
-        }, $nestedFinds);
-
-        // Replace the current find request with the combined find requests
-        array_splice($this->wheres, $this->currentFindRequestIndex, 1, $combinedFinds);
-        $this->setFindRequestIndex($this->currentFindRequestIndex + count($combinedFinds) - 1);
-
-        return $this;
-    }
-
-    /**
-     * Delete records from the database.
-     *
-     * @param  null  $recordId
-     *
-     * @throws FileMakerDataApiException
-     */
-    public function delete($id = null): int
-    {
-        // If an ID is passed to the method we will delete the record with this internal FileMaker record ID
-        if (! is_null($id)) {
-            $this->where($this->defaultKeyName(), '=', $id);
-        }
-        $this->applyBeforeQueryCallbacks();
-
-        // Check if we have a record ID to delete or if this is a query for a bulk delete
-        if ($this->getRecordId() === null) {
-            // There's no individual record ID to delete, so do a bulk delete
-            return $this->bulkDeleteFromQuery();
-        }
-
-        try {
-            $this->connection->deleteRecord($this);
-        } catch (FileMakerDataApiException $e) {
-            if ($e->getCode() === 101) {
-                // no record was found to be deleted, return modified count of 0
-                return 0;
-            } else {
-                throw $e;
-            }
-        }
-
-        // we deleted the record, return modified count of 1
-        return 1;
-    }
-
-    /**
-     * Do a bulk delete from a where query
-     *
-     *
-     * @throws FileMakerDataApiException
-     */
-    protected function bulkDeleteFromQuery(): int
-    {
-        $records = $this->get();
-        $deleteCount = 0;
-        foreach ($records as $record) {
-            try {
-                $recordId = $record['recordId'];
-                $this->deleteByRecordId($recordId);
-                // increment our delete counter if we didn't hit an exception
-                $deleteCount++;
-            } catch (FileMakerDataApiException $e) {
-                if ($e->getCode() === 101) {
-                    // no record was found to be deleted
-                    // continue on to the next record to attempt to delete without incrementing $deleteCount
-                } else {
-                    throw $e;
-                }
-            }
-        }
-
-        // Return the count of deleted records
-        return $deleteCount;
-    }
-
-    /**
-     * Delete a record using the internal FileMaker record ID
-     *
-     *
-     * @throws FileMakerDataApiException
-     */
-    public function deleteByRecordId(int $recordId): int
-    {
-        $this->recordId = $recordId;
-
-        try {
-            $this->connection->deleteRecord($this);
-        } catch (FileMakerDataApiException $e) {
-            if ($e->getCode() === 101) {
-                // no record was found to be deleted, return modified count of 0
-                return 0;
-            } else {
-                throw $e;
-            }
-        }
-
-        // we deleted the record, return modified count of 1
-        return 1;
-    }
-
-    /**
-     * Returns the internal FileMaker record ID returned in a previous query, used for things like edits and deletes. This is not the primary key in your database.
-     *
-     * @return mixed
-     */
-    public function getRecordId()
-    {
-        return $this->recordId;
-    }
-
-    /**
-     * Set the internal FileMaker Record ID to be used for these queries
-     *
-     * @param  int  $recordId
-     */
-    public function recordId($recordId)
-    {
-        $this->recordId = $recordId;
-
-        return $this;
-    }
-
     public function orderBy($column, $direction = self::ASCEND): FMBaseBuilder
     {
-        // check for specific direction values sent by some Laravel functions and convert them to FileMaker's values
-        $direction = match ($direction) {
-            'asc' => self::ASCEND,
-            'desc' => self::DESCEND,
-            default => $direction
+        $direction = match (strtolower($direction)) {
+            'ascend' => 'asc',
+            'descend' => 'desc',
+            default => $direction,
         };
 
-        $this->appendSortOrder($column, $direction);
+        parent::orderBy($column, $direction);
 
         return $this;
     }
@@ -454,170 +75,44 @@ class FMBaseBuilder extends Builder
         return $this->orderBy($column, self::DESCEND);
     }
 
-    protected function appendSortOrder($column, $direction)
-    {
-        $this->orders[] = ['fieldName' => $this->getMappedFieldName($column), 'sortOrder' => $direction];
-    }
-
-    /**
-     * Set the "limit" value of the query.
-     *
-     * @param  int  $value
-     * @return $this
-     */
-    public function limit($value): FMBaseBuilder
-    {
-        $this->limit = $value;
-
-        return $this;
-    }
-
-    public function limitPortal(string $portalName, int $limit): FMBaseBuilder
-    {
-        $this->limitPortals[] = ['portalName' => $portalName, 'limit' => $limit];
-
-        return $this;
-    }
-
-    /**
-     * Set an offset for a given portal.
-     * This is actually the "starting record", and so the default value is 1.
-     */
-    public function offsetPortal(string $portalName, int $startingRecord): FMBaseBuilder
-    {
-        $this->offsetPortals[] = ['portalName' => $portalName, 'offset' => $startingRecord];
-
-        return $this;
-    }
-
-    public function offset($value): FMBaseBuilder
-    {
-        $this->offset = $value;
-
-        return $this;
-    }
-
-    public function script($scriptName, $param = null): FMBaseBuilder
-    {
-        $this->script = $scriptName;
-
-        // set the script parameter if one was passed in
-        if ($param) {
-            $this->scriptParam = $param;
-        }
-
-        return $this;
-    }
-
-    public function scriptParam(string $param): FMBaseBuilder
-    {
-        $this->scriptParam = $param;
-
-        return $this;
-    }
-
-    public function scriptPresort(string $scriptName, $param = null): FMBaseBuilder
-    {
-        $this->scriptPresort = $scriptName;
-
-        // set the script parameter if one was passed in
-        if ($param) {
-            $this->scriptPresortParam = $param;
-        }
-
-        return $this;
-    }
-
-    public function scriptPresortParam(string $param): FMBaseBuilder
-    {
-        $this->scriptPresortParam = $param;
-
-        return $this;
-    }
-
-    public function scriptPrerequest(string $scriptName, ?string $param = null): FMBaseBuilder
-    {
-        $this->scriptPrerequest = $scriptName;
-
-        // set the script parameter if one was passed in
-        if ($param) {
-            $this->scriptPrerequestParam = $param;
-        }
-
-        return $this;
-    }
-
-    public function scriptPrerequestParam(string $param): FMBaseBuilder
-    {
-        $this->scriptPrerequestParam = $param;
-
-        return $this;
-    }
-
-    public function layoutResponse(string $layoutName): FMBaseBuilder
-    {
-        $this->layoutResponse = $layoutName;
-
-        return $this;
-    }
-
     /**
      * @return Collection
      *
-     * @throws FileMakerDataApiException
+     * @throws FileMakerODataException
      */
     public function get($columns = ['*'])
     {
-        $records = collect(Arr::get($this->getData(), 'response.data', []));
+        $records = collect($this->connection->getRecords($this));
 
-        // filter each record down to only the requested top-level keys
-        // (e.g. 'fieldData', 'portalData', 'recordId', 'modId')
         if ($columns !== ['*']) {
-            $records = $records->map(function ($record) use ($columns) {
-                return Arr::only($record, $columns);
-            });
+            $records = $records->map(fn ($record) => Arr::only($record, $columns));
         }
 
         return $records;
-    }
-
-    public function getData()
-    {
-        $this->computeWhereIns();
-
-        // Run the query and catch a 401 error if there are no records found - just return an empty collection
-        try {
-            return $this->connection->performFind($this);
-        } catch (FileMakerDataApiException $e) {
-            throw_if($e->getCode() !== 401, $e);
-
-            return [];
-        }
     }
 
     public function paginate($perPage = 15, $columns = ['*'], $pageName = 'page', $page = null, $total = null)
     {
         $page = $page ?: Paginator::resolveCurrentPage($pageName);
 
-        $response = $this->forPage($page, $perPage)->getData();
+        $response = $this->forPage($page, $perPage)->connection->selectWithCount($this);
 
-        $total = Arr::get($response, 'response.dataInfo.foundCount', 0);
-        $results = collect(Arr::get($response, 'response.data'));
+        $results = collect($response['value'] ?? []);
 
-        return $this->paginator($results, $total, $perPage, $page, [
+        return $this->paginator($results, $response['@odata.count'] ?? 0, $perPage, $page, [
             'path' => Paginator::resolveCurrentPath(),
             'pageName' => $pageName,
         ]);
     }
 
     /**
-     * Gets the gets the name of the mapped FileMaker field for a particular column
+     * Gets the name of the mapped FileMaker field for a particular column. Public because
+     * FMGrammar needs it to translate where/order columns when compiling the $filter/$orderby.
      *
      * @return string
      */
-    protected function getMappedFieldName(string $column)
+    public function getMappedFieldName(string $column)
     {
-        // remap the field name if the dev specified a mapping
         return array_flip($this->getFieldMapping())[$column] ?? $column;
     }
 
@@ -650,157 +145,16 @@ class FMBaseBuilder extends Builder
     }
 
     /**
-     * Sets the current find request as an omit.
-     * Optionally may pass false as a parameter to make a request NOT an omit if it was already set
-     *
-     * @param  bool  $boolean
+     * Create a new query instance for a nested where group, carrying over the field
+     * mapping so columns referenced inside the closure still map to FileMaker field names.
      */
-    public function omit($boolean = true): FMBaseBuilder
+    public function forNestedWhere()
     {
-        $currentFind = $this->getCurrentFind();
+        $query = parent::forNestedWhere();
 
-        $currentFind['omit'] = $boolean ? 'true' : 'false';
+        $query->setFieldMapping($this->getFieldMapping());
 
-        $this->updateCurrentFind($currentFind);
-
-        return $this;
-    }
-
-    /**
-     * we should add this where clause as an AND to the current find request
-     * This allows us to chain wheres
-     * Create a new find array if null
-     */
-    protected function getCurrentFind()
-    {
-        if ($this->currentFindRequestIndex === -1) {
-            $this->addFindRequest();
-        }
-
-        return $this->wheres[$this->currentFindRequestIndex];
-    }
-
-    protected function isCurrentFindAnOmit()
-    {
-        if ($this->currentFindRequestIndex === -1) {
-            return false;
-        }
-
-        return Arr::get($this->wheres, "{$this->currentFindRequestIndex}.omit", 'false') === 'true';
-    }
-
-    protected function updateCurrentFind($find)
-    {
-        $this->wheres[$this->currentFindRequestIndex] = $find;
-    }
-
-    public function whereIn($column, $values, $boolean = 'and', $not = false)
-    {
-        if ($boolean === 'or' || $not) {
-            $this->addFindRequest();
-
-            if ($not) {
-                $this->omit();
-            }
-        }
-
-        if ($values instanceof Arrayable) {
-            $values = $values->toArray();
-        }
-
-        // We don't need the current find request but in the case that 0 finds are already performed,
-        // this will create the first one.
-        $this->getCurrentFind();
-
-        $this->whereIns[] = [
-            'column' => $this->getMappedFieldName($column),
-            'values' => $values,
-            'boolean' => $boolean,
-            'not' => $not,
-            'findRequestIndex' => $this->currentFindRequestIndex,
-        ];
-
-        return $this;
-    }
-
-    public function computeWhereIns()
-    {
-        // If no where in clauses return
-        if (empty($this->whereIns)) {
-            return $this;
-        }
-
-        $whereInRequests = collect($this->whereIns)->mapToGroups(function ($whereIn) {
-            $finds = [];
-
-            // If the list of values in a whereIn clause is empty we want the end query to return an empty set instead of other records.
-            if (empty($whereIn['values'])) {
-                $this->forceHighOffset = true;
-
-                if ($this->isWheresEmpty()) {
-                    $finds[] = [
-                        $whereIn['column'] => '=',
-                    ];
-                }
-            } else {
-                foreach ($whereIn['values'] as $value) {
-                    $find = [
-                        $whereIn['column'] => $value,
-                    ];
-
-                    if ($whereIn['not']) {
-                        $find['omit'] = true;
-                    }
-
-                    $finds[] = $find;
-                }
-            }
-
-            return [$whereIn['findRequestIndex'] => $finds];
-        });
-
-        if ($this->isWheresEmpty()) {
-            $this->wheres = $whereInRequests->map(function ($whereInRequest) {
-                return Arr::crossJoin(...$whereInRequest->values());
-            })->map(function ($findRequest) {
-                return array_map(function ($clauses) {
-                    return array_merge(...$clauses);
-                }, $findRequest);
-            })->flatten(1)->toArray();
-
-            return $this;
-        }
-
-        $newWheres = collect([]);
-
-        // loop through each where and merge in any whereIn clauses attached to it
-        foreach ($this->wheres as $index => $where) {
-            $whereInRequest = $whereInRequests->get($index) ?? [];
-
-            if (empty($whereInRequest)) {
-                $newWheres->push($where);
-            } else {
-                $newWheres = $newWheres->push(...Arr::crossJoin([$where], ...$whereInRequest->values()));
-            }
-        }
-
-        $this->wheres = $newWheres
-            ->map(function ($findRequest) {
-                if (Arr::isAssoc($findRequest)) {
-                    return $findRequest;
-                }
-
-                return array_merge(...$findRequest);
-            })->toArray();
-
-        return $this;
-    }
-
-    public function getWheres()
-    {
-        $this->computeWhereIns();
-
-        return $this->wheres;
+        return $query;
     }
 
     /**
@@ -812,11 +166,9 @@ class FMBaseBuilder extends Builder
      */
     public function min($column, $direction = self::ASCEND)
     {
-        $this->orderBy($column, $direction);
-        $result = $this->first();
-        $min = $result['fieldData'][$this->getMappedFieldName($column)];
+        $result = $this->orderBy($column, $direction)->first();
 
-        return $min;
+        return $result[$this->getMappedFieldName($column)] ?? null;
     }
 
     /**
@@ -831,29 +183,23 @@ class FMBaseBuilder extends Builder
     }
 
     /**
-     * Edit the record and get the raw FileMaker Data API Response
+     * Edit the record and get the raw OData response
      *
-     * @throws FileMakerDataApiException
+     * @throws FileMakerODataException
      */
     public function editRecord()
     {
-        $response = $this->connection->editRecord($this);
-
-        return $response;
+        return $this->connection->update($this);
     }
 
     /**
-     * Create a record and get the raw FileMaker Data API Response
+     * Create a record and get the raw OData response
      *
-     * @return bool
-     *
-     * @throws FileMakerDataApiException
+     * @throws FileMakerODataException
      */
     public function createRecord()
     {
-        $response = $this->connection->createRecord($this);
-
-        return $response;
+        return $this->connection->createRecord($this);
     }
 
     /**
@@ -870,36 +216,9 @@ class FMBaseBuilder extends Builder
     }
 
     /**
-     * Set the portal data to be used when creating or updating a record
-     *
-     * @param  $array  array
-     * @return $this
-     */
-    public function portalData(array $array)
-    {
-        $this->portalData = $array;
-
-        return $this;
-    }
-
-    /**
-     * @param  string  $column  The name of the container field
-     * @param  File | UploadedFile | array  $file  The file to be uploaded to the container or a file and filename array ex: [$file, 'MyFile.pdf']
-     * @return mixed
-     */
-    public function setContainer($column, $file)
-    {
-        $this->containerFieldName = $this->getMappedFieldName($column);
-        $this->containerFile = $file;
-        $response = $this->connection->uploadToContainerField($this);
-
-        return $response;
-    }
-
-    /**
      * Insert new records into the database.
      *
-     * @return bool
+     * @return array
      */
     public function insert(array $values)
     {
@@ -909,21 +228,7 @@ class FMBaseBuilder extends Builder
 
         $this->fieldData = $this->mapFieldNamesForArray($values);
 
-        // TODO handle inserting multiple records at once, maybe?
-        // TODO handle setting portal data
-
-        // Finally, we will run this query against the database connection and return
-        // the results. We will need to also flatten these bindings before running
-        // the query so they are all in one huge, flattened array for execution.
         return $this->connection->createRecord($this);
-    }
-
-    public function duplicate(int $recordId): array
-    {
-        $this->recordId($recordId);
-        $response = $this->connection->duplicateRecord($this);
-
-        return $response;
     }
 
     /**
@@ -937,176 +242,34 @@ class FMBaseBuilder extends Builder
 
         $this->fieldData($values);
 
-        $this->computeWhereIns();
-
         return $this->connection->update($this);
     }
 
-    public function layout($layoutName)
-    {
-        $this->from($layoutName);
-
-        return $this;
-    }
-
-    public function findByRecordId($recordId)
-    {
-        $this->recordId = $recordId;
-
-        return $this->connection->getSingleRecordById($this);
-    }
-
     /**
-     * Set fields in $columns to = to find empty fields
+     * Delete records from the database.
      *
-     * @param  string|array  $columns
-     * @param  string  $boolean
-     * @param  bool  $not
-     * @return $this
+     * @throws FileMakerODataException
      */
-    public function whereNull($columns, $boolean = 'and', $not = false)
+    public function delete($id = null): int
     {
-        if ($not) {
-            // where NOT null
-            $this->where($columns, null, '*', $boolean);
-        } else {
-            // where null
-            $this->where($columns, null, '=', $boolean);
+        if (! is_null($id)) {
+            $this->where($this->defaultKeyName(), '=', $id);
         }
 
-        return $this;
-    }
+        $this->applyBeforeQueryCallbacks();
 
-    protected function addFindRequest()
-    {
-        array_push($this->wheres, []);
-
-        $this->setFindRequestIndex(count($this->wheres) - 1);
+        return $this->connection->delete($this);
     }
 
     /**
-     * Add a where between statement to the query.
-     */
-    public function whereBetween($column, iterable $values, $boolean = 'and', $not = false)
-    {
-        $this->where($column, null, $values[0] . '...' . $values[1], $boolean);
-
-        return $this;
-    }
-
-    /**
-     * Set the FileMaker record modId for editing an existing record.
-     * FileMaker modIds look like numbers, but must always be strings.
-     *
-     * @return $this
-     */
-    public function modId(string $modId)
-    {
-        $this->modId = $modId;
-
-        return $this;
-    }
-
-    /**
-     * The name of a portal or an array of portals to return with the record data
-     *
-     * @return $this
-     */
-    public function portal($portalName)
-    {
-        if (is_array($portalName)) {
-            // it's an array, so set this as the value
-            $this->portal = $portalName;
-        } else {
-            // It's a single value, so append it on the array
-            array_push($this->portal, $portalName);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Alias for executeScript()
-     *
-     *
-     * @param  null  $script
-     * @param  null  $param
-     * @return array|mixed
-     */
-    public function performScript($script = null, $param = null)
-    {
-        return $this->executeScript($script, $param);
-    }
-
-    /**
-     * Execute a script
-     *
-     * @param  null  $script
-     * @param  null  $param
-     */
-    public function executeScript($script = null, $param = null)
-    {
-        if ($script) {
-            $this->script = $script;
-        }
-
-        if ($param) {
-            $this->scriptParam = $param;
-        }
-
-        $result = $this->connection->executeScript($this);
-
-        return $result;
-    }
-
-    public function getLayoutMetadata($layoutName = null)
-    {
-        if ($layoutName) {
-            $this->layout($layoutName);
-        }
-
-        return $this->connection->getLayoutMetadata($this);
-    }
-
-    /**
-     * Prepare the value and operator for a where clause.
-     *
-     * @param  string  $value
-     * @param  string  $operator
-     * @param  bool  $useDefault
-     * @return array
-     *
-     * @throws InvalidArgumentException
-     */
-    public function prepareValueAndOperator($value, $operator, $useDefault = false)
-    {
-        if ($useDefault) {
-            return [$operator, ''];
-        } elseif ($this->invalidOperatorAndValue($operator, $value)) {
-            throw new InvalidArgumentException('Illegal operator and value combination.');
-        }
-
-        return [$value, $operator];
-    }
-
-    public function setGlobalFields(array $globals)
-    {
-        $this->globalFields = $globals;
-
-        return $this->connection->setGlobalFields($globals);
-    }
-
-    /**
-     * Retrieve the "count" result of the query.
+     * Retrieve the "count" result of the query using OData's $count path segment.
      *
      * @param  string  $columns
      * @return int
      */
     public function count($columns = '*')
     {
-        $response = $this->limit(1)->getData();
-
-        return (int) (Arr::get($response, 'response.dataInfo.foundCount', 0));
+        return $this->connection->count($this);
     }
 
     public function whereDate($column, $operator, $value = null, $boolean = 'and')
@@ -1117,56 +280,43 @@ class FMBaseBuilder extends Builder
         }
 
         if ($value instanceof DateTimeInterface) {
-            $value = $value->format('n/j/Y');
+            $value = $value->format('Y-m-d');
         }
 
         return $this->where($column, $operator, $value, $boolean);
     }
 
-    protected function isWheresEmpty()
+    public function toSql(): string
     {
-        $wheres = collect($this->wheres);
-
-        if ($wheres->isEmpty()) {
-            return true;
-        }
-
-        // keys() returns the field names as values (not keys), so 'omit' has to
-        // be filtered out by value with diff(), not by key with except()
-        return collect($wheres->first())->keys()->diff(['omit'])->isEmpty();
-    }
-
-    public function setFindRequestIndex($index)
-    {
-        $this->currentFindRequestIndex = $index;
-    }
-
-    public function resetFindRequestIndex()
-    {
-        $this->currentFindRequestIndex = -1;
-    }
-
-    protected function invalidOperatorAndValue($operator, $value)
-    {
-        return is_null($value) && in_array($operator, $this->operators) &&
-            ! in_array($operator, ['=', '==', '!=', '≠']);
-    }
-
-    public function getCountForPagination($columns = ['*'])
-    {
-        return $this->count($columns);
+        return $this->getGrammar()->compileWheres($this);
     }
 
     public function toRawSql(): string
     {
-        $this->computeWhereIns();
-
-        return json_encode($this->wheres);
+        return $this->toSql();
     }
 
-    public function toSql(): string
+    protected function defaultKeyName()
     {
+        return 'id';
+    }
 
-        return $this->toRawSql();
+    protected function isContainer($field)
+    {
+        if (is_a($field, File::class)) {
+            return true;
+        }
+
+        if (is_array($field) && count($field) === 2 && $this->isFile($field[0])) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function isFile($object)
+    {
+        return is_a($object, File::class) ||
+            is_a($object, UploadedFile::class);
     }
 }
